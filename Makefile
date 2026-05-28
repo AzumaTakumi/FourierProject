@@ -12,7 +12,7 @@ all:
 
 # 1. アプリケーションの起動（起動コマンド要件）
 run:
-	$(PYTHON) $(TARGET)
+	PYTHONPATH=. $(PYTHON) $(TARGET)
 
 # 2. 自動テストの実行（xUnitによる回帰テスト要件）
 test:
