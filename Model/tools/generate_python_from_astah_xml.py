@@ -785,6 +785,70 @@ def merge_safe_areas(new_text: str, old_text: str) -> str:
     return "".join(merged_parts)
 
 
+def extract_changed_generated_area_labels(old_text: str, new_text: str) -> list[str]:
+    old_areas = extract_generated_code_areas(old_text)
+    new_areas = extract_generated_code_areas(new_text)
+    changed: list[str] = []
+    for label in sorted(set(old_areas) & set(new_areas)):
+        if old_areas[label].body != new_areas[label].body:
+            changed.append(label)
+    return changed
+
+
+def summarize_changed_labels(changed_labels: list[str]) -> dict[str, list[str]]:
+    methods: list[str] = []
+    sections: list[str] = []
+    seen_methods: set[str] = set()
+    seen_sections: set[str] = set()
+
+    for label in changed_labels:
+        if label.startswith("method."):
+            method_name = label.split(".", 1)[1]
+            if method_name not in seen_methods:
+                seen_methods.add(method_name)
+                methods.append(method_name)
+            continue
+        if label not in seen_sections:
+            seen_sections.add(label)
+            sections.append(label)
+
+    return {
+        "methods": methods,
+        "sections": sections,
+    }
+
+
+def extract_outside_generated_text(text: str) -> str:
+    parts: list[str] = []
+    cursor = 0
+    for match in GENERATED_CODE_AREA_PATTERN.finditer(text):
+        parts.append(text[cursor : match.start()])
+        cursor = match.end()
+    parts.append(text[cursor:])
+    return "".join(parts)
+
+
+def summarize_non_generated_changes(old_text: str, new_text: str) -> dict[str, str]:
+    old_safe = extract_safe_areas(old_text)
+    new_safe = extract_safe_areas(new_text)
+    safe_changed = old_safe != new_safe
+
+    old_outside = extract_outside_generated_text(old_text)
+    new_outside = extract_outside_generated_text(new_text)
+    outside_changed = old_outside != new_outside
+
+    whitespace_only = (
+        old_text != new_text
+        and re.sub(r"\s+", "", old_text) == re.sub(r"\s+", "", new_text)
+    )
+
+    return {
+        "safe_areas": "changed" if safe_changed else "unchanged",
+        "outside_generated": "changed" if outside_changed else "unchanged",
+        "whitespace": "changed-only" if whitespace_only else "not-only",
+    }
+
+
 def format_parameter(param: ParameterSpec) -> str:
     if param.default is None:
         return f"{param.name}: {param.type_name}"
@@ -1063,6 +1127,9 @@ def main() -> int:
     files = build_output_files(model, args.output)
 
     changed_count = 0
+    notes: list[str] = []
+    change_logs: list[str] = []
+
     for path in sorted(files):
         new_text = files[path]
         old_text = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -1072,12 +1139,25 @@ def main() -> int:
             new_text = merge_safe_areas(new_text, old_text)
         if blocked_fixed_labels:
             labels = ", ".join(blocked_fixed_labels)
-            print(f"note: {path}: FIXED CODE AREA prevented updates: {labels}")
+            notes.append(f"[NOTE] {path}: FIXED CODE AREA prevented updates: {labels}")
         if old_text == new_text:
             continue
         changed_count += 1
         action = "update" if path.exists() else "create"
-        print(f"{action}: {path}")
+        if action == "update":
+            changed_labels = extract_changed_generated_area_labels(old_text, new_text)
+            summary = summarize_changed_labels(changed_labels)
+            non_generated = summarize_non_generated_changes(old_text, new_text)
+            method_text = ", ".join(summary["methods"]) if summary["methods"] else "(none)"
+            section_text = ", ".join(summary["sections"]) if summary["sections"] else "(none)"
+            change_logs.append(
+                f"[UPDATE] {path} | methods: {method_text} | sections: {section_text} "
+                f"| safe_areas: {non_generated['safe_areas']} "
+                f"| outside_generated: {non_generated['outside_generated']} "
+                f"| whitespace: {non_generated['whitespace']}"
+            )
+        else:
+            change_logs.append(f"[CREATE] {path}")
         if args.show_diff:
             print(
                 "".join(
@@ -1093,10 +1173,24 @@ def main() -> int:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(new_text, encoding="utf-8")
 
-    mode = "updated" if args.write else "dry-run"
-    print(f"{mode}: {changed_count} file(s)")
+    if notes:
+        print("=== Notes ===")
+        for line in notes:
+            print(line)
+        print("")
+
+    if change_logs:
+        print("=== Planned Changes ===" if not args.write else "=== Applied Changes ===")
+        for line in change_logs:
+            print(line)
+        print("")
+
+    mode = "write mode" if args.write else "dry-run"
+    print(f"=== Summary ===")
+    print(f"Mode: {mode}")
+    print(f"Changed files: {changed_count}")
     if not args.write:
-        print("Run again with --write to create/update files.")
+        print("Next: run again with --write to apply these changes.")
     return 0
 
 
