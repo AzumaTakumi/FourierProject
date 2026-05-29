@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 # GENERATED CODE AREA: module.imports ˅
+import numpy as np
 from .fourier_transform import FourierTransform
+from .fourier_renderer import FourierRenderer
+from .pane_type import PaneType
 
 # GENERATED CODE AREA: module.imports ˄
 
@@ -23,19 +26,19 @@ class FourierModel(object):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
-    def __init__(self, engine: FourierTransform) -> None:
+    # FIXED CODE AREA: method.__init__ ˅
+    def __init__(self) -> None:
         """
         FourierModelを初期化する。計算処理を担当するFourierTransformを受け取り、共通状態を初期化する。
         """
 
         # 計算処理を担当するCalculationEngine。フーリエ変換/逆変換などの実処理を委譲する。
-        self.engine: FourierTransform = None
+        self.engine: FourierTransform = FourierTransform()
 
         # SAFE CODE AREA ˅
-        pass
+        self.renderer: FourierRenderer = FourierRenderer()
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.resetSpectrum ˅
@@ -45,7 +48,16 @@ class FourierModel(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        real_part = getattr(self, "realPart", None)
+        imaginary_part = getattr(self, "imaginaryPart", None)
+        power_spectrum = getattr(self, "powerSpectrum", None)
+        self.interactiveRealPart = np.copy(real_part) if real_part is not None else None
+        self.interactiveImaginaryPart = np.copy(imaginary_part) if imaginary_part is not None else None
+        self.interactivePowerSpectrum = np.copy(power_spectrum) if power_spectrum is not None else None
+        try:
+            self._computeInverseData()
+        except AttributeError:
+            pass
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.resetSpectrum ˄
 
@@ -57,7 +69,12 @@ class FourierModel(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return {
+            PaneType.SOURCE_DATA: getattr(self, "sourceData", None),
+            PaneType.POWER_SPECTRUM: getattr(self, "powerSpectrum", None),
+            PaneType.INTERACTIVE_POWER_SPECTRUM: getattr(self, "interactivePowerSpectrum", None),
+            PaneType.INVERSE_DATA: getattr(self, "inverseData", None),
+        }
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getData ˄
 
@@ -69,7 +86,14 @@ class FourierModel(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        data_map = self.getData()
+        image_map: dict = {}
+        render_1d = self.renderer.imageFrom1dData
+        render_2d = self.renderer.imageFromSpectrum
+        renderers = {1: render_1d}
+        for pane_type, data in data_map.items():
+            renderer = renderers.get(getattr(data, "ndim", 0), render_2d)
+            image_map[pane_type] = ((lambda: renderer(data)), (lambda: None))[data is None]()
+        return image_map
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getImage ˄
-
