@@ -11,6 +11,27 @@ from .spectrum_edit_command import SpectrumEditCommand
 # GENERATED CODE AREA: module.imports ˄
 
 # SAFE CODE AREA ˅
+from .fourier_1_d_model import Fourier1dModel
+from .fourier_2_d_model import Fourier2dModel
+
+# データ更新用コマンド
+from .set_1_d_source_data_command import Set1dSourceDataCommand
+from .set_2_d_source_data_command import Set2dSourceDataCommand
+from .change_fourier_model_command import ChangeFourierModelCommand
+
+# １次元編集用コマンド
+from .erase_spectrum_at_index_command import EraseSpectrumAtIndexCommand
+from .restore_spectrum_at_index_command import RestoreSpectrumAtIndexCommand
+from .edit_spectrum_value_at_index_command import EditSpectrumValueAtIndexCommand
+
+# ２次元編集用コマンド
+from .erase_spectrum_at_position_command import EraseSpectrumAtPositionCommand
+from .paint_rgb_spectrum_at_position_command import PaintRgbSpectrumAtPositionCommand
+from .reset_spectrum_command import ResetSpectrumCommand
+
+# View送信用のスペクトル変更クラス
+from .spectrum_1_d_change import Spectrum1dChange
+from .spectrum_2_d_change import Spectrum2dChange
 # SAFE CODE AREA ˄
 
 class FourierModelContext(object):
@@ -24,14 +45,14 @@ class FourierModelContext(object):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
+    # FIXED CODE AREA: method.__init__ ˅
     def __init__(self, spectrumChangedListener: Callable) -> None:
         """
         FourierModelContextを初期化する。初期Model、Undo/Redo履歴、通知用関数などを設定する。
         """
 
         # 現在操作対象となっているFourierModelを保持する。
-        self.currentModel: FourierModel = None
+        self.currentModel: Fourier1dModel | Fourier2dModel = FourierModel()
 
         # Undo可能なCommandを保持するスタックである。
         self.undoStack: list = []
@@ -40,7 +61,7 @@ class FourierModelContext(object):
         self.redoStack: list = []
 
         # スペクトル変更時に呼び出す通知用関数を保持する。View側から渡された操作を保持し、SpectrumChangeを引数として呼び出す。
-        self.spectrumChangedListener: Callable = None
+        self.spectrumChangedListener: Callable = spectrumChangedListener
 
         # ドラッグ操作中に発生した複数の編集Commandを一時的にまとめるCompositeSpectrumEditCommandを保持する。
         self.currentCompositeCommand: CompositeSpectrumEditCommand = None
@@ -48,19 +69,19 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         pass
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
-    # GENERATED CODE AREA: method._model ˅
+    # FIXED CODE AREA: method._model ˅
     def _model(self) -> FourierModel:
         """
         現在操作対象となっているFourierModelを返す。
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return self.currentModel
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._model ˄
+    # FIXED CODE AREA: method._model ˄
 
 
     # GENERATED CODE AREA: method.set1dSourceData ˅
@@ -70,7 +91,11 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        commands = (
+            ChangeFourierModelCommand(self, Fourier1dModel(sourceData)),
+            Set1dSourceDataCommand(self.currentModel, sourceData),
+        )
+        self._executeEdit(commands[self.currentModel.sourceData.ndim == 1])
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.set1dSourceData ˄
 
@@ -82,7 +107,11 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        commands = (
+            ChangeFourierModelCommand(self, Fourier2dModel(sourceData)),
+            Set2dSourceDataCommand(self.currentModel, sourceData),
+        )
+        self._executeEdit(commands[self.currentModel.sourceData.ndim == 2])
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.set2dSourceData ˄
 
@@ -106,7 +135,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.spectrumChangedListener(change)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._notifySpectrumChanged ˄
 
@@ -118,7 +147,11 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        command.execute()
+        change_cls = (Spectrum2dChange, Spectrum1dChange)[self.currentModel.spectrum.ndim == 1]
+        self._notifySpectrumChanged(change_cls(self.currentModel.spectrum))
+        self.undoStack.append(command)
+        self.redoStack.clear()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._executeEdit ˄
 
@@ -130,7 +163,12 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        try:
+            self.undoStack[-1].undo()
+            self.redoStack.append(self.undoStack.pop())
+        except IndexError:
+            return False
+        return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -142,7 +180,12 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        try:
+            self.redoStack[-1].execute()
+            self.undoStack.append(self.redoStack.pop())
+        except IndexError:
+            return False
+        return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.redo ˄
 
@@ -154,7 +197,8 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.undoStack.clear()
+        self.redoStack.clear()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._clearStack ˄
 
@@ -166,7 +210,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self._executeEdit(EraseSpectrumAtIndexCommand(self.currentModel, index))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˄
 
@@ -178,7 +222,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self._executeEdit(RestoreSpectrumAtIndexCommand(self.currentModel, index))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
 
@@ -190,7 +234,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self._executeEdit(EditSpectrumValueAtIndexCommand(self.currentModel, index, realPart, imaginaryPart))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
 
@@ -202,7 +246,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self._executeEdit(EraseSpectrumAtPositionCommand(self.currentModel, row, col, radius))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtPosition ˄
 
@@ -214,7 +258,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self._executeEdit(PaintRgbSpectrumAtPositionCommand(self.currentModel, row, col, radius, rgbColor))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.paintRgbSpectrumAtPosition ˄
 
@@ -226,7 +270,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.currentCompositeCommand = CompositeSpectrumEditCommand(self)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.beginSpectrumEdit ˄
 
@@ -238,7 +282,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        (self._noop(), self.currentCompositeCommand.add(command))[self.currentCompositeCommand is not None]
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._appendSpectrumEdit ˄
 
@@ -250,7 +294,9 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.undoStack.append(self.currentCompositeCommand)
+        self.redoStack.clear()
+        self.currentCompositeCommand = None
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.endSpectrumEdit ˄
 
@@ -262,7 +308,15 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self._executeEdit(ResetSpectrumCommand(self.currentModel))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.resetSpectrum ˄
+
+
+    # GENERATED CODE AREA: method._noop ˅
+    def _noop(self) -> None:
+        # SAFE CODE AREA ˅
+        return None
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._noop ˄
 
