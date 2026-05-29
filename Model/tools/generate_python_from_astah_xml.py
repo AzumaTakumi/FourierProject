@@ -736,17 +736,21 @@ def extract_generated_code_areas(text: str) -> dict[str, GeneratedCodeArea]:
     return areas
 
 
-def merge_generated_code_areas(new_text: str, old_text: str) -> str:
+def merge_generated_code_areas(new_text: str, old_text: str) -> tuple[str, list[str]]:
     old_areas = extract_generated_code_areas(old_text)
+    blocked_labels: list[str] = []
 
     def _replace(match: re.Match[str]) -> str:
         label = match.group("label")
         old_area = old_areas.get(label)
         if old_area is None or old_area.state != "FIXED":
             return match.group(0)
+        if old_area.body != match.group("body") and label not in blocked_labels:
+            blocked_labels.append(label)
         return f"{old_area.start}{old_area.body}{old_area.end}"
 
-    return GENERATED_CODE_AREA_PATTERN.sub(_replace, new_text)
+    merged = GENERATED_CODE_AREA_PATTERN.sub(_replace, new_text)
+    return merged, blocked_labels
 
 
 def merge_safe_areas(new_text: str, old_text: str) -> str:
@@ -1062,9 +1066,13 @@ def main() -> int:
     for path in sorted(files):
         new_text = files[path]
         old_text = path.read_text(encoding="utf-8") if path.exists() else ""
+        blocked_fixed_labels: list[str] = []
         if old_text:
-            new_text = merge_generated_code_areas(new_text, old_text)
+            new_text, blocked_fixed_labels = merge_generated_code_areas(new_text, old_text)
             new_text = merge_safe_areas(new_text, old_text)
+        if blocked_fixed_labels:
+            labels = ", ".join(blocked_fixed_labels)
+            print(f"note: {path}: FIXED CODE AREA prevented updates: {labels}")
         if old_text == new_text:
             continue
         changed_count += 1
