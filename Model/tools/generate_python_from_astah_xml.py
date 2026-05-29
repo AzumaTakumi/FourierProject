@@ -691,6 +691,37 @@ def extract_safe_areas(text: str) -> list[str]:
     return areas
 
 
+def extract_safe_areas_by_context(text: str) -> tuple[list[str], dict[str, list[str]]]:
+    outside_areas: list[str] = []
+    generated_area_safe_areas: dict[str, list[str]] = {}
+
+    cursor = 0
+    for match in GENERATED_CODE_AREA_PATTERN.finditer(text):
+        outside_areas.extend(extract_safe_areas(text[cursor : match.start()]))
+        label = match.group("label")
+        generated_area_safe_areas.setdefault(label, []).extend(extract_safe_areas(match.group("body")))
+        cursor = match.end()
+
+    outside_areas.extend(extract_safe_areas(text[cursor:]))
+    return outside_areas, generated_area_safe_areas
+
+
+def merge_safe_areas_in_segment(new_segment: str, old_areas: list[str], start_index: int) -> tuple[str, int]:
+    index = start_index
+
+    def _replace(match: re.Match[str]) -> str:
+        nonlocal index
+        if index >= len(old_areas):
+            return match.group(0)
+        old_body = old_areas[index]
+        index += 1
+        if old_body.strip() == SAFE_AREA_DEFAULT_PLACEHOLDER:
+            old_body = ""
+        return f"{match.group('start')}{old_body}{match.group('end')}"
+
+    return SAFE_AREA_PATTERN.sub(_replace, new_segment), index
+
+
 def extract_generated_code_areas(text: str) -> dict[str, GeneratedCodeArea]:
     areas: dict[str, GeneratedCodeArea] = {}
     for match in GENERATED_CODE_AREA_PATTERN.finditer(text):
@@ -719,20 +750,35 @@ def merge_generated_code_areas(new_text: str, old_text: str) -> str:
 
 
 def merge_safe_areas(new_text: str, old_text: str) -> str:
-    old_areas = extract_safe_areas(old_text)
-    index = 0
+    old_outside_areas, old_generated_area_areas = extract_safe_areas_by_context(old_text)
+    merged_parts: list[str] = []
+    outside_index = 0
+    generated_area_indexes: dict[str, int] = {}
 
-    def _replace(match: re.Match[str]) -> str:
-        nonlocal index
-        if index >= len(old_areas):
-            return match.group(0)
-        old_body = old_areas[index]
-        index += 1
-        if old_body.strip() == SAFE_AREA_DEFAULT_PLACEHOLDER:
-            old_body = ""
-        return f"{match.group('start')}{old_body}{match.group('end')}"
+    cursor = 0
+    for match in GENERATED_CODE_AREA_PATTERN.finditer(new_text):
+        outside_segment, outside_index = merge_safe_areas_in_segment(
+            new_text[cursor : match.start()],
+            old_outside_areas,
+            outside_index,
+        )
+        merged_parts.append(outside_segment)
 
-    return SAFE_AREA_PATTERN.sub(_replace, new_text)
+        label = match.group("label")
+        old_areas = old_generated_area_areas.get(label, [])
+        area_index = generated_area_indexes.get(label, 0)
+        merged_body, area_index = merge_safe_areas_in_segment(match.group("body"), old_areas, area_index)
+        generated_area_indexes[label] = area_index
+        merged_parts.append(f"{match.group('start')}{merged_body}{match.group('end')}")
+        cursor = match.end()
+
+    tail_segment, outside_index = merge_safe_areas_in_segment(
+        new_text[cursor:],
+        old_outside_areas,
+        outside_index,
+    )
+    merged_parts.append(tail_segment)
+    return "".join(merged_parts)
 
 
 def format_parameter(param: ParameterSpec) -> str:
