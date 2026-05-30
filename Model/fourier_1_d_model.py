@@ -3,7 +3,6 @@ from __future__ import annotations
 # GENERATED CODE AREA: module.imports ˅
 import numpy as np
 from .fourier_model import FourierModel
-from .fourier_transform import FourierTransform
 from .snapshot import Snapshot
 
 # GENERATED CODE AREA: module.imports ˄
@@ -26,14 +25,17 @@ class Fourier1dModel(FourierModel):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
-    def __init__(self, engine: FourierTransform, sourceData: np.ndarray | None = None) -> None:
+    # FIXED CODE AREA: method.__init__ ˅
+    def __init__(self, sourceData: np.ndarray = np.array([])) -> None:
         """
         Fourier1dModelを初期化する。必要に応じてsourceDataを受け取り、内部状態（スペクトル/表示用データ）を初期化する。
         """
 
+        # FourierModelの初期化を行う。
+        super().__init__()
+
         # 入力となる1次元ソースデータ。フーリエ変換の計算元として保持する。
-        self.sourceData: np.ndarray = None
+        self.sourceData: np.ndarray = sourceData
 
         # 1次元フーリエ変換結果の実部。表示および編集処理の基礎データ。
         self.realPart: np.ndarray | None = None
@@ -59,7 +61,7 @@ class Fourier1dModel(FourierModel):
         # SAFE CODE AREA ˅
         pass
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.setSourceData ˅
@@ -69,7 +71,9 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.sourceData = sourceData
+        self._computeFourierData()
+        self.resetSpectrum()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.setSourceData ˄
 
@@ -81,7 +85,13 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.engine.setFftInputSignal(self.sourceData)
+        self.engine.transform()
+        self.realPart = self.engine.realPart()
+        self.imaginaryPart = self.engine.imaginaryPart()
+        self.powerSpectrum = np.square(self.realPart) + np.square(self.imaginaryPart)
+        self.interactiveRealPart, self.interactiveImaginaryPart = np.copy(self.realPart), np.copy(self.imaginaryPart)
+        self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._computeFourierData ˄
 
@@ -93,7 +103,8 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.engine.setIfftInputSpectrum(self.interactiveRealPart + 1j * self.interactiveImaginaryPart)
+        self.inverseData = self.engine.inverseTransform()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._computeInverseData ˄
 
@@ -105,7 +116,10 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.interactiveRealPart[index] = 0
+        self.interactiveImaginaryPart[index] = 0
+        self.interactivePowerSpectrum[index] = 0
+        self._computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˄
 
@@ -117,7 +131,10 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.interactiveRealPart[index] = self.realPart[index]
+        self.interactiveImaginaryPart[index] = self.imaginaryPart[index]
+        self.interactivePowerSpectrum[index] = self.powerSpectrum[index]
+        self._computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
 
@@ -129,7 +146,10 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.interactiveRealPart[index] = realPart
+        self.interactiveImaginaryPart[index] = imaginaryPart
+        self.interactivePowerSpectrum[index] = realPart**2 + imaginaryPart**2
+        self._computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
 
@@ -189,7 +209,16 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return Snapshot(
+            sourceData=np.copy(self.sourceData) if self.sourceData is not None else None,
+            realPart=np.copy(self.realPart) if self.realPart is not None else None,
+            imaginaryPart=np.copy(self.imaginaryPart) if self.imaginaryPart is not None else None,
+            powerSpectrum=np.copy(self.powerSpectrum) if self.powerSpectrum is not None else None,
+            interactiveRealPart=np.copy(self.interactiveRealPart) if self.interactiveRealPart is not None else None,
+            interactiveImaginaryPart=np.copy(self.interactiveImaginaryPart) if self.interactiveImaginaryPart is not None else None,
+            interactivePowerSpectrum=np.copy(self.interactivePowerSpectrum) if self.interactivePowerSpectrum is not None else None,
+            inverseData=np.copy(self.inverseData) if self.inverseData is not None else None
+        )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.createSnapshot ˄
 
@@ -201,7 +230,14 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.sourceData = snapshot.sourceData
+        self.realPart = snapshot.realPart
+        self.imaginaryPart = snapshot.imaginaryPart
+        self.powerSpectrum = snapshot.powerSpectrum
+        self.interactiveRealPart = snapshot.interactiveRealPart
+        self.interactiveImaginaryPart = snapshot.interactiveImaginaryPart
+        self.interactivePowerSpectrum = snapshot.interactivePowerSpectrum
+        self.inverseData = snapshot.inverseData
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSnapshot ˄
 
@@ -213,7 +249,10 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.interactiveRealPart = np.copy(self.realPart)
+        self.interactiveImaginaryPart = np.copy(self.imaginaryPart)
+        self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
+        self._computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.resetSpectrum ˄
 
@@ -225,7 +264,9 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return (
+            self.interactiveRealPart[index],
+            self.interactiveImaginaryPart[index]
+        )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._getInteractiveSpectrumAtIndex ˄
-

@@ -3,7 +3,6 @@ from __future__ import annotations
 # GENERATED CODE AREA: module.imports ˅
 import numpy as np
 from .fourier_model import FourierModel
-from .fourier_transform import FourierTransform
 from .snapshot import Snapshot
 
 # GENERATED CODE AREA: module.imports ˄
@@ -26,14 +25,17 @@ class Fourier2dModel(FourierModel):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
-    def __init__(self, engine: FourierTransform, sourceData: np.ndarray | None = None) -> None:
+    # FIXED CODE AREA: method.__init__ ˅
+    def __init__(self, sourceData: np.ndarray | None = None) -> None:
         """
         Fourier2dModelを初期化する。必要に応じてsourceDataを受け取り、内部状態として各スペクトル、編集用スペクトル、逆変換結果を初期化する。
         """
 
+        # FourierModelの初期化を行う。
+        super().__init__()
+
         # 入力となる2次元ソースデータ（元画像/元行列）。フーリエ変換の計算元として保持する。
-        self.sourceData: np.ndarray = None
+        self.sourceData: np.ndarray | None = sourceData
 
         # 2次元フーリエ変換結果の実部。engine計算結果を保持し、描画用データ生成に利用する。
         self.realPart: np.ndarray | None = None
@@ -59,7 +61,7 @@ class Fourier2dModel(FourierModel):
         # SAFE CODE AREA ˅
         pass
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.setSourceData ˅
@@ -69,19 +71,20 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.sourceData = sourceData
+        self._computeFourierData()
+        self.resetSpectrum()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.setSourceData ˄
 
 
     # GENERATED CODE AREA: method._fill ˅
-    def _fill(self, array: np.ndarray, value: float) -> None:
+    def _fill(self, value: float) -> None:
         """
         指定したndarray全体を同一値で埋めるユーティリティ。初期化やマスク生成に利用する。
         """
 
         # SAFE CODE AREA ˅
-        pass
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._fill ˄
 
@@ -93,7 +96,13 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.engine.setFftInputSignal(self.sourceData)
+        self.engine.transform()
+        self.realPart = self.engine.realPart()
+        self.imaginaryPart = self.engine.imaginaryPart()
+        self.powerSpectrum = np.square(self.realPart) + np.square(self.imaginaryPart)
+        self.interactiveRealPart, self.interactiveImaginaryPart = np.copy(self.realPart), np.copy(self.imaginaryPart)
+        self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._computeFourierData ˄
 
@@ -105,7 +114,8 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.engine.setIfftInputSpectrum(self.interactiveRealPart + 1j * self.interactiveImaginaryPart)
+        self.inverseData = self.engine.inverseTransform()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._computeInverseData ˄
 
@@ -117,7 +127,34 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        try:
+            height, width = self.interactiveRealPart.shape[:2]
+            _ = self.interactiveImaginaryPart.shape
+            _ = self.interactivePowerSpectrum.shape
+        except Exception:
+            return
+
+        row = int(np.clip(row, 0, max(height - 1, 0)))
+        col = int(np.clip(col, 0, max(width - 1, 0)))
+        radius = max(0, int(radius))
+
+        r0 = max(0, row - radius)
+        r1 = min(height, row + radius + 1)
+        c0 = max(0, col - radius)
+        c1 = min(width, col + radius + 1)
+
+        rr, cc = np.ogrid[r0:r1, c0:c1]
+        mask = (rr - row) ** 2 + (cc - col) ** 2 <= radius ** 2
+
+        real_view = self.interactiveRealPart[r0:r1, c0:c1]
+        imag_view = self.interactiveImaginaryPart[r0:r1, c0:c1]
+        real_view[mask] = 0
+        imag_view[mask] = 0
+
+        power_view = self.interactivePowerSpectrum[r0:r1, c0:c1]
+        power_view[mask] = 0
+
+        self._computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtPosition ˄
 
@@ -129,7 +166,41 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        try:
+            height, width = self.interactiveRealPart.shape[:2]
+            _ = self.interactiveImaginaryPart.shape
+            _ = self.interactivePowerSpectrum.shape
+        except Exception:
+            return
+
+        row = int(np.clip(row, 0, max(height - 1, 0)))
+        col = int(np.clip(col, 0, max(width - 1, 0)))
+        radius = max(0, int(radius))
+
+        r0 = max(0, row - radius)
+        r1 = min(height, row + radius + 1)
+        c0 = max(0, col - radius)
+        c1 = min(width, col + radius + 1)
+
+        rr, cc = np.ogrid[r0:r1, c0:c1]
+        mask = (rr - row) ** 2 + (cc - col) ** 2 <= radius ** 2
+
+        real_view = self.interactiveRealPart[r0:r1, c0:c1]
+        imag_view = self.interactiveImaginaryPart[r0:r1, c0:c1]
+
+        color = np.asarray(rgbColor, dtype=real_view.dtype).reshape(-1)
+        try:
+            _ = color[0]
+        except IndexError as exc:
+            raise ValueError("rgbColor が空です。少なくとも1つ以上の数値を指定してください。空配列は塗りつぶし値に変換できません。") from exc
+        paint_scalar = float(np.mean(color[:3]))
+        real_view[mask] = paint_scalar
+        imag_view[mask] = 0
+
+        power_view = self.interactivePowerSpectrum[r0:r1, c0:c1]
+        power_view[mask] = np.square(real_view[mask]) + np.square(imag_view[mask])
+
+        self._computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.paintRgbSpectrumAtPosition ˄
 
@@ -141,7 +212,42 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        try:
+            height, width = self.interactiveRealPart.shape[:2]
+            _ = self.interactiveImaginaryPart.shape
+            _ = self.interactivePowerSpectrum.shape
+        except Exception:
+            return
+
+        row = int(np.clip(row, 0, max(height - 1, 0)))
+        col = int(np.clip(col, 0, max(width - 1, 0)))
+        radius = max(0, int(radius))
+
+        r0 = max(0, row - radius)
+        r1 = min(height, row + radius + 1)
+        c0 = max(0, col - radius)
+        c1 = min(width, col + radius + 1)
+
+        rr, cc = np.ogrid[r0:r1, c0:c1]
+        mask = (rr - row) ** 2 + (cc - col) ** 2 <= radius ** 2
+
+        real_view = self.interactiveRealPart[r0:r1, c0:c1]
+        imag_view = self.interactiveImaginaryPart[r0:r1, c0:c1]
+
+        old_real = np.asarray(realPart)
+        old_imag = np.asarray(imaginaryPart)
+
+        try:
+            real_view[...] = old_real
+            imag_view[...] = old_imag
+        except ValueError:
+            real_view[mask] = old_real
+            imag_view[mask] = old_imag
+
+        power_view = self.interactivePowerSpectrum[r0:r1, c0:c1]
+        power_view[...] = np.square(real_view) + np.square(imag_view)
+
+        self._computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreInteractiveSpectrumAtPosition ˄
 
@@ -177,7 +283,16 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return Snapshot(
+            sourceData=np.copy(self.sourceData) if self.sourceData is not None else None,
+            realPart=np.copy(self.realPart) if self.realPart is not None else None,
+            imaginaryPart=np.copy(self.imaginaryPart) if self.imaginaryPart is not None else None,
+            powerSpectrum=np.copy(self.powerSpectrum) if self.powerSpectrum is not None else None,
+            interactiveRealPart=np.copy(self.interactiveRealPart) if self.interactiveRealPart is not None else None,
+            interactiveImaginaryPart=np.copy(self.interactiveImaginaryPart) if self.interactiveImaginaryPart is not None else None,
+            interactivePowerSpectrum=np.copy(self.interactivePowerSpectrum) if self.interactivePowerSpectrum is not None else None,
+            inverseData=np.copy(self.inverseData) if self.inverseData is not None else None
+        )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.createSnapshot ˄
 
@@ -189,7 +304,14 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.sourceData = snapshot.sourceData
+        self.realPart = snapshot.realPart
+        self.imaginaryPart = snapshot.imaginaryPart
+        self.powerSpectrum = snapshot.powerSpectrum
+        self.interactiveRealPart = snapshot.interactiveRealPart
+        self.interactiveImaginaryPart = snapshot.interactiveImaginaryPart
+        self.interactivePowerSpectrum = snapshot.interactivePowerSpectrum
+        self.inverseData = snapshot.inverseData
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSnapshot ˄
 
@@ -201,7 +323,11 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.interactiveRealPart = np.copy(self.realPart)
+        self.interactiveImaginaryPart = np.copy(self.imaginaryPart)
+        self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
+        
+        self._computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.resetSpectrum ˄
 
@@ -213,7 +339,26 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        try:
+            height, width = self.interactiveRealPart.shape[:2]
+            _ = self.interactiveImaginaryPart.shape
+        except Exception:
+            return (np.array([]), np.array([]))
+
+        row = int(np.clip(row, 0, max(height - 1, 0)))
+        col = int(np.clip(col, 0, max(width - 1, 0)))
+        radius = max(0, int(radius))
+
+        r0 = max(0, row - radius)
+        r1 = min(height, row + radius + 1)
+        c0 = max(0, col - radius)
+        c1 = min(width, col + radius + 1)
+
+        rr, cc = np.ogrid[r0:r1, c0:c1]
+        mask = (rr - row) ** 2 + (cc - col) ** 2 <= radius ** 2
+
+        real_part = np.copy(self.interactiveRealPart[r0:r1, c0:c1][mask])
+        imaginary_part = np.copy(self.interactiveImaginaryPart[r0:r1, c0:c1][mask])
+        return (real_part, imaginary_part)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._getInteractiveSpectrumAtPosition ˄
-
