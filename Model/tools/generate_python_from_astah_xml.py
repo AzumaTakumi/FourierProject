@@ -849,6 +849,29 @@ def summarize_non_generated_changes(old_text: str, new_text: str) -> dict[str, s
     }
 
 
+def is_single_blank_line_addition(old_text: str, new_text: str) -> bool:
+    if old_text == new_text:
+        return False
+
+    old_lines = old_text.splitlines(keepends=True)
+    new_lines = new_text.splitlines(keepends=True)
+    matcher = difflib.SequenceMatcher(a=old_lines, b=new_lines)
+
+    blank_added = 0
+    for tag, _, _, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+        if tag != "insert":
+            return False
+        for line in new_lines[j1:j2]:
+            if line.strip():
+                return False
+            blank_added += 1
+            if blank_added > 1:
+                return False
+    return blank_added == 1
+
+
 def format_parameter(param: ParameterSpec) -> str:
     if param.default is None:
         return f"{param.name}: {param.type_name}"
@@ -1140,6 +1163,8 @@ def main() -> int:
         if blocked_fixed_labels:
             labels = ", ".join(blocked_fixed_labels)
             notes.append(f"[NOTE] {path}: FIXED CODE AREA prevented updates: {labels}")
+        if is_single_blank_line_addition(old_text, new_text):
+            continue
         if old_text == new_text:
             continue
         changed_count += 1
