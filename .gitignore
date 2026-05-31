@@ -6,3 +6,15 @@ Model/tools/FourierSignalModelUndoRedo.xml
 __pycache__/
 *.pyc
 Model/tools/FourierSignalModelUndoRedo.xml.bak
+
+# Local test programs (Model配下運用)
+Model/test_programes/
+test_programs/
+
+# Render output (Model配下運用)
+Model/output/
+output/
+
+# Commit message rules
+tools/
+COMMIT_MESSAGE_RULES.md
