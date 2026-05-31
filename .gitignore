@@ -5,3 +5,4 @@ Model/tools/FourierSignalModelUndoRedo.xml
 # Python bytecode/cache
 __pycache__/
 *.pyc
+Model/tools/FourierSignalModelUndoRedo.xml.bak
