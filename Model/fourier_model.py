@@ -36,7 +36,7 @@ class FourierModel(object):
         self.engine: FourierTransform = FourierTransform()
 
         # SAFE CODE AREA ˅
-        self.renderer: FourierRenderer = FourierRenderer()
+        self.renderer = FourierRenderer
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -97,4 +97,3 @@ class FourierModel(object):
         return image_map
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getImage ˄
-
