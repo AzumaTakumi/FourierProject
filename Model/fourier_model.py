@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-# GENERATED CODE AREA: module.imports ˅
+# FIXED CODE AREA: module.imports ˅
 import numpy as np
 from .fourier_transform import FourierTransform
 from .fourier_renderer import FourierRenderer
 from .pane_type import PaneType
 
-# GENERATED CODE AREA: module.imports ˄
+# FIXED CODE AREA: module.imports ˄
 
 # SAFE CODE AREA ˅
 # SAFE CODE AREA ˄
@@ -97,3 +97,4 @@ class FourierModel(object):
         return image_map
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getImage ˄
+
