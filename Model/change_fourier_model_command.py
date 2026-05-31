@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-# GENERATED CODE AREA: module.imports ˅
+# FIXED CODE AREA: module.imports ˅
+from typing import TYPE_CHECKING
 from .fourier_model import FourierModel
-from .fourier_model_context import FourierModelContext
 from .spectrum_edit_command import SpectrumEditCommand
 
-# GENERATED CODE AREA: module.imports ˄
+if TYPE_CHECKING:
+    from .fourier_model_context import FourierModelContext
+
+# FIXED CODE AREA: module.imports ˄
 
 # SAFE CODE AREA ˅
 # SAFE CODE AREA ˄
