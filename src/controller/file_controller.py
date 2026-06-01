@@ -87,3 +87,4 @@ class FileLoader(FileController):
 		# modelオブジェクトが持つ「データセット用関数」に、NumPy配列を入れる。
 		# self.model.Fourier1dModel.setSourceData(aData)  modelの関数が決まったらここのコメントアウトを取る
 		print("-> 2次元データをModelへデータを送信しました。")
+		
