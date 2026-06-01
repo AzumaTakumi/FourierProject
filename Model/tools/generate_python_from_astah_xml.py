@@ -121,6 +121,7 @@ class AttributeSpec:
     default: str | None
     definition: str | None
     is_enum_literal: bool
+    is_class_scope: bool
 
 
 @dataclass(frozen=True)
@@ -505,6 +506,7 @@ def parse_xmi(xml_path: Path) -> XmiModel:
                 attr_type = normalize_type(uml_type, classifier_py_names, default_value)
                 attr_definition = read_definition(attr)
                 is_enum_literal = has_tagged_value(attr, "jude.enumeration_literal", "true")
+                is_class_scope = attr.attrib.get("ownerScope") == "classifier"
 
                 attributes.append(
                     AttributeSpec(
@@ -513,6 +515,7 @@ def parse_xmi(xml_path: Path) -> XmiModel:
                         default=default_value,
                         definition=attr_definition,
                         is_enum_literal=is_enum_literal,
+                        is_class_scope=is_class_scope,
                     )
                 )
 
@@ -1023,17 +1026,19 @@ def render_class_file(cls: ClassSpec, class_index: dict[str, tuple[str, str]]) -
 
     methods = list(cls.methods)
     attributes = [a for a in cls.attributes if not a.is_enum_literal]
+    instance_attributes = [a for a in attributes if not a.is_class_scope]
 
     if cls.is_dataclass:
         attribute_block: list[str] = []
-        for attr in attributes:
+        for attr in instance_attributes:
             if attr.definition:
                 attribute_block.extend(render_comment_block(attr.definition, indent="    "))
             default = choose_attr_init_expr(attr, set())
             attribute_block.append(f"    {attr.name}: {attr.type_name} = {default}\n")
             append_blank_line(attribute_block)
-        out.extend(render_generated_code_area("    ", "class.attributes", attribute_block))
-        append_blank_line(out)
+        if attribute_block:
+            out.extend(render_generated_code_area("    ", "class.attributes", attribute_block))
+            append_blank_line(out)
         remaining_methods = [m for m in methods if m.name != "__init__"]
         if remaining_methods:
             for method_index, method in enumerate(remaining_methods):
@@ -1058,7 +1063,30 @@ def render_class_file(cls: ClassSpec, class_index: dict[str, tuple[str, str]]) -
         return "".join(out)
 
     if methods:
-        for method_index, method in enumerate(methods):
+        ctor = next((m for m in methods if m.name == "__init__"), None)
+        remaining_methods = [m for m in methods if m.name != "__init__"]
+
+        if ctor is None and instance_attributes:
+            init_block: list[str] = ["    def __init__(self) -> None:\n"]
+            for attr_index, attr in enumerate(instance_attributes):
+                if attr.definition:
+                    init_block.extend(render_comment_block(attr.definition, indent="        "))
+                init_expr = choose_attr_init_expr(attr, set())
+                init_block.append(f"        self.{attr.name}: {attr.type_name} = {init_expr}\n")
+                if attr_index < len(instance_attributes) - 1:
+                    append_blank_line(init_block)
+            append_blank_line(init_block)
+            init_block.extend(render_safe_area("        ", ["pass"]))
+            append_blank_line(init_block)
+            out.extend(render_generated_code_area("    ", "method.__init__", init_block))
+            append_blank_line(out)
+
+        rendered_methods = [ctor] if ctor is not None else []
+        rendered_methods.extend(remaining_methods)
+
+        for method_index, method in enumerate(rendered_methods):
+            if method is None:
+                continue
             method_block: list[str] = []
             params = ", ".join(["self", *(format_parameter(p) for p in method.parameters)])
             method_block.append(f"    def {method.name}({params}) -> {method.return_type}:\n")
@@ -1068,34 +1096,34 @@ def render_class_file(cls: ClassSpec, class_index: dict[str, tuple[str, str]]) -
 
             if method.name == "__init__":
                 ctor_param_names = {p.name for p in method.parameters}
-                for attr_index, attr in enumerate(attributes):
+                for attr_index, attr in enumerate(instance_attributes):
                     if attr.definition:
                         method_block.extend(render_comment_block(attr.definition, indent="        "))
                     init_expr = choose_attr_init_expr(attr, ctor_param_names)
                     method_block.append(f"        self.{attr.name}: {attr.type_name} = {init_expr}\n")
-                    if attr_index < len(attributes) - 1:
+                    if attr_index < len(instance_attributes) - 1:
                         append_blank_line(method_block)
-                if attributes:
+                if instance_attributes:
                     append_blank_line(method_block)
                 method_block.extend(render_safe_area("        ", ["pass"]))
             else:
                 method_block.extend(render_safe_area("        ", ["pass"]))
             out.extend(render_generated_code_area("    ", f"method.{method.name}", method_block))
-            if method_index < len(methods) - 1:
+            if method_index < len(rendered_methods) - 1:
                 out.append("\n")
                 out.append("\n")
             else:
                 out.append("\n")
-    elif attributes:
+    elif instance_attributes:
         init_block: list[str] = ["    def __init__(self) -> None:\n"]
-        for attr_index, attr in enumerate(attributes):
+        for attr_index, attr in enumerate(instance_attributes):
             if attr.definition:
                 init_block.extend(render_comment_block(attr.definition, indent="        "))
             init_expr = choose_attr_init_expr(attr, set())
             init_block.append(f"        self.{attr.name}: {attr.type_name} = {init_expr}\n")
-            if attr_index < len(attributes) - 1:
+            if attr_index < len(instance_attributes) - 1:
                 append_blank_line(init_block)
-        if attributes:
+        if instance_attributes:
             append_blank_line(init_block)
         init_block.extend(render_safe_area("        ", ["pass"]))
         append_blank_line(init_block)
