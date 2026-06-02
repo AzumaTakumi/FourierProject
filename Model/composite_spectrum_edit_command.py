@@ -25,6 +25,7 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         self.commands: list = []
 
         # SAFE CODE AREA ˅
+        # 固定領域でcommandsリストを初期化済みのため、追加初期化は不要。
         pass
         # SAFE CODE AREA ˄
 
@@ -37,6 +38,7 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # ドラッグ中に発生した個別編集Commandを順序付きで保持する。
         self.commands.append(command)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.add ˄
@@ -49,6 +51,7 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # Redo時は、ドラッグ中に行われた編集と同じ順番で再実行する。
         for command in self.commands:
             command.execute()
         # SAFE CODE AREA ˄
@@ -62,6 +65,7 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # Undo時は最後に行った編集から逆順に戻し、ドラッグ前の状態へ戻す。
         for command in reversed(self.commands):
             command.undo()
         # SAFE CODE AREA ˄
@@ -75,7 +79,7 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # デバッグや履歴表示用に、まとめられたCommand数を返す。
         return f"Composite Command: {len(self.commands)} sub-commands"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
-

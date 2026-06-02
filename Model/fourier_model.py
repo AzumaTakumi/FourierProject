@@ -36,6 +36,7 @@ class FourierModel(object):
         self.engine: FourierTransform = FourierTransform()
 
         # SAFE CODE AREA ˅
+        # Rendererは状態を持たない補助クラスとして使うため、インスタンスではなくクラス参照を保持する。
         self.renderer = FourierRenderer
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
@@ -48,12 +49,15 @@ class FourierModel(object):
         """
 
         # SAFE CODE AREA ˅
+        # 子クラスが持つFFT結果を共通処理で扱えるよう、属性名で安全に取得する。
         real_part = getattr(self, "realPart", None)
         imaginary_part = getattr(self, "imaginaryPart", None)
         power_spectrum = getattr(self, "powerSpectrum", None)
+        # 編集用スペクトルを元スペクトルのコピーへ戻し、以降の編集が元スペクトルを変更しないようにする。
         self.interactiveRealPart = np.copy(real_part) if real_part is not None else None
         self.interactiveImaginaryPart = np.copy(imaginary_part) if imaginary_part is not None else None
         self.interactivePowerSpectrum = np.copy(power_spectrum) if power_spectrum is not None else None
+        # 子クラスに逆変換処理がある場合だけ、リセット後の復元データを再計算する。
         try:
             self._computeInverseData()
         except AttributeError:
@@ -69,6 +73,7 @@ class FourierModel(object):
         """
 
         # SAFE CODE AREA ˅
+        # Viewが4つの表示領域を同じ形式で取得できるよう、PaneTypeをキーにして現在データを返す。
         return {
             PaneType.SOURCE_DATA: getattr(self, "sourceData", None),
             PaneType.POWER_SPECTRUM: getattr(self, "powerSpectrum", None),
@@ -86,16 +91,21 @@ class FourierModel(object):
         """
 
         # SAFE CODE AREA ˅
+        # getDataで取得した数値配列を、PaneTypeごとに適切な描画方法へ振り分ける。
         data_map = self.getData()
         image_map: dict = {}
         for pane_type, data in data_map.items():
             if data is None:
+                # 未初期化ペインはView側で空表示にできるようNoneのまま返す。
                 image_map[pane_type] = None
             elif getattr(data, "ndim", 0) == 1:
+                # 1次元データは画像ではなく波形として折れ線描画する。
                 image_map[pane_type] = self.renderer.imageFrom1dData(data)
             elif pane_type in (PaneType.SOURCE_DATA, PaneType.INVERSE_DATA):
+                # 元画像と逆変換画像は、画素値としてそのまま見える画像へ変換する。
                 image_map[pane_type] = self.renderer.imageFromImageData(data)
             else:
+                # スペクトル系ペインはlogスケール・fftshift込みのスペクトル画像として描画する。
                 image_map[pane_type] = self.renderer.imageFromSpectrum(data)
         return image_map
         # SAFE CODE AREA ˄

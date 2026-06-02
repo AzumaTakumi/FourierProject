@@ -18,6 +18,7 @@ class Spectrum2dChange(SpectrumChange):
     """
 
     # SAFE CODE AREA ˅
+    # dataclassのフィールドだけで通知情報を表せるため、追加処理は定義しない。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -42,8 +43,8 @@ class Spectrum2dChange(SpectrumChange):
 
     # GENERATED CODE AREA: class.body ˅
     # SAFE CODE AREA ˅
+    # 2D変更通知は範囲情報と変更後スペクトルを運ぶだけの値オブジェクトとして扱う。
     pass
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.body ˄
-

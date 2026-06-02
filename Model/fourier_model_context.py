@@ -11,6 +11,7 @@ from .spectrum_edit_command import SpectrumEditCommand
 # GENERATED CODE AREA: module.imports ˄
 
 # SAFE CODE AREA ˅
+# ContextはControllerの代わりに各Commandを生成するため、具体ModelとCommandをここで読み込む。
 from .fourier_1_d_model import Fourier1dModel
 from .fourier_2_d_model import Fourier2dModel
 from .set_1_d_source_data_command import Set1dSourceDataCommand
@@ -33,6 +34,7 @@ class FourierModelContext(object):
     """
 
     # SAFE CODE AREA ˅
+    # 追加のクラス共通処理は不要。状態管理は__init__と各操作メソッドで行う。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -59,6 +61,7 @@ class FourierModelContext(object):
         self.currentCompositeCommand: CompositeSpectrumEditCommand | None = None
 
         # SAFE CODE AREA ˅
+        # 固定領域で初期化したフィールドをそのまま使用するため、SAFE内の追加初期化は行わない。
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -70,6 +73,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 互換用の内部アクセサ。現在の操作対象Modelをそのまま返す。
         return self.currentModel
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method._model ˄
@@ -82,6 +86,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # Controller/Viewから参照される公開アクセサとして現在のModelを返す。
         return self.currentModel
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.model ˄
@@ -94,7 +99,9 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 入力データを1Dモデル用のfloat配列へそろえる。
         data = np.asarray(sourceData, dtype=float)
+        # すでに1Dモデルならデータ差し替えCommand、2DモデルならModel切り替えCommandを使う。
         command = (
             Set1dSourceDataCommand(self.currentModel, data)
             if isinstance(self.currentModel, Fourier1dModel)
@@ -112,7 +119,9 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 入力データを2Dモデル用のfloat配列へそろえる。
         data = np.asarray(sourceData, dtype=float)
+        # すでに2Dモデルならデータ差し替えCommand、1DモデルならModel切り替えCommandを使う。
         command = (
             Set2dSourceDataCommand(self.currentModel, data)
             if isinstance(self.currentModel, Fourier2dModel)
@@ -130,6 +139,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # Model差し替えもUndo可能な編集操作として扱う。
         self._executeEdit(ChangeFourierModelCommand(self, model))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.setModel ˄
@@ -142,6 +152,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 呼び出し側が変更情報を渡さない場合は、現在Modelの全体変更情報を作る。
         self._notifySpectrumChanged(change or self._createSpectrumChange())
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.notifySpectrumChanged ˄
@@ -154,6 +165,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # View側から登録された関数がある場合だけ通知する。
         if callable(self.spectrumChangedListener):
             self.spectrumChangedListener(change)
         # SAFE CODE AREA ˄
@@ -167,6 +179,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 外部から渡されたCommandも、Context管理のUndo/Redo処理へ統一して流す。
         self._executeEdit(command)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.executeEdit ˄
@@ -179,12 +192,16 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # まずCommandを実行してModel本体の状態を変更する。
         command.execute()
         if self.currentCompositeCommand is None:
+            # 通常操作はUndoスタックへ積み、新規編集なのでRedo履歴は破棄する。
             self.undoStack.append(command)
             self.redoStack.clear()
         else:
+            # ドラッグ中は個別CommandをUndoスタックへ積まず、Compositeの中へまとめる。
             self.currentCompositeCommand.add(command)
+        # Model状態が変わったので、Viewへ最新スペクトルを通知する。
         self._notifySpectrumChanged(self._createSpectrumChange())
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._executeEdit ˄
@@ -197,11 +214,14 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # Undo対象が無ければ何もせず、呼び出し側へ失敗を返す。
         if not self.undoStack:
             return False
+        # 最後に実行したCommandを取り消し、RedoできるようRedoスタックへ移す。
         command = self.undoStack.pop()
         command.undo()
         self.redoStack.append(command)
+        # Undo後のModel状態をViewへ通知する。
         self._notifySpectrumChanged(self._createSpectrumChange())
         return True
         # SAFE CODE AREA ˄
@@ -215,11 +235,14 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # Redo対象が無ければ何もせず、呼び出し側へ失敗を返す。
         if not self.redoStack:
             return False
+        # 直前にUndoしたCommandを再実行し、Undoスタックへ戻す。
         command = self.redoStack.pop()
         command.execute()
         self.undoStack.append(command)
+        # Redo後のModel状態をViewへ通知する。
         self._notifySpectrumChanged(self._createSpectrumChange())
         return True
         # SAFE CODE AREA ˄
@@ -233,6 +256,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 公開メソッドから内部の履歴消去処理へ委譲する。
         self._clearStack()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.clearStack ˄
@@ -245,6 +269,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 新しいファイル読み込みや初期化時に、Undo/Redo履歴を完全に消す。
         self.undoStack.clear()
         self.redoStack.clear()
         # SAFE CODE AREA ˄
@@ -258,7 +283,9 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 1D専用操作なので、現在Modelの型を先に検査する。
         self._require1dModel()
+        # 実際の編集とUndo用保存はCommandへ任せる。
         self._executeEdit(EraseSpectrumAtIndexCommand(self.currentModel, index))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˄
@@ -271,7 +298,9 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 1D専用操作なので、現在Modelの型を先に検査する。
         self._require1dModel()
+        # 指定成分を元スペクトルへ戻すCommandを実行する。
         self._executeEdit(RestoreSpectrumAtIndexCommand(self.currentModel, index))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
@@ -284,7 +313,9 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 1D専用操作なので、現在Modelの型を先に検査する。
         self._require1dModel()
+        # 指定成分の実部・虚部を直接書き換えるCommandを実行する。
         self._executeEdit(EditSpectrumValueAtIndexCommand(self.currentModel, index, realPart, imaginaryPart))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
@@ -297,7 +328,9 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 2D専用操作なので、現在Modelの型を先に検査する。
         self._require2dModel()
+        # 指定位置周辺のスペクトルを消去するCommandを実行する。
         self._executeEdit(EraseSpectrumAtPositionCommand(self.currentModel, row, col, radius))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtPosition ˄
@@ -310,7 +343,9 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 2D専用操作なので、現在Modelの型を先に検査する。
         self._require2dModel()
+        # 指定位置周辺のスペクトルをRGB値で編集するCommandを実行する。
         self._executeEdit(PaintRgbSpectrumAtPositionCommand(self.currentModel, row, col, radius, rgbColor))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.paintRgbSpectrumAtPosition ˄
@@ -323,6 +358,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 以降の連続編集を1回のUndo対象にまとめるため、CompositeCommandを作る。
         self.currentCompositeCommand = CompositeSpectrumEditCommand()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.beginSpectrumEdit ˄
@@ -335,6 +371,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 追加されたCommandも通常実行と同じ経路で実行し、Compositeへ格納させる。
         self._executeEdit(command)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.appendSpectrumEdit ˄
@@ -347,6 +384,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # 古い内部名から公開メソッドへ委譲する。
         self.appendSpectrumEdit(command)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._appendSpectrumEdit ˄
@@ -359,11 +397,14 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # beginされていない場合は、終了対象がないため何もしない。
         if self.currentCompositeCommand is None:
             return
+        # ドラッグ中に実行されたCommandがある場合だけ、CompositeをUndoスタックへ積む。
         if self.currentCompositeCommand.commands:
             self.undoStack.append(self.currentCompositeCommand)
             self.redoStack.clear()
+        # ドラッグ編集のまとめ処理を終了する。
         self.currentCompositeCommand = None
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.endSpectrumEdit ˄
@@ -376,6 +417,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        # リセットもUndo可能な編集として扱う。
         self._executeEdit(ResetSpectrumCommand(self.currentModel))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.resetSpectrum ˄
@@ -384,6 +426,7 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method._noop ˅
     def _noop(self) -> None:
         # SAFE CODE AREA ˅
+        # 自動生成された空操作用メソッド。呼ばれても状態を変更しない。
         return None
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._noop ˄
@@ -391,20 +434,25 @@ class FourierModelContext(object):
 
     # SAFE CODE AREA ˅
     def _createSpectrumChange(self) -> SpectrumChange:
+        # Viewへ渡すスペクトルは、通知後の編集で変わらないようcopyしておく。
         spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
         spectrum_copy = np.copy(spectrum) if spectrum is not None else None
         if isinstance(self.currentModel, Fourier1dModel):
+            # 1Dでは全体更新を表すため、個別indexではなく-1を指定する。
             return Spectrum1dChange(index=-1, changedPowerSpectrum=spectrum_copy)
 
+        # 2Dでは現在スペクトルの縦横サイズを通知情報へ入れる。
         height = int(spectrum.shape[0]) if spectrum is not None and spectrum.ndim >= 2 else 0
         width = int(spectrum.shape[1]) if spectrum is not None and spectrum.ndim >= 2 else 0
         return Spectrum2dChange(x=0, y=0, width=width, height=height, changedPowerSpectrum=spectrum_copy)
 
     def _require1dModel(self) -> None:
+        # 誤って2Dモデルへ1D編集を実行しないよう、Context入口で型を保証する。
         if not isinstance(self.currentModel, Fourier1dModel):
             raise TypeError("Current model is not Fourier1dModel.")
 
     def _require2dModel(self) -> None:
+        # 誤って1Dモデルへ2D編集を実行しないよう、Context入口で型を保証する。
         if not isinstance(self.currentModel, Fourier2dModel):
             raise TypeError("Current model is not Fourier2dModel.")
     # SAFE CODE AREA ˄

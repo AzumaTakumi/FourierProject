@@ -34,7 +34,9 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         self.oldSnapshot: Snapshot = None
 
         # SAFE CODE AREA ˅
+        # 自動生成の初期値を実際の引数で上書きし、操作対象Modelを保持する。
         self.model = model
+        # リセット前の編集状態へUndoできるよう、現在のModel全体をSnapshot化する。
         self.oldSnapshot = model.createSnapshot()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.__init__ ˄
@@ -47,7 +49,9 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # Redo時にも「実行直前」の状態へUndoできるようSnapshotを取り直す。
         self.oldSnapshot = self.model.createSnapshot()
+        # 編集用スペクトルを元スペクトルへ戻す処理をModelへ依頼する。
         self.model.resetSpectrum()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
@@ -60,6 +64,7 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # 保存しておいたSnapshotを使い、リセット前の編集状態へ戻す。
         self.model.restoreSnapshot(self.oldSnapshot)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
@@ -72,6 +77,7 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # デバッグや履歴表示用の固定説明を返す。
         return "Reset Spectrum"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄

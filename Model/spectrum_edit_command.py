@@ -9,6 +9,7 @@ from __future__ import annotations
 class SpectrumEditCommand(object):
     # GENERATED CODE AREA: class.header ˅
     # SAFE CODE AREA ˅
+    # 具象Commandがexecute/undo/descriptionを実装するための共通インターフェースとして使う。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -20,6 +21,7 @@ class SpectrumEditCommand(object):
         """
 
         # SAFE CODE AREA ˅
+        # 基底クラスでは処理を持たない。具象Command側で編集内容を実装する。
         pass
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
@@ -32,6 +34,7 @@ class SpectrumEditCommand(object):
         """
 
         # SAFE CODE AREA ˅
+        # 基底クラスでは処理を持たない。具象Command側で取り消し処理を実装する。
         pass
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
@@ -44,7 +47,7 @@ class SpectrumEditCommand(object):
         """
 
         # SAFE CODE AREA ˅
+        # 基底クラスでは説明を持たない。具象Command側で履歴表示用文字列を返す。
         pass
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
-

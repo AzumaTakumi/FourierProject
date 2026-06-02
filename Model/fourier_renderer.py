@@ -28,24 +28,32 @@ class FourierRenderer(object):
 
     @classmethod
     def imageFromImageData(cls, data: np.ndarray) -> Image.Image:
+        # SOURCE/INVERSE用の画像データは、スペクトル表示ではなく実際の画素値として描画する。
         array = np.asarray(data)
+        # IFFT結果などで複素数が渡ってきた場合は、表示に使う実部だけを取り出す。
         if np.iscomplexobj(array):
             array = np.real(array)
+        # NaNやInfを画素化できる数値へ置き換える。
         array = np.nan_to_num(array.astype(float, copy=False))
 
+        # 空配列はPILで画像化できないため、1pxの黒画像として返す。
         if array.size == 0:
             return Image.new("L", (1, 1), 0)
 
+        # 0〜1正規化画像は8bit画像として表示できるよう0〜255へ拡大する。
         if np.max(array) <= 1.0 and np.min(array) >= 0.0:
             array = array * 255.0
+        # 表示画像として扱えるよう、画素値を8bit範囲へ丸める。
         array = np.clip(array, 0.0, 255.0).astype(np.uint8)
 
+        # 配列形状に応じて、グレースケールまたはRGBのPIL.Imageへ変換する。
         if array.ndim == 2:
             return Image.fromarray(array, "L")
         if array.ndim == 3 and array.shape[-1] == 3:
             return Image.fromarray(array, "RGB")
         if array.ndim == 3 and array.shape[-1] == 1:
             return Image.fromarray(np.squeeze(array, axis=-1), "L")
+        # 想定外の形状はスペクトル風に正規化して、最低限表示できる画像にする。
         return cls.imageFromSpectrum(array)
     # SAFE CODE AREA ˄
 
@@ -179,8 +187,10 @@ class FourierRenderer(object):
         complex_mask = float(np.iscomplexobj(base))
         base = np.abs(base) * complex_mask + base * (1.0 - complex_mask)
         array = np.nan_to_num(base.astype(float, copy=False))
+        # 2次元以上では低周波成分を中央に寄せ、スペクトル画像として見やすくする。
         if array.ndim >= 2:
             array = np.fft.fftshift(array, axes=(0, 1))
+        # 強い直流成分だけで表示が潰れないよう、対数スケールで圧縮する。
         array = np.log1p(np.abs(array))
         channel_size = int(np.shape(array)[-1])
         # 1Dは折れ線描画、2D/3Dは画像化の経路に振り分ける。

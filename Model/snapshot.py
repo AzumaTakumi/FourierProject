@@ -17,6 +17,7 @@ class Snapshot(object):
     """
 
     # SAFE CODE AREA ˅
+    # dataclassのフィールド定義だけで状態保存に必要な処理は足りるため、追加メソッドは定義しない。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -50,8 +51,8 @@ class Snapshot(object):
 
     # GENERATED CODE AREA: class.body ˅
     # SAFE CODE AREA ˅
+    # Snapshotは値を運ぶだけのデータクラスとして扱う。配列のcopyはModel側で行う。
     pass
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.body ˄
-

@@ -46,6 +46,7 @@ class EraseSpectrumAtPositionCommand(SpectrumEditCommand):
         self.oldImaginaryPart: np.ndarray = None
 
         # SAFE CODE AREA ˅
+        # UIからの入力を配列アクセスで使える整数へそろえ、負の半径を防ぐ。
         self.row = int(row)
         self.col = int(col)
         self.radius = max(0, int(radius))
@@ -60,13 +61,16 @@ class EraseSpectrumAtPositionCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # Undo用に、消去前の円形ブラシ範囲の実部・虚部を保存する。
         self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtPosition(
             self.row, self.col, self.radius
         )
+        # 編集対象がない場合は無効Commandとして扱い、Undoでも何もしないようNoneにする。
         if self.oldRealPart.size == 0 or self.oldImaginaryPart.size == 0:
             self.oldRealPart = None
             self.oldImaginaryPart = None
             return
+        # Model本体に消去処理を任せ、逆変換の再計算もそこで行う。
         self.model.eraseSpectrumAtPosition(self.row, self.col, self.radius)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
@@ -79,8 +83,10 @@ class EraseSpectrumAtPositionCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # executeで有効な保存値が作られていない場合は取り消し対象がない。
         if self.oldRealPart is None or self.oldImaginaryPart is None:
             return
+        # 保存していた円形ブラシ範囲の値をModelへ書き戻す。
         self.model.restoreInteractiveSpectrumAtPosition(
             self.row,
             self.col,
@@ -99,6 +105,7 @@ class EraseSpectrumAtPositionCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # デバッグや履歴表示用に、編集中心と半径を文字列化する。
         return f"Erase Spectrum at position ({self.row}, {self.col}) with radius {self.radius}"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄

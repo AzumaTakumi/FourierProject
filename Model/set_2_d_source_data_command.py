@@ -38,6 +38,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         self.newSourceData: np.ndarray = newSourceData
 
         # SAFE CODE AREA ˅
+        # 呼び出し元配列の後続変更に影響されないよう、新しい元データをcopyして保持する。
         self.newSourceData = np.copy(newSourceData)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
@@ -50,7 +51,9 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # Redo時にも「実行直前」の状態へUndoできるようSnapshotを取り直す。
         self.oldSnapshot = self.model.createSnapshot()
+        # Modelへ新しい2Dデータを設定し、FFT/逆変換の再計算を行わせる。
         self.model.setSourceData(self.newSourceData)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
@@ -63,6 +66,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # 保存しておいたSnapshotを使い、データ読み込み前のModel状態へ戻す。
         self.model.restoreSnapshot(self.oldSnapshot)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
@@ -75,6 +79,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # デバッグや履歴表示用の固定説明を返す。
         return "Set 2D Source Data"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄

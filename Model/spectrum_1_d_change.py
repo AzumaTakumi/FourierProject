@@ -18,6 +18,7 @@ class Spectrum1dChange(SpectrumChange):
     """
 
     # SAFE CODE AREA ˅
+    # dataclassのフィールドだけで通知情報を表せるため、追加処理は定義しない。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -33,8 +34,8 @@ class Spectrum1dChange(SpectrumChange):
 
     # GENERATED CODE AREA: class.body ˅
     # SAFE CODE AREA ˅
+    # 1D変更通知はindexと変更後スペクトルを運ぶだけの値オブジェクトとして扱う。
     pass
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.body ˄
-

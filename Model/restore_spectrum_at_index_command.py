@@ -39,8 +39,10 @@ class RestoreSpectrumAtIndexCommand(SpectrumEditCommand):
         self.oldImaginaryPart: float = 0.0
 
         # SAFE CODE AREA ˅
+        # 自動生成の初期値を実際の引数で上書きし、操作対象を確定する。
         self.model = model
         self.index = index
+        # Undo時に復元前のinteractive値へ戻せるよう、現在値を保存する。
         self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(index)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.__init__ ˄
@@ -53,7 +55,9 @@ class RestoreSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # 実行直前のinteractive値を保存し直し、Redo後のUndoでも正しい値へ戻せるようにする。
         self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(self.index)
+        # Modelに元スペクトル値への復元を依頼する。
         self.model.restoreSpectrumAtIndex(self.index)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
@@ -66,6 +70,7 @@ class RestoreSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # 復元操作の直前にあったinteractive値を直接書き戻す。
         self.model.editSpectrumValueAtIndex(self.index, self.oldRealPart, self.oldImaginaryPart)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
@@ -78,6 +83,7 @@ class RestoreSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # デバッグや履歴表示用に、復元対象のindexを返す。
         return f"Restore Spectrum at index {self.index}"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄

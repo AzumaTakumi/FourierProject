@@ -26,6 +26,7 @@ class PaneType(Enum):
     """
 
     # SAFE CODE AREA ˅
+    # 列挙値そのものは自動生成領域にあるため、SAFE内では補助メソッドを追加していない。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -44,8 +45,8 @@ class PaneType(Enum):
     INVERSE_DATA = auto()
 
     # SAFE CODE AREA ˅
+    # 追加のenum値は不要。既存4ペインだけをModel/View間の共通キーとして使う。
     pass
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: enum.members ˄
-

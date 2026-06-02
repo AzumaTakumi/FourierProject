@@ -13,14 +13,15 @@ class SpectrumChange(object):
     """
 
     # SAFE CODE AREA ˅
+    # 1D/2D変更通知クラスを同じ型として扱うための基底クラスで、共通状態は持たない。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
 
     # GENERATED CODE AREA: class.body ˅
     # SAFE CODE AREA ˅
+    # 具体的な通知データはSpectrum1dChange/Spectrum2dChange側のdataclassフィールドで保持する。
     pass
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.body ˄
-

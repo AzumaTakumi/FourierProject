@@ -45,6 +45,7 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
         self.newImaginaryPart: float = newImaginaryPart
 
         # SAFE CODE AREA ˅
+        # Undo先は元スペクトルではなく編集直前のinteractive値なので、Modelから現在値を取得する。
         self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(index)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
@@ -57,7 +58,9 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # Redo時も直前のinteractive値を取り直し、Undoで戻す値を最新化する。
         self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(self.index)
+        # 指定された新しい実部・虚部をModelの編集用スペクトルへ反映する。
         self.model.editSpectrumValueAtIndex(self.index, self.newRealPart, self.newImaginaryPart)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
@@ -70,6 +73,7 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # 保存していた編集前の実部・虚部を直接書き戻す。
         self.model.editSpectrumValueAtIndex(self.index, self.oldRealPart, self.oldImaginaryPart)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
@@ -82,6 +86,7 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # デバッグや履歴表示用に、編集前後の複素値を文字列化する。
         return f"Edit Spectrum at index {self.index}: ({self.oldRealPart} + {self.oldImaginaryPart}j) -> ({self.newRealPart} + {self.newImaginaryPart}j)"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄

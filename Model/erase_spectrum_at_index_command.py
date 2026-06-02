@@ -39,6 +39,7 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         self.oldImaginaryPart: float = self.model.imaginaryPart[index]
 
         # SAFE CODE AREA ˅
+        # Undoでは元スペクトルではなく「編集直前のinteractive値」へ戻す必要があるため現在値を保存する。
         self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(index)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
@@ -51,7 +52,9 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # Redo時も直前状態を取り直し、連続操作後のUndo先が古くならないようにする。
         self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(self.index)
+        # Model本体に削除処理を任せ、逆変換結果もそこで更新させる。
         self.model.eraseSpectrumAtIndex(self.index)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
@@ -64,6 +67,7 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # 保存していたinteractive値を直接書き戻し、削除前の編集状態へ戻す。
         self.model.editSpectrumValueAtIndex(self.index, self.oldRealPart, self.oldImaginaryPart)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
@@ -76,6 +80,7 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        # デバッグや履歴表示用に、対象indexと保存値を文字列化する。
         return f"Erase Spectrum at index {self.index}: ({self.oldRealPart} + {self.oldImaginaryPart}j)"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
