@@ -21,6 +21,14 @@ class Fourier2dModel(FourierModel):
     """
 
     # SAFE CODE AREA ˅
+    def computeFourierData(self) -> None:
+        self._computeFourierData()
+
+    def computeInverseData(self) -> None:
+        self._computeInverseData()
+
+    def getInteractiveSpectrumAtPosition(self, row: int, col: int, radius: int) -> tuple:
+        return self._getInteractiveSpectrumAtPosition(row, col, radius)
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -59,7 +67,8 @@ class Fourier2dModel(FourierModel):
         self.inverseData: np.ndarray | None = None
 
         # SAFE CODE AREA ˅
-        pass
+        if sourceData is not None:
+            self.setSourceData(sourceData)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -71,7 +80,15 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        self.sourceData = sourceData
+        data = np.asarray(sourceData, dtype=float)
+        if data.ndim not in (2, 3):
+            raise ValueError("Fourier2dModel sourceData must be a 2D grayscale or 3D RGB array.")
+        if data.ndim == 3 and data.shape[-1] != 3:
+            raise ValueError("Fourier2dModel only supports RGB arrays with 3 channels.")
+        if data.shape[0] == 0 or data.shape[1] == 0:
+            raise ValueError("Fourier2dModel sourceData height and width must not be empty.")
+
+        self.sourceData = data.copy()
         self._computeFourierData()
         self.resetSpectrum()
         # SAFE CODE AREA ˄
@@ -85,6 +102,18 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
+        for name in (
+            "realPart",
+            "imaginaryPart",
+            "powerSpectrum",
+            "interactiveRealPart",
+            "interactiveImaginaryPart",
+            "interactivePowerSpectrum",
+            "inverseData",
+        ):
+            array = getattr(self, name, None)
+            if array is not None:
+                array.fill(value)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._fill ˄
 
@@ -188,13 +217,20 @@ class Fourier2dModel(FourierModel):
         real_view = self.interactiveRealPart[r0:r1, c0:c1]
         imag_view = self.interactiveImaginaryPart[r0:r1, c0:c1]
 
-        color = np.asarray(rgbColor, dtype=real_view.dtype).reshape(-1)
+        color = np.asarray(rgbColor, dtype=float).reshape(-1)
         try:
             _ = color[0]
         except IndexError as exc:
             raise ValueError("rgbColor が空です。少なくとも1つ以上の数値を指定してください。空配列は塗りつぶし値に変換できません。") from exc
-        paint_scalar = float(np.mean(color[:3]))
-        real_view[mask] = paint_scalar
+
+        if real_view.ndim == 3:
+            channels = real_view.shape[-1]
+            if color.size < channels:
+                raise ValueError("RGBスペクトル編集には3つの色成分が必要です。")
+            real_view[mask] = color[:channels].astype(real_view.dtype, copy=False)
+        else:
+            paint_scalar = float(np.mean(color[:3]))
+            real_view[mask] = paint_scalar
         imag_view[mask] = 0
 
         power_view = self.interactivePowerSpectrum[r0:r1, c0:c1]
@@ -259,7 +295,11 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        y, x = np.mgrid[0:128, 0:128]
+        red = (x / 127.0) * 255.0
+        green = (y / 127.0) * 255.0
+        blue = ((np.sin(x / 8.0) + np.cos(y / 10.0) + 2.0) / 4.0) * 255.0
+        return np.stack((red, green, blue), axis=-1)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.dataColorImage ˄
 
@@ -271,7 +311,12 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        y, x = np.mgrid[0:128, 0:128]
+        return (
+            127.5
+            + 60.0 * np.sin(2.0 * np.pi * x / 24.0)
+            + 40.0 * np.cos(2.0 * np.pi * y / 32.0)
+        )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.dataGrayScaleImage ˄
 
@@ -304,14 +349,14 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        self.sourceData = snapshot.sourceData
-        self.realPart = snapshot.realPart
-        self.imaginaryPart = snapshot.imaginaryPart
-        self.powerSpectrum = snapshot.powerSpectrum
-        self.interactiveRealPart = snapshot.interactiveRealPart
-        self.interactiveImaginaryPart = snapshot.interactiveImaginaryPart
-        self.interactivePowerSpectrum = snapshot.interactivePowerSpectrum
-        self.inverseData = snapshot.inverseData
+        self.sourceData = np.copy(snapshot.sourceData) if snapshot.sourceData is not None else None
+        self.realPart = np.copy(snapshot.realPart) if snapshot.realPart is not None else None
+        self.imaginaryPart = np.copy(snapshot.imaginaryPart) if snapshot.imaginaryPart is not None else None
+        self.powerSpectrum = np.copy(snapshot.powerSpectrum) if snapshot.powerSpectrum is not None else None
+        self.interactiveRealPart = np.copy(snapshot.interactiveRealPart) if snapshot.interactiveRealPart is not None else None
+        self.interactiveImaginaryPart = np.copy(snapshot.interactiveImaginaryPart) if snapshot.interactiveImaginaryPart is not None else None
+        self.interactivePowerSpectrum = np.copy(snapshot.interactivePowerSpectrum) if snapshot.interactivePowerSpectrum is not None else None
+        self.inverseData = np.copy(snapshot.inverseData) if snapshot.inverseData is not None else None
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSnapshot ˄
 
@@ -323,6 +368,8 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
+        if self.realPart is None or self.imaginaryPart is None or self.powerSpectrum is None:
+            return
         self.interactiveRealPart = np.copy(self.realPart)
         self.interactiveImaginaryPart = np.copy(self.imaginaryPart)
         self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
