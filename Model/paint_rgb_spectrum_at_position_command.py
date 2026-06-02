@@ -49,7 +49,11 @@ class PaintRgbSpectrumAtPositionCommand(SpectrumEditCommand):
         self.oldImaginaryPart: np.ndarray = None
 
         # SAFE CODE AREA ˅
-        pass
+        self.model = model
+        self.row = int(row)
+        self.col = int(col)
+        self.radius = max(0, int(radius))
+        self.rgbColor = list(rgbColor)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.__init__ ˄
 
@@ -61,7 +65,14 @@ class PaintRgbSpectrumAtPositionCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtPosition(
+            self.row, self.col, self.radius
+        )
+        if self.oldRealPart.size == 0 or self.oldImaginaryPart.size == 0:
+            self.oldRealPart = None
+            self.oldImaginaryPart = None
+            return
+        self.model.paintRgbSpectrumAtPosition(self.row, self.col, self.radius, self.rgbColor)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
 
@@ -73,7 +84,15 @@ class PaintRgbSpectrumAtPositionCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        if self.oldRealPart is None or self.oldImaginaryPart is None:
+            return
+        self.model.restoreInteractiveSpectrumAtPosition(
+            self.row,
+            self.col,
+            self.radius,
+            self.oldRealPart,
+            self.oldImaginaryPart,
+        )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -85,7 +104,6 @@ class PaintRgbSpectrumAtPositionCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return f"Paint RGB Spectrum at position ({self.row}, {self.col}) with radius {self.radius}"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
-

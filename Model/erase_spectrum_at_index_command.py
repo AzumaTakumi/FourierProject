@@ -39,7 +39,7 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         self.oldImaginaryPart: float = self.model.imaginaryPart[index]
 
         # SAFE CODE AREA ˅
-        pass
+        self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(index)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -51,8 +51,8 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        self.model.realPart[self.index] = 0.0
-        self.model.imaginaryPart[self.index] = 0.0
+        self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(self.index)
+        self.model.eraseSpectrumAtIndex(self.index)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
 
@@ -64,8 +64,7 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        self.model.realPart[self.index] = self.oldRealPart
-        self.model.imaginaryPart[self.index] = self.oldImaginaryPart
+        self.model.editSpectrumValueAtIndex(self.index, self.oldRealPart, self.oldImaginaryPart)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -80,4 +79,3 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         return f"Erase Spectrum at index {self.index}: ({self.oldRealPart} + {self.oldImaginaryPart}j)"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
-

@@ -34,7 +34,8 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         self.oldSnapshot: Snapshot = None
 
         # SAFE CODE AREA ˅
-        pass
+        self.model = model
+        self.oldSnapshot = model.createSnapshot()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.__init__ ˄
 
@@ -46,7 +47,8 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.oldSnapshot = self.model.createSnapshot()
+        self.model.resetSpectrum()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
 
@@ -58,7 +60,7 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.model.restoreSnapshot(self.oldSnapshot)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -70,7 +72,6 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return "Reset Spectrum"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
-

@@ -38,7 +38,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         self.newSourceData: np.ndarray = newSourceData
 
         # SAFE CODE AREA ˅
-        pass
+        self.newSourceData = np.copy(newSourceData)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -50,6 +50,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
+        self.oldSnapshot = self.model.createSnapshot()
         self.model.setSourceData(self.newSourceData)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
@@ -62,7 +63,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        self.model.loadSnapshot(self.oldSnapshot)
+        self.model.restoreSnapshot(self.oldSnapshot)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -77,4 +78,3 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         return "Set 2D Source Data"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
-

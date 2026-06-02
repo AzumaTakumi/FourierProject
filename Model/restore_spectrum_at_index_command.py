@@ -39,7 +39,9 @@ class RestoreSpectrumAtIndexCommand(SpectrumEditCommand):
         self.oldImaginaryPart: float = 0.0
 
         # SAFE CODE AREA ˅
-        pass
+        self.model = model
+        self.index = index
+        self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(index)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.__init__ ˄
 
@@ -51,7 +53,8 @@ class RestoreSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(self.index)
+        self.model.restoreSpectrumAtIndex(self.index)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
 
@@ -63,7 +66,7 @@ class RestoreSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.model.editSpectrumValueAtIndex(self.index, self.oldRealPart, self.oldImaginaryPart)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -75,7 +78,6 @@ class RestoreSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return f"Restore Spectrum at index {self.index}"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
-
