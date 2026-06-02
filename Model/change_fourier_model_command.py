@@ -24,25 +24,25 @@ class ChangeFourierModelCommand(SpectrumEditCommand):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
+    # FIXED CODE AREA: method.__init__ ˅
     def __init__(self, context: FourierModelContext, newModel: FourierModel) -> None:
         """
         操作対象のFourierModelContextと差し替え後のFourierModelを受け取り、Commandを初期化する。
         """
 
         # 現在のModelを管理するFourierModelContextを保持する。
-        self.context: FourierModelContext = None
+        self.context: FourierModelContext = context
 
         # 差し替え前のFourierModelを保持する。
-        self.oldModel: FourierModel = None
+        self.oldModel: FourierModel = context.currentModel
 
         # 差し替え後のFourierModelを保持する。
-        self.newModel: FourierModel = None
+        self.newModel: FourierModel = newModel
 
         # SAFE CODE AREA ˅
         pass
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.execute ˅
@@ -52,7 +52,7 @@ class ChangeFourierModelCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.context.currentModel = self.newModel
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
 
@@ -64,7 +64,7 @@ class ChangeFourierModelCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.context.currentModel = self.oldModel
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -76,7 +76,7 @@ class ChangeFourierModelCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return f"Change FourierModel: {self.oldModel} -> {self.newModel}"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
 

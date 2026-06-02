@@ -20,28 +20,28 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
+    # FIXED CODE AREA: method.__init__ ˅
     def __init__(self, model: Fourier1dModel, index: int) -> None:
         """
         操作対象のFourier1dModelと編集対象インデックスを受け取り、Commandを初期化する。
         """
 
         # 操作対象となるFourier1dModelを保持する。
-        self.model: Fourier1dModel = None
+        self.model: Fourier1dModel = model
 
         # 無効化する周波数成分のインデックスを保持する。
-        self.index: int = 0
+        self.index: int = index
 
         # 編集前の実部の値を保持する。
-        self.oldRealPart: float = 0.0
+        self.oldRealPart: float = self.model.realPart[index]
 
         # 編集前の虚部の値を保持する。
-        self.oldImaginaryPart: float = 0.0
+        self.oldImaginaryPart: float = self.model.imaginaryPart[index]
 
         # SAFE CODE AREA ˅
         pass
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.execute ˅
@@ -51,7 +51,8 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.model.realPart[self.index] = 0.0
+        self.model.imaginaryPart[self.index] = 0.0
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
 
@@ -63,7 +64,8 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.model.realPart[self.index] = self.oldRealPart
+        self.model.imaginaryPart[self.index] = self.oldImaginaryPart
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -75,7 +77,7 @@ class EraseSpectrumAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return f"Erase Spectrum at index {self.index}: ({self.oldRealPart} + {self.oldImaginaryPart}j)"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
 

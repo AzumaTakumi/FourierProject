@@ -22,25 +22,25 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
+    # FIXED CODE AREA: method.__init__ ˅
     def __init__(self, model: Fourier2dModel, newSourceData: np.ndarray) -> None:
         """
         操作対象のFourier2dModelと新しい2次元元データを受け取り、Commandを初期化する。
         """
 
         # 操作対象となるFourier2dModelを保持する。
-        self.model: Fourier2dModel = None
+        self.model: Fourier2dModel = model
 
         # 新しい2次元データを設定する前のModel状態を保持する。
-        self.oldSnapshot: Snapshot = None
+        self.oldSnapshot: Snapshot = model.createSnapshot()
 
         # 新しく設定する2次元元データを保持する。
-        self.newSourceData: np.ndarray = None
+        self.newSourceData: np.ndarray = newSourceData
 
         # SAFE CODE AREA ˅
         pass
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.execute ˅
@@ -50,7 +50,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.model.setSourceData(self.newSourceData)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
 
@@ -62,7 +62,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.model.loadSnapshot(self.oldSnapshot)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -74,7 +74,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return "Set 2D Source Data"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
 

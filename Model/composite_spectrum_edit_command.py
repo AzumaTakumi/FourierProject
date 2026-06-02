@@ -19,6 +19,17 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
 
     # GENERATED CODE AREA: class.header ˄
 
+    # GENERATED CODE AREA: method.__init__ ˅
+    def __init__(self) -> None:
+        # まとめて管理するSpectrumEditCommandのリストを保持する。
+        self.commands: list = []
+
+        # SAFE CODE AREA ˅
+        pass
+        # SAFE CODE AREA ˄
+
+    # GENERATED CODE AREA: method.__init__ ˄
+
     # GENERATED CODE AREA: method.add ˅
     def add(self, command: SpectrumEditCommand) -> None:
         """
@@ -26,7 +37,7 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.commands.append(command)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.add ˄
 
@@ -38,7 +49,8 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        for command in self.commands:
+            command.execute()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
 
@@ -50,7 +62,8 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        for command in reversed(self.commands):
+            command.undo()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -62,7 +75,7 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return f"Composite Command: {len(self.commands)} sub-commands"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
 

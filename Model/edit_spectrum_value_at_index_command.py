@@ -20,34 +20,34 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
+    # FIXED CODE AREA: method.__init__ ˅
     def __init__(self, model: Fourier1dModel, index: int, newRealPart: float, newImaginaryPart: float) -> None:
         """
         操作対象のFourier1dModel、編集対象インデックス、新しく設定する実部と虚部の値を受け取り、Commandを初期化する。
         """
 
         # 操作対象となるFourier1dModelを保持する。
-        self.model: Fourier1dModel = None
+        self.model: Fourier1dModel = model
 
         # 値を変更する周波数成分のインデックスを保持する。
-        self.index: int = 0
+        self.index: int = index
 
         # 編集前の実部の値を保持する。
-        self.oldRealPart: float = 0.0
+        self.oldRealPart: float = self.model.realPart[index]
 
         # 編集前の虚部の値を保持する。
-        self.oldImaginaryPart: float = 0.0
+        self.oldImaginaryPart: float = self.model.imaginaryPart[index]
 
         # 新しく設定する実部の値を保持する。
-        self.newRealPart: float = 0.0
+        self.newRealPart: float = newRealPart
 
         # 新しく設定する虚部の値を保持する。
-        self.newImaginaryPart: float = 0.0
+        self.newImaginaryPart: float = newImaginaryPart
 
         # SAFE CODE AREA ˅
         pass
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.execute ˅
@@ -57,7 +57,8 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.model.realPart[self.index] = self.newRealPart
+        self.model.imaginaryPart[self.index] = self.newImaginaryPart
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
 
@@ -69,7 +70,8 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.model.realPart[self.index] = self.oldRealPart
+        self.model.imaginaryPart[self.index] = self.oldImaginaryPart
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
@@ -81,7 +83,7 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        return f"Edit Spectrum at index {self.index}: ({self.oldRealPart} + {self.oldImaginaryPart}j) -> ({self.newRealPart} + {self.newImaginaryPart}j)"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
 
