@@ -25,6 +25,28 @@ class FourierRenderer(object):
     imageWidth: int = 512
     # 1D描画時の出力画像高さ。
     imageHeight: int = 256
+
+    @classmethod
+    def imageFromImageData(cls, data: np.ndarray) -> Image.Image:
+        array = np.asarray(data)
+        if np.iscomplexobj(array):
+            array = np.real(array)
+        array = np.nan_to_num(array.astype(float, copy=False))
+
+        if array.size == 0:
+            return Image.new("L", (1, 1), 0)
+
+        if np.max(array) <= 1.0 and np.min(array) >= 0.0:
+            array = array * 255.0
+        array = np.clip(array, 0.0, 255.0).astype(np.uint8)
+
+        if array.ndim == 2:
+            return Image.fromarray(array, "L")
+        if array.ndim == 3 and array.shape[-1] == 3:
+            return Image.fromarray(array, "RGB")
+        if array.ndim == 3 and array.shape[-1] == 1:
+            return Image.fromarray(np.squeeze(array, axis=-1), "L")
+        return cls.imageFromSpectrum(array)
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -156,7 +178,10 @@ class FourierRenderer(object):
         base = np.asarray(spectrum)
         complex_mask = float(np.iscomplexobj(base))
         base = np.abs(base) * complex_mask + base * (1.0 - complex_mask)
-        array = np.log1p(np.abs(np.nan_to_num(base.astype(float, copy=False))))
+        array = np.nan_to_num(base.astype(float, copy=False))
+        if array.ndim >= 2:
+            array = np.fft.fftshift(array, axes=(0, 1))
+        array = np.log1p(np.abs(array))
         channel_size = int(np.shape(array)[-1])
         # 1Dは折れ線描画、2D/3Dは画像化の経路に振り分ける。
         render_mode = {1: "line", 2: "image", 3: "image"}[array.ndim]

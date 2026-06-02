@@ -88,12 +88,15 @@ class FourierModel(object):
         # SAFE CODE AREA ˅
         data_map = self.getData()
         image_map: dict = {}
-        render_1d = self.renderer.imageFrom1dData
-        render_2d = self.renderer.imageFromSpectrum
-        renderers = {1: render_1d}
         for pane_type, data in data_map.items():
-            renderer = renderers.get(getattr(data, "ndim", 0), render_2d)
-            image_map[pane_type] = ((lambda: renderer(data)), (lambda: None))[data is None]()
+            if data is None:
+                image_map[pane_type] = None
+            elif getattr(data, "ndim", 0) == 1:
+                image_map[pane_type] = self.renderer.imageFrom1dData(data)
+            elif pane_type in (PaneType.SOURCE_DATA, PaneType.INVERSE_DATA):
+                image_map[pane_type] = self.renderer.imageFromImageData(data)
+            else:
+                image_map[pane_type] = self.renderer.imageFromSpectrum(data)
         return image_map
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getImage ˄
