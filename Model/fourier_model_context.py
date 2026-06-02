@@ -52,7 +52,7 @@ class FourierModelContext(object):
         """
 
         # 現在操作対象となっているFourierModelを保持する。
-        self.currentModel: Fourier1dModel | Fourier2dModel = FourierModel()
+        self.currentModel: Fourier1dModel | Fourier2dModel = Fourier2dModel(sourceData=np.zeros((1, 1)))
 
         # Undo可能なCommandを保持するスタックである。
         self.undoStack: list = []
