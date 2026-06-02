@@ -13,23 +13,15 @@ from .spectrum_edit_command import SpectrumEditCommand
 # SAFE CODE AREA ˅
 from .fourier_1_d_model import Fourier1dModel
 from .fourier_2_d_model import Fourier2dModel
-
-# データ更新用コマンド
 from .set_1_d_source_data_command import Set1dSourceDataCommand
 from .set_2_d_source_data_command import Set2dSourceDataCommand
 from .change_fourier_model_command import ChangeFourierModelCommand
-
-# １次元編集用コマンド
 from .erase_spectrum_at_index_command import EraseSpectrumAtIndexCommand
 from .restore_spectrum_at_index_command import RestoreSpectrumAtIndexCommand
 from .edit_spectrum_value_at_index_command import EditSpectrumValueAtIndexCommand
-
-# ２次元編集用コマンド
 from .erase_spectrum_at_position_command import EraseSpectrumAtPositionCommand
 from .paint_rgb_spectrum_at_position_command import PaintRgbSpectrumAtPositionCommand
 from .reset_spectrum_command import ResetSpectrumCommand
-
-# View送信用のスペクトル変更クラス
 from .spectrum_1_d_change import Spectrum1dChange
 from .spectrum_2_d_change import Spectrum2dChange
 # SAFE CODE AREA ˄
@@ -46,7 +38,7 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: class.header ˄
 
     # FIXED CODE AREA: method.__init__ ˅
-    def __init__(self, spectrumChangedListener: Callable) -> None:
+    def __init__(self, spectrumChangedListener: Callable | None = None) -> None:
         """
         FourierModelContextを初期化する。初期Model、Undo/Redo履歴、通知用関数などを設定する。
         """
@@ -61,13 +53,12 @@ class FourierModelContext(object):
         self.redoStack: list = []
 
         # スペクトル変更時に呼び出す通知用関数を保持する。View側から渡された操作を保持し、SpectrumChangeを引数として呼び出す。
-        self.spectrumChangedListener: Callable = spectrumChangedListener
+        self.spectrumChangedListener: Callable | None = spectrumChangedListener
 
         # ドラッグ操作中に発生した複数の編集Commandを一時的にまとめるCompositeSpectrumEditCommandを保持する。
-        self.currentCompositeCommand: CompositeSpectrumEditCommand = None
+        self.currentCompositeCommand: CompositeSpectrumEditCommand | None = None
 
         # SAFE CODE AREA ˅
-        pass
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -84,6 +75,18 @@ class FourierModelContext(object):
     # FIXED CODE AREA: method._model ˄
 
 
+    # GENERATED CODE AREA: method.model ˅
+    def model(self) -> FourierModel:
+        """
+        現在操作対象となっているFourierModelを返す。
+        """
+
+        # SAFE CODE AREA ˅
+        return self.currentModel
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.model ˄
+
+
     # GENERATED CODE AREA: method.set1dSourceData ˅
     def set1dSourceData(self, sourceData: np.ndarray) -> None:
         """
@@ -91,11 +94,13 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        commands = (
-            ChangeFourierModelCommand(self, Fourier1dModel(sourceData)),
-            Set1dSourceDataCommand(self.currentModel, sourceData),
+        data = np.asarray(sourceData, dtype=float)
+        command = (
+            Set1dSourceDataCommand(self.currentModel, data)
+            if isinstance(self.currentModel, Fourier1dModel)
+            else ChangeFourierModelCommand(self, Fourier1dModel(data))
         )
-        self._executeEdit(commands[self.currentModel.sourceData.ndim == 1])
+        self._executeEdit(command)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.set1dSourceData ˄
 
@@ -107,11 +112,13 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        commands = (
-            ChangeFourierModelCommand(self, Fourier2dModel(sourceData)),
-            Set2dSourceDataCommand(self.currentModel, sourceData),
+        data = np.asarray(sourceData, dtype=float)
+        command = (
+            Set2dSourceDataCommand(self.currentModel, data)
+            if isinstance(self.currentModel, Fourier2dModel)
+            else ChangeFourierModelCommand(self, Fourier2dModel(data))
         )
-        self._executeEdit(commands[self.currentModel.sourceData.ndim == 2])
+        self._executeEdit(command)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.set2dSourceData ˄
 
@@ -123,9 +130,21 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self._executeEdit(ChangeFourierModelCommand(self, model))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.setModel ˄
+
+
+    # GENERATED CODE AREA: method.notifySpectrumChanged ˅
+    def notifySpectrumChanged(self, change: SpectrumChange | None = None) -> None:
+        """
+        スペクトル変更をView側へ通知する。
+        """
+
+        # SAFE CODE AREA ˅
+        self._notifySpectrumChanged(change or self._createSpectrumChange())
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.notifySpectrumChanged ˄
 
 
     # GENERATED CODE AREA: method._notifySpectrumChanged ˅
@@ -135,9 +154,22 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        self.spectrumChangedListener(change)
+        if callable(self.spectrumChangedListener):
+            self.spectrumChangedListener(change)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._notifySpectrumChanged ˄
+
+
+    # GENERATED CODE AREA: method.executeEdit ˅
+    def executeEdit(self, command: SpectrumEditCommand) -> None:
+        """
+        指定されたSpectrumEditCommandを実行する。
+        """
+
+        # SAFE CODE AREA ˅
+        self._executeEdit(command)
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.executeEdit ˄
 
 
     # GENERATED CODE AREA: method._executeEdit ˅
@@ -148,46 +180,62 @@ class FourierModelContext(object):
 
         # SAFE CODE AREA ˅
         command.execute()
-        change_cls = (Spectrum2dChange, Spectrum1dChange)[self.currentModel.spectrum.ndim == 1]
-        self._notifySpectrumChanged(change_cls(self.currentModel.spectrum))
-        self.undoStack.append(command)
-        self.redoStack.clear()
+        if self.currentCompositeCommand is None:
+            self.undoStack.append(command)
+            self.redoStack.clear()
+        else:
+            self.currentCompositeCommand.add(command)
+        self._notifySpectrumChanged(self._createSpectrumChange())
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._executeEdit ˄
 
 
     # GENERATED CODE AREA: method.undo ˅
-    def undo(self) -> None:
+    def undo(self) -> bool:
         """
         Undo履歴から直前のCommandを取り出して取り消し、Redo履歴に追加する。
         """
 
         # SAFE CODE AREA ˅
-        try:
-            self.undoStack[-1].undo()
-            self.redoStack.append(self.undoStack.pop())
-        except IndexError:
+        if not self.undoStack:
             return False
+        command = self.undoStack.pop()
+        command.undo()
+        self.redoStack.append(command)
+        self._notifySpectrumChanged(self._createSpectrumChange())
         return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
 
 
     # GENERATED CODE AREA: method.redo ˅
-    def redo(self) -> None:
+    def redo(self) -> bool:
         """
         Redo履歴から直前に取り消したCommandを取り出して再実行し、Undo履歴に戻す。
         """
 
         # SAFE CODE AREA ˅
-        try:
-            self.redoStack[-1].execute()
-            self.undoStack.append(self.redoStack.pop())
-        except IndexError:
+        if not self.redoStack:
             return False
+        command = self.redoStack.pop()
+        command.execute()
+        self.undoStack.append(command)
+        self._notifySpectrumChanged(self._createSpectrumChange())
         return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.redo ˄
+
+
+    # GENERATED CODE AREA: method.clearStack ˅
+    def clearStack(self) -> None:
+        """
+        Undo履歴とRedo履歴を消去する。
+        """
+
+        # SAFE CODE AREA ˅
+        self._clearStack()
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.clearStack ˄
 
 
     # GENERATED CODE AREA: method._clearStack ˅
@@ -210,6 +258,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        self._require1dModel()
         self._executeEdit(EraseSpectrumAtIndexCommand(self.currentModel, index))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˄
@@ -222,6 +271,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        self._require1dModel()
         self._executeEdit(RestoreSpectrumAtIndexCommand(self.currentModel, index))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
@@ -234,6 +284,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        self._require1dModel()
         self._executeEdit(EditSpectrumValueAtIndexCommand(self.currentModel, index, realPart, imaginaryPart))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
@@ -246,6 +297,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        self._require2dModel()
         self._executeEdit(EraseSpectrumAtPositionCommand(self.currentModel, row, col, radius))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtPosition ˄
@@ -258,6 +310,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
+        self._require2dModel()
         self._executeEdit(PaintRgbSpectrumAtPositionCommand(self.currentModel, row, col, radius, rgbColor))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.paintRgbSpectrumAtPosition ˄
@@ -270,9 +323,21 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        self.currentCompositeCommand = CompositeSpectrumEditCommand(self)
+        self.currentCompositeCommand = CompositeSpectrumEditCommand()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.beginSpectrumEdit ˄
+
+
+    # GENERATED CODE AREA: method.appendSpectrumEdit ˅
+    def appendSpectrumEdit(self, command: SpectrumEditCommand) -> None:
+        """
+        ドラッグ操作中に実行されたCommandをcurrentCompositeCommandに追加する。
+        """
+
+        # SAFE CODE AREA ˅
+        self._executeEdit(command)
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.appendSpectrumEdit ˄
 
 
     # GENERATED CODE AREA: method._appendSpectrumEdit ˅
@@ -282,7 +347,7 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        (self._noop(), self.currentCompositeCommand.add(command))[self.currentCompositeCommand is not None]
+        self.appendSpectrumEdit(command)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._appendSpectrumEdit ˄
 
@@ -294,8 +359,11 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        self.undoStack.append(self.currentCompositeCommand)
-        self.redoStack.clear()
+        if self.currentCompositeCommand is None:
+            return
+        if self.currentCompositeCommand.commands:
+            self.undoStack.append(self.currentCompositeCommand)
+            self.redoStack.clear()
         self.currentCompositeCommand = None
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.endSpectrumEdit ˄
@@ -320,3 +388,23 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._noop ˄
 
+
+    # SAFE CODE AREA ˅
+    def _createSpectrumChange(self) -> SpectrumChange:
+        spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
+        spectrum_copy = np.copy(spectrum) if spectrum is not None else None
+        if isinstance(self.currentModel, Fourier1dModel):
+            return Spectrum1dChange(index=-1, changedPowerSpectrum=spectrum_copy)
+
+        height = int(spectrum.shape[0]) if spectrum is not None and spectrum.ndim >= 2 else 0
+        width = int(spectrum.shape[1]) if spectrum is not None and spectrum.ndim >= 2 else 0
+        return Spectrum2dChange(x=0, y=0, width=width, height=height, changedPowerSpectrum=spectrum_copy)
+
+    def _require1dModel(self) -> None:
+        if not isinstance(self.currentModel, Fourier1dModel):
+            raise TypeError("Current model is not Fourier1dModel.")
+
+    def _require2dModel(self) -> None:
+        if not isinstance(self.currentModel, Fourier2dModel):
+            raise TypeError("Current model is not Fourier2dModel.")
+    # SAFE CODE AREA ˄
