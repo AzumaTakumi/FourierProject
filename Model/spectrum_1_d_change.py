@@ -18,7 +18,7 @@ class Spectrum1dChange(SpectrumChange):
     """
 
     # SAFE CODE AREA ˅
-    # dataclassのフィールドだけで通知情報を表せるため、追加処理は定義しない。
+    # indexは変更開始位置、changedPowerSpectrumはその位置から始まる変更後スペクトル部分配列を表す。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -34,7 +34,7 @@ class Spectrum1dChange(SpectrumChange):
 
     # GENERATED CODE AREA: class.body ˅
     # SAFE CODE AREA ˅
-    # 1D変更通知はindexと変更後スペクトルを運ぶだけの値オブジェクトとして扱う。
+    # 1D変更通知は部分更新に必要なindexと変更後スペクトル片を運ぶ値オブジェクトとして扱う。
     pass
     # SAFE CODE AREA ˄
 

@@ -86,8 +86,8 @@ class FourierModelContext(object):
         """
 
         # SAFE CODE AREA ˅
-        # Controller/Viewから参照される公開アクセサとして現在のModelを返す。
-        return self.currentModel
+        # View/ControllerからModelインスタンスを直接扱わせないため、この公開アクセサは使用不可にする。
+        raise RuntimeError("model() は使用しないでください。getData() / getImage() などのContextメソッドを使用してください。")
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.model ˄
 
@@ -201,8 +201,8 @@ class FourierModelContext(object):
         else:
             # ドラッグ中は個別CommandをUndoスタックへ積まず、Compositeの中へまとめる。
             self.currentCompositeCommand.add(command)
-        # Model状態が変わったので、Viewへ最新スペクトルを通知する。
-        self._notifySpectrumChanged(self._createSpectrumChange())
+        # Model状態が変わったので、Viewへ変更範囲だけを通知する。
+        self._notifySpectrumChanged(self._createSpectrumChangeForCommand(command))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._executeEdit ˄
 
@@ -221,8 +221,8 @@ class FourierModelContext(object):
         command = self.undoStack.pop()
         command.undo()
         self.redoStack.append(command)
-        # Undo後のModel状態をViewへ通知する。
-        self._notifySpectrumChanged(self._createSpectrumChange())
+        # Undo後の変更範囲だけをViewへ通知する。
+        self._notifySpectrumChanged(self._createSpectrumChangeForCommand(command))
         return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
@@ -242,8 +242,8 @@ class FourierModelContext(object):
         command = self.redoStack.pop()
         command.execute()
         self.undoStack.append(command)
-        # Redo後のModel状態をViewへ通知する。
-        self._notifySpectrumChanged(self._createSpectrumChange())
+        # Redo後の変更範囲だけをViewへ通知する。
+        self._notifySpectrumChanged(self._createSpectrumChangeForCommand(command))
         return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.redo ˄
@@ -433,18 +433,164 @@ class FourierModelContext(object):
 
 
     # SAFE CODE AREA ˅
+    def getData(self) -> dict:
+        # Viewが表示用の数値配列を取得できるよう、現在ModelのgetDataをContext経由で呼び出す。
+        return self.currentModel.getData()
+
+    def getImage(self) -> dict:
+        # Viewが表示用のPIL.Imageを取得できるよう、現在ModelのgetImageをContext経由で呼び出す。
+        return self.currentModel.getImage()
+
+    def getModelName(self) -> str:
+        # Viewのステータス表示用に、現在Modelのクラス名だけを返す。
+        return self.currentModel.__class__.__name__
+
+    def getUndoCount(self) -> int:
+        # Viewのステータス表示用に、Undo可能なCommand数を返す。
+        return len(self.undoStack)
+
+    def getRedoCount(self) -> int:
+        # Viewのステータス表示用に、Redo可能なCommand数を返す。
+        return len(self.redoStack)
+
+    def is1dModel(self) -> bool:
+        # Controllerが1D専用操作を呼び分けるための判定結果を返す。
+        return isinstance(self.currentModel, Fourier1dModel)
+
+    def is2dModel(self) -> bool:
+        # Controllerが2D専用操作を呼び分けるための判定結果を返す。
+        return isinstance(self.currentModel, Fourier2dModel)
+
+    def getInteractiveSpectrumAtIndex(self, index: int) -> tuple:
+        # 1D入力欄の表示用に、指定indexの編集用スペクトル実部・虚部をContext経由で返す。
+        self._require1dModel()
+        return self.currentModel.getInteractiveSpectrumAtIndex(index)
+
     def _createSpectrumChange(self) -> SpectrumChange:
-        # Viewへ渡すスペクトルは、通知後の編集で変わらないようcopyしておく。
+        # 明示的な変更範囲が分からない場合は、現在スペクトル全体を1つの変更範囲として扱う。
+        return self._createFullSpectrumChange()
+
+    def _createSpectrumChangeForCommand(self, command: SpectrumEditCommand) -> SpectrumChange:
+        # Commandの種類から、Viewが部分更新できる最小範囲の変更情報を作る。
+        if isinstance(command, (EraseSpectrumAtIndexCommand, RestoreSpectrumAtIndexCommand, EditSpectrumValueAtIndexCommand)):
+            return self._create1dSpectrumChangeAtIndex(command.index)
+        if isinstance(command, (EraseSpectrumAtPositionCommand, PaintRgbSpectrumAtPositionCommand)):
+            return self._create2dSpectrumChangeAtPosition(command.row, command.col, command.radius)
+        if isinstance(command, CompositeSpectrumEditCommand):
+            return self._createCompositeSpectrumChange(command)
+        return self._createFullSpectrumChange()
+
+    def _createFullSpectrumChange(self) -> SpectrumChange:
+        # ファイル読み込み、Model切り替え、Resetなどは全スペクトルが変更されたものとして通知する。
         spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
         spectrum_copy = np.copy(spectrum) if spectrum is not None else None
         if isinstance(self.currentModel, Fourier1dModel):
-            # 1Dでは全体更新を表すため、個別indexではなく-1を指定する。
-            return Spectrum1dChange(index=-1, changedPowerSpectrum=spectrum_copy)
+            # 1Dではindexを変更開始位置として扱う。全体更新では0から全配列を渡す。
+            return Spectrum1dChange(index=0, changedPowerSpectrum=spectrum_copy)
 
         # 2Dでは現在スペクトルの縦横サイズを通知情報へ入れる。
         height = int(spectrum.shape[0]) if spectrum is not None and spectrum.ndim >= 2 else 0
         width = int(spectrum.shape[1]) if spectrum is not None and spectrum.ndim >= 2 else 0
         return Spectrum2dChange(x=0, y=0, width=width, height=height, changedPowerSpectrum=spectrum_copy)
+
+    def _create1dSpectrumChangeAtIndex(self, index: int) -> Spectrum1dChange:
+        # 1Dの単一点編集では、変更されたindexとその1要素だけをViewへ渡す。
+        spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
+        if spectrum is None:
+            return Spectrum1dChange(index=0, changedPowerSpectrum=None)
+        size = int(spectrum.shape[0]) if spectrum.ndim >= 1 else 0
+        if size <= 0:
+            return Spectrum1dChange(index=0, changedPowerSpectrum=np.array([]))
+        normalized_index = int(index)
+        if normalized_index < 0:
+            normalized_index += size
+        normalized_index = int(np.clip(normalized_index, 0, size - 1))
+        return Spectrum1dChange(
+            index=normalized_index,
+            changedPowerSpectrum=np.copy(spectrum[normalized_index:normalized_index + 1]),
+        )
+
+    def _create1dSpectrumChangeForRange(self, start: int, stop: int) -> Spectrum1dChange:
+        # 複数indexをまとめて通知する場合は、startからstopまでの連続範囲を切り出す。
+        spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
+        if spectrum is None:
+            return Spectrum1dChange(index=0, changedPowerSpectrum=None)
+        size = int(spectrum.shape[0]) if spectrum.ndim >= 1 else 0
+        if size <= 0:
+            return Spectrum1dChange(index=0, changedPowerSpectrum=np.array([]))
+        start = int(np.clip(start, 0, size - 1))
+        stop = int(np.clip(stop, start + 1, size))
+        return Spectrum1dChange(index=start, changedPowerSpectrum=np.copy(spectrum[start:stop]))
+
+    def _create2dSpectrumChangeAtPosition(self, row: int, col: int, radius: int) -> Spectrum2dChange:
+        # 2Dのブラシ編集では、円形ブラシを含む矩形範囲を切り出してViewへ渡す。
+        spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
+        if spectrum is None or getattr(spectrum, "ndim", 0) < 2:
+            return Spectrum2dChange(x=0, y=0, width=0, height=0, changedPowerSpectrum=None)
+        rect = self._spectrumRect(row, col, radius, spectrum.shape[:2])
+        return self._create2dSpectrumChangeForRect(rect)
+
+    def _create2dSpectrumChangeForRect(self, rect: tuple[int, int, int, int]) -> Spectrum2dChange:
+        # rectは(row_start, row_stop, col_start, col_stop)。通知ではx=col, y=rowとして渡す。
+        spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
+        if spectrum is None or getattr(spectrum, "ndim", 0) < 2:
+            return Spectrum2dChange(x=0, y=0, width=0, height=0, changedPowerSpectrum=None)
+        row_start, row_stop, col_start, col_stop = rect
+        changed = np.copy(spectrum[row_start:row_stop, col_start:col_stop])
+        return Spectrum2dChange(
+            x=col_start,
+            y=row_start,
+            width=col_stop - col_start,
+            height=row_stop - row_start,
+            changedPowerSpectrum=changed,
+        )
+
+    def _createCompositeSpectrumChange(self, command: CompositeSpectrumEditCommand) -> SpectrumChange:
+        # CompositeCommandのUndo/Redoでは、含まれる編集範囲を1つの連続範囲または矩形にまとめて通知する。
+        if not command.commands:
+            return self._createFullSpectrumChange()
+        if isinstance(self.currentModel, Fourier1dModel):
+            indices: list[int] = []
+            spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
+            size = int(spectrum.shape[0]) if spectrum is not None and spectrum.ndim >= 1 else 0
+            for child in command.commands:
+                if not isinstance(child, (EraseSpectrumAtIndexCommand, RestoreSpectrumAtIndexCommand, EditSpectrumValueAtIndexCommand)):
+                    return self._createFullSpectrumChange()
+                index = int(child.index)
+                if size > 0 and index < 0:
+                    index += size
+                indices.append(index)
+            if not indices:
+                return self._createFullSpectrumChange()
+            return self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1)
+
+        spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
+        if spectrum is None or getattr(spectrum, "ndim", 0) < 2:
+            return self._createFullSpectrumChange()
+        rects: list[tuple[int, int, int, int]] = []
+        for child in command.commands:
+            if not isinstance(child, (EraseSpectrumAtPositionCommand, PaintRgbSpectrumAtPositionCommand)):
+                return self._createFullSpectrumChange()
+            rects.append(self._spectrumRect(child.row, child.col, child.radius, spectrum.shape[:2]))
+        if not rects:
+            return self._createFullSpectrumChange()
+        row_start = min(rect[0] for rect in rects)
+        row_stop = max(rect[1] for rect in rects)
+        col_start = min(rect[2] for rect in rects)
+        col_stop = max(rect[3] for rect in rects)
+        return self._create2dSpectrumChangeForRect((row_start, row_stop, col_start, col_stop))
+
+    def _spectrumRect(self, row: int, col: int, radius: int, shape: tuple[int, int]) -> tuple[int, int, int, int]:
+        # 2Dスペクトル配列上で、指定中心と半径を含む矩形範囲を安全に計算する。
+        height, width = shape
+        row = int(np.clip(row, 0, max(height - 1, 0)))
+        col = int(np.clip(col, 0, max(width - 1, 0)))
+        radius = max(0, int(radius))
+        row_start = max(0, row - radius)
+        row_stop = min(height, row + radius + 1)
+        col_start = max(0, col - radius)
+        col_stop = min(width, col + radius + 1)
+        return row_start, row_stop, col_start, col_stop
 
     def _require1dModel(self) -> None:
         # 誤って2Dモデルへ1D編集を実行しないよう、Context入口で型を保証する。

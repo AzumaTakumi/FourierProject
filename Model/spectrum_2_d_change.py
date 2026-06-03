@@ -18,7 +18,7 @@ class Spectrum2dChange(SpectrumChange):
     """
 
     # SAFE CODE AREA ˅
-    # dataclassのフィールドだけで通知情報を表せるため、追加処理は定義しない。
+    # x/y/width/heightは変更矩形、changedPowerSpectrumはその矩形で切り取った変更後スペクトルデータを表す。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -43,7 +43,7 @@ class Spectrum2dChange(SpectrumChange):
 
     # GENERATED CODE AREA: class.body ˅
     # SAFE CODE AREA ˅
-    # 2D変更通知は範囲情報と変更後スペクトルを運ぶだけの値オブジェクトとして扱う。
+    # 2D変更通知はViewの部分更新に必要な矩形情報と切り取りデータを運ぶ値オブジェクトとして扱う。
     pass
     # SAFE CODE AREA ˄
 
