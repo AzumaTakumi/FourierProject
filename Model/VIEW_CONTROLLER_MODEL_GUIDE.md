@@ -61,6 +61,9 @@ def on_spectrum_changed(self, change):
         self.view.update_1d_spectrum(start, changed_values)
 ```
 
+`changedPowerSpectrum`は1要素とは限りません。
+ドラッグなどで複数indexが変更された場合は、`index`から始まる連続範囲のデータが渡されます。
+
 2Dの場合、`change`は`Spectrum2dChange`です。
 `changedPowerSpectrum`には、変更されたスペクトル画像を長方形に切り取った部分のデータが入ります。
 `x`と`y`はCanvas表示上の座標ではなく、Contextへ渡した`row`/`col`と同じModel内部のスペクトル配列座標系です。
@@ -82,6 +85,53 @@ def on_spectrum_changed(self, change):
 
 `set1dSourceData()`、`set2dSourceData()`、`resetSpectrum()`のように全体が変わる操作では、全範囲を表すchangeが渡されます。
 1Dでは`index=0`で全スペクトル配列、2Dでは`x=0`、`y=0`で全矩形データが渡されます。
+
+## ドラッグ時の線分編集
+
+マウス移動イベントは、ペンを動かす速度や処理速度によって間引かれることがあります。
+その場合、取得できた座標だけを編集すると線ではなく点が並んだように見えます。
+
+この問題を避けるため、Controllerは前回取得した座標と今回取得した座標をContextへ渡し、Context側でその間を線として補間して編集します。
+
+1Dの場合は、前回indexと今回indexを渡します。
+
+```python
+def erase_1d_drag(self, previous_index, current_index):
+    self.context.eraseSpectrumBetweenIndexes(previous_index, current_index)
+```
+
+```python
+def restore_1d_drag(self, previous_index, current_index):
+    self.context.restoreSpectrumBetweenIndexes(previous_index, current_index)
+```
+
+2Dの場合は、前回の`row`/`col`と今回の`row`/`col`を渡します。
+
+```python
+def erase_2d_drag(self, previous_row, previous_col, current_row, current_col, radius):
+    self.context.eraseSpectrumLineAtPosition(
+        previous_row,
+        previous_col,
+        current_row,
+        current_col,
+        radius,
+    )
+```
+
+```python
+def paint_2d_drag(self, previous_row, previous_col, current_row, current_col, radius, rgb):
+    self.context.paintRgbSpectrumLineAtPosition(
+        previous_row,
+        previous_col,
+        current_row,
+        current_col,
+        radius,
+        rgb,
+    )
+```
+
+これらの線分編集メソッドは、線分上の複数点を編集してもView通知は1回にまとめます。
+1Dでは変更された連続index範囲、2Dでは線分とブラシ半径をすべて含む矩形範囲が`change`として渡されます。
 
 ## 表示用データを取得する
 
@@ -281,6 +331,16 @@ def erase_1d_at_canvas_point(self, click_x, displayed_width):
     self.context.eraseSpectrumAtIndex(index)
 ```
 
+ドラッグでは前回Canvas座標から得たindexと今回Canvas座標から得たindexを使い、線分編集メソッドを呼びます。
+
+```python
+def erase_1d_drag_at_canvas_point(self, previous_x, current_x, displayed_width):
+    spectrum = self.context.getData()[PaneType.INTERACTIVE_POWER_SPECTRUM]
+    previous_index = canvas_x_to_1d_index(previous_x, displayed_width, spectrum.shape[0])
+    current_index = canvas_x_to_1d_index(current_x, displayed_width, spectrum.shape[0])
+    self.context.eraseSpectrumBetweenIndexes(previous_index, current_index)
+```
+
 ## 2D Canvas座標からスペクトル座標へ変換する
 
 2Dスペクトル画像をクリック編集する場合は、Canvas上のクリック座標をModel内部のスペクトル座標へ変換してからContextへ渡します。
@@ -329,6 +389,45 @@ def erase_2d_at_canvas_point(self, click_x, click_y, displayed_width, displayed_
     self.context.eraseSpectrumAtPosition(row, col, radius)
 ```
 
+ドラッグでは前回Canvas座標と今回Canvas座標をそれぞれModel内部座標へ変換し、線分編集メソッドを呼びます。
+
+```python
+def erase_2d_drag_at_canvas_point(
+    self,
+    previous_x,
+    previous_y,
+    current_x,
+    current_y,
+    displayed_width,
+    displayed_height,
+    radius,
+):
+    spectrum = self.context.getData()[PaneType.INTERACTIVE_POWER_SPECTRUM]
+
+    previous_row, previous_col = canvas_point_to_spectrum_position(
+        previous_x,
+        previous_y,
+        displayed_width,
+        displayed_height,
+        spectrum.shape[:2],
+    )
+    current_row, current_col = canvas_point_to_spectrum_position(
+        current_x,
+        current_y,
+        displayed_width,
+        displayed_height,
+        spectrum.shape[:2],
+    )
+
+    self.context.eraseSpectrumLineAtPosition(
+        previous_row,
+        previous_col,
+        current_row,
+        current_col,
+        radius,
+    )
+```
+
 Canvas内で画像を中央配置している場合は、Canvas座標から画像左上座標を引いたローカル座標を渡してください。
 
 ```python
@@ -343,15 +442,19 @@ local_y = event.y - image_top
 ```python
 def on_mouse_press(self, event):
     self.context.beginSpectrumEdit()
+    self.previous_point = self.event_to_local_point(event)
     self.edit_at_event(event)
 
 
 def on_mouse_drag(self, event):
-    self.edit_at_event(event)
+    current_point = self.event_to_local_point(event)
+    self.edit_line_between(self.previous_point, current_point)
+    self.previous_point = current_point
 
 
 def on_mouse_release(self, event):
     self.context.endSpectrumEdit()
+    self.previous_point = None
 ```
 
 `beginSpectrumEdit()`から`endSpectrumEdit()`までに実行された編集は、1つのUndo単位として扱われます。
@@ -477,6 +580,43 @@ class FourierController:
             col = (display_col + width // 2) % width
             self.context.eraseSpectrumAtPosition(row, col, radius)
 
+    def erase_drag_segment(self, previous_x, previous_y, current_x, current_y, displayed_width, displayed_height, radius):
+        spectrum = self.context.getData()[PaneType.INTERACTIVE_POWER_SPECTRUM]
+
+        if self.context.is1dModel():
+            previous_index = int((previous_x / max(1, displayed_width)) * spectrum.shape[0])
+            current_index = int((current_x / max(1, displayed_width)) * spectrum.shape[0])
+            previous_index = max(0, min(previous_index, spectrum.shape[0] - 1))
+            current_index = max(0, min(current_index, spectrum.shape[0] - 1))
+            self.context.eraseSpectrumBetweenIndexes(previous_index, current_index)
+            return
+
+        if self.context.is2dModel():
+            height, width = spectrum.shape[:2]
+
+            previous_display_row = int((previous_y / max(1, displayed_height)) * height)
+            previous_display_col = int((previous_x / max(1, displayed_width)) * width)
+            current_display_row = int((current_y / max(1, displayed_height)) * height)
+            current_display_col = int((current_x / max(1, displayed_width)) * width)
+
+            previous_display_row = max(0, min(previous_display_row, height - 1))
+            previous_display_col = max(0, min(previous_display_col, width - 1))
+            current_display_row = max(0, min(current_display_row, height - 1))
+            current_display_col = max(0, min(current_display_col, width - 1))
+
+            previous_row = (previous_display_row + height // 2) % height
+            previous_col = (previous_display_col + width // 2) % width
+            current_row = (current_display_row + height // 2) % height
+            current_col = (current_display_col + width // 2) % width
+
+            self.context.eraseSpectrumLineAtPosition(
+                previous_row,
+                previous_col,
+                current_row,
+                current_col,
+                radius,
+            )
+
     def begin_drag(self):
         self.context.beginSpectrumEdit()
 
@@ -542,10 +682,14 @@ inverseData
 | 2Dデータ設定 | `context.set2dSourceData(data)` |
 | 1D成分削除 | `context.eraseSpectrumAtIndex(index)` |
 | 1D成分復元 | `context.restoreSpectrumAtIndex(index)` |
+| 1D範囲削除 | `context.eraseSpectrumBetweenIndexes(start, end)` |
+| 1D範囲復元 | `context.restoreSpectrumBetweenIndexes(start, end)` |
 | 1D値直接編集 | `context.editSpectrumValueAtIndex(index, real, imag)` |
 | 1D現在値取得 | `context.getInteractiveSpectrumAtIndex(index)` |
 | 2D成分削除 | `context.eraseSpectrumAtPosition(row, col, radius)` |
 | 2D RGBペイント | `context.paintRgbSpectrumAtPosition(row, col, radius, rgb)` |
+| 2D線分削除 | `context.eraseSpectrumLineAtPosition(startRow, startCol, endRow, endCol, radius)` |
+| 2D線分RGBペイント | `context.paintRgbSpectrumLineAtPosition(startRow, startCol, endRow, endCol, radius, rgb)` |
 | スペクトルリセット | `context.resetSpectrum()` |
 | Undo | `context.undo()` |
 | Redo | `context.redo()` |

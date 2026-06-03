@@ -320,6 +320,28 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
 
+    # SAFE CODE AREA ˅
+    def eraseSpectrumBetweenIndexes(self, startIndex: int, endIndex: int) -> None:
+        # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として削除する。
+        self._require1dModel()
+        indices = self._indexLine(startIndex, endIndex)
+        commands = [EraseSpectrumAtIndexCommand(self.currentModel, index) for index in indices]
+        self._executeEditBatch(
+            commands,
+            lambda: self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1),
+        )
+
+    def restoreSpectrumBetweenIndexes(self, startIndex: int, endIndex: int) -> None:
+        # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として復元する。
+        self._require1dModel()
+        indices = self._indexLine(startIndex, endIndex)
+        commands = [RestoreSpectrumAtIndexCommand(self.currentModel, index) for index in indices]
+        self._executeEditBatch(
+            commands,
+            lambda: self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1),
+        )
+    # SAFE CODE AREA ˄
+
 
     # GENERATED CODE AREA: method.eraseSpectrumAtPosition ˅
     def eraseSpectrumAtPosition(self, row: int, col: int, radius: int) -> None:
@@ -349,6 +371,39 @@ class FourierModelContext(object):
         self._executeEdit(PaintRgbSpectrumAtPositionCommand(self.currentModel, row, col, radius, rgbColor))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.paintRgbSpectrumAtPosition ˄
+
+    # SAFE CODE AREA ˅
+    def eraseSpectrumLineAtPosition(self, startRow: int, startCol: int, endRow: int, endCol: int, radius: int) -> None:
+        # 2Dドラッグでイベント間隔が空いた場合に、前回座標と今回座標を線で結んで削除する。
+        self._require2dModel()
+        points = self._linePoints(startRow, startCol, endRow, endCol)
+        commands = [EraseSpectrumAtPositionCommand(self.currentModel, row, col, radius) for row, col in points]
+        self._executeEditBatch(
+            commands,
+            lambda: self._create2dSpectrumChangeForLine(points, radius),
+        )
+
+    def paintRgbSpectrumLineAtPosition(
+        self,
+        startRow: int,
+        startCol: int,
+        endRow: int,
+        endCol: int,
+        radius: int,
+        rgbColor: list,
+    ) -> None:
+        # 2Dドラッグでイベント間隔が空いた場合に、前回座標と今回座標を線で結んでRGBペイントする。
+        self._require2dModel()
+        points = self._linePoints(startRow, startCol, endRow, endCol)
+        commands = [
+            PaintRgbSpectrumAtPositionCommand(self.currentModel, row, col, radius, rgbColor)
+            for row, col in points
+        ]
+        self._executeEditBatch(
+            commands,
+            lambda: self._create2dSpectrumChangeForLine(points, radius),
+        )
+    # SAFE CODE AREA ˄
 
 
     # GENERATED CODE AREA: method.beginSpectrumEdit ˅
@@ -466,6 +521,26 @@ class FourierModelContext(object):
         self._require1dModel()
         return self.currentModel.getInteractiveSpectrumAtIndex(index)
 
+    def _executeEditBatch(self, commands: list, changeFactory: Callable) -> None:
+        # 複数の点編集を1つの編集操作として実行し、View通知も1回にまとめる。
+        commands = [command for command in commands if command is not None]
+        if not commands:
+            return
+
+        composite = CompositeSpectrumEditCommand()
+        for command in commands:
+            command.execute()
+            composite.add(command)
+
+        stored_command = composite if len(commands) > 1 else commands[0]
+        if self.currentCompositeCommand is None:
+            self.undoStack.append(stored_command)
+            self.redoStack.clear()
+        else:
+            self.currentCompositeCommand.add(stored_command)
+
+        self._notifySpectrumChanged(changeFactory())
+
     def _createSpectrumChange(self) -> SpectrumChange:
         # 明示的な変更範囲が分からない場合は、現在スペクトル全体を1つの変更範囲として扱う。
         return self._createFullSpectrumChange()
@@ -547,13 +622,14 @@ class FourierModelContext(object):
 
     def _createCompositeSpectrumChange(self, command: CompositeSpectrumEditCommand) -> SpectrumChange:
         # CompositeCommandのUndo/Redoでは、含まれる編集範囲を1つの連続範囲または矩形にまとめて通知する。
-        if not command.commands:
+        commands = self._flattenCommands(command)
+        if not commands:
             return self._createFullSpectrumChange()
         if isinstance(self.currentModel, Fourier1dModel):
             indices: list[int] = []
             spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
             size = int(spectrum.shape[0]) if spectrum is not None and spectrum.ndim >= 1 else 0
-            for child in command.commands:
+            for child in commands:
                 if not isinstance(child, (EraseSpectrumAtIndexCommand, RestoreSpectrumAtIndexCommand, EditSpectrumValueAtIndexCommand)):
                     return self._createFullSpectrumChange()
                 index = int(child.index)
@@ -568,12 +644,24 @@ class FourierModelContext(object):
         if spectrum is None or getattr(spectrum, "ndim", 0) < 2:
             return self._createFullSpectrumChange()
         rects: list[tuple[int, int, int, int]] = []
-        for child in command.commands:
+        for child in commands:
             if not isinstance(child, (EraseSpectrumAtPositionCommand, PaintRgbSpectrumAtPositionCommand)):
                 return self._createFullSpectrumChange()
             rects.append(self._spectrumRect(child.row, child.col, child.radius, spectrum.shape[:2]))
         if not rects:
             return self._createFullSpectrumChange()
+        row_start = min(rect[0] for rect in rects)
+        row_stop = max(rect[1] for rect in rects)
+        col_start = min(rect[2] for rect in rects)
+        col_stop = max(rect[3] for rect in rects)
+        return self._create2dSpectrumChangeForRect((row_start, row_stop, col_start, col_stop))
+
+    def _create2dSpectrumChangeForLine(self, points: list[tuple[int, int]], radius: int) -> Spectrum2dChange:
+        # 線分上の複数ブラシ編集を、すべて含む1つの矩形changeへまとめる。
+        spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
+        if spectrum is None or getattr(spectrum, "ndim", 0) < 2 or not points:
+            return Spectrum2dChange(x=0, y=0, width=0, height=0, changedPowerSpectrum=None)
+        rects = [self._spectrumRect(row, col, radius, spectrum.shape[:2]) for row, col in points]
         row_start = min(rect[0] for rect in rects)
         row_stop = max(rect[1] for rect in rects)
         col_start = min(rect[2] for rect in rects)
@@ -591,6 +679,41 @@ class FourierModelContext(object):
         col_start = max(0, col - radius)
         col_stop = min(width, col + radius + 1)
         return row_start, row_stop, col_start, col_stop
+
+    def _linePoints(self, startRow: int, startCol: int, endRow: int, endCol: int) -> list[tuple[int, int]]:
+        # 前回座標と今回座標の間を線形補間し、イベントが飛んでも点ではなく線として編集する。
+        start_row = int(startRow)
+        start_col = int(startCol)
+        end_row = int(endRow)
+        end_col = int(endCol)
+        steps = max(abs(end_row - start_row), abs(end_col - start_col))
+        if steps == 0:
+            return [(start_row, start_col)]
+
+        rows = np.rint(np.linspace(start_row, end_row, steps + 1)).astype(int)
+        cols = np.rint(np.linspace(start_col, end_col, steps + 1)).astype(int)
+        points: list[tuple[int, int]] = []
+        for row, col in zip(rows, cols):
+            point = (int(row), int(col))
+            if not points or points[-1] != point:
+                points.append(point)
+        return points
+
+    def _indexLine(self, startIndex: int, endIndex: int) -> list[int]:
+        # 1Dでも前回indexから今回indexまでの間を連続範囲として編集できるようにする。
+        start = int(startIndex)
+        end = int(endIndex)
+        step = 1 if end >= start else -1
+        return list(range(start, end + step, step))
+
+    def _flattenCommands(self, command: SpectrumEditCommand) -> list:
+        # 入れ子になったCompositeCommandを、変更範囲計算しやすいよう通常Commandのリストに展開する。
+        if isinstance(command, CompositeSpectrumEditCommand):
+            flattened: list = []
+            for child in command.commands:
+                flattened.extend(self._flattenCommands(child))
+            return flattened
+        return [command]
 
     def _require1dModel(self) -> None:
         # 誤って2Dモデルへ1D編集を実行しないよう、Context入口で型を保証する。
