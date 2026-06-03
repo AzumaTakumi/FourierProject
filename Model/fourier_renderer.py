@@ -25,36 +25,6 @@ class FourierRenderer(object):
     imageWidth: int = 512
     # 1D描画時の出力画像高さ。
     imageHeight: int = 256
-
-    @classmethod
-    def imageFromImageData(cls, data: np.ndarray) -> Image.Image:
-        # SOURCE/INVERSE用の画像データは、スペクトル表示ではなく実際の画素値として描画する。
-        array = np.asarray(data)
-        # IFFT結果などで複素数が渡ってきた場合は、表示に使う実部だけを取り出す。
-        if np.iscomplexobj(array):
-            array = np.real(array)
-        # NaNやInfを画素化できる数値へ置き換える。
-        array = np.nan_to_num(array.astype(float, copy=False))
-
-        # 空配列はPILで画像化できないため、1pxの黒画像として返す。
-        if array.size == 0:
-            return Image.new("L", (1, 1), 0)
-
-        # 0〜1正規化画像は8bit画像として表示できるよう0〜255へ拡大する。
-        if np.max(array) <= 1.0 and np.min(array) >= 0.0:
-            array = array * 255.0
-        # 表示画像として扱えるよう、画素値を8bit範囲へ丸める。
-        array = np.clip(array, 0.0, 255.0).astype(np.uint8)
-
-        # 配列形状に応じて、グレースケールまたはRGBのPIL.Imageへ変換する。
-        if array.ndim == 2:
-            return Image.fromarray(array, "L")
-        if array.ndim == 3 and array.shape[-1] == 3:
-            return Image.fromarray(array, "RGB")
-        if array.ndim == 3 and array.shape[-1] == 1:
-            return Image.fromarray(np.squeeze(array, axis=-1), "L")
-        # 想定外の形状はスペクトル風に正規化して、最低限表示できる画像にする。
-        return cls.imageFromSpectrum(array)
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -99,6 +69,44 @@ class FourierRenderer(object):
         cls.imageHeight = int(imageHeight)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.setImageHeight ˄
+
+
+    # GENERATED CODE AREA: method.imageFromImageData ˅
+    def imageFromImageData(self, data: np.ndarray) -> Image.Image:
+        """
+        Source/Inverse用の画素データをPIL.Imageへ変換する
+        """
+
+        # SAFE CODE AREA ˅
+        # SOURCE/INVERSE用の画像データは、スペクトル表示ではなく実際の画素値として描画する。
+        array = np.asarray(data)
+        # IFFT結果などで複素数が渡ってきた場合は、表示に使う実部だけを取り出す。
+        if np.iscomplexobj(array):
+            array = np.real(array)
+        # NaNやInfを画素化できる数値へ置き換える。
+        array = np.nan_to_num(array.astype(float, copy=False))
+
+        # 空配列はPILで画像化できないため、1pxの黒画像として返す。
+        if array.size == 0:
+            return Image.new("L", (1, 1), 0)
+
+        # 0〜1正規化画像は8bit画像として表示できるよう0〜255へ拡大する。
+        if np.max(array) <= 1.0 and np.min(array) >= 0.0:
+            array = array * 255.0
+        # 表示画像として扱えるよう、画素値を8bit範囲へ丸める。
+        array = np.clip(array, 0.0, 255.0).astype(np.uint8)
+
+        # 配列形状に応じて、グレースケールまたはRGBのPIL.Imageへ変換する。
+        if array.ndim == 2:
+            return Image.fromarray(array, "L")
+        if array.ndim == 3 and array.shape[-1] == 3:
+            return Image.fromarray(array, "RGB")
+        if array.ndim == 3 and array.shape[-1] == 1:
+            return Image.fromarray(np.squeeze(array, axis=-1), "L")
+        # 想定外の形状はスペクトル風に正規化して、最低限表示できる画像にする。
+        return type(self).imageFromSpectrum(array)
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.imageFromImageData ˄
 
 
     # FIXED CODE AREA: method.imageFrom1dData ˅

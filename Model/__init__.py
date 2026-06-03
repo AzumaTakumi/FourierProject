@@ -4,14 +4,14 @@ from .change_fourier_model_command import ChangeFourierModelCommand
 from .composite_spectrum_edit_command import CompositeSpectrumEditCommand
 from .edit_spectrum_value_at_index_command import EditSpectrumValueAtIndexCommand
 from .erase_spectrum_at_index_command import EraseSpectrumAtIndexCommand
-from .erase_spectrum_at_position_command import EraseSpectrumAtPositionCommand
+from .erase_spectrum_at_positions_command import EraseSpectrumAtPositionsCommand
 from .fourier_1_d_model import Fourier1dModel
 from .fourier_2_d_model import Fourier2dModel
 from .fourier_model import FourierModel
 from .fourier_model_context import FourierModelContext
 from .fourier_renderer import FourierRenderer
 from .fourier_transform import FourierTransform
-from .paint_rgb_spectrum_at_position_command import PaintRgbSpectrumAtPositionCommand
+from .paint_rgb_spectrum_at_positions_command import PaintRgbSpectrumAtPositionsCommand
 from .pane_type import PaneType
 from .reset_spectrum_command import ResetSpectrumCommand
 from .restore_spectrum_at_index_command import RestoreSpectrumAtIndexCommand
@@ -24,4 +24,4 @@ from .spectrum_change import SpectrumChange
 from .spectrum_changed_listener import SpectrumChangedListener
 from .spectrum_edit_command import SpectrumEditCommand
 
-__all__ = ["ChangeFourierModelCommand", "CompositeSpectrumEditCommand", "EditSpectrumValueAtIndexCommand", "EraseSpectrumAtIndexCommand", "EraseSpectrumAtPositionCommand", "Fourier1dModel", "Fourier2dModel", "FourierModel", "FourierModelContext", "FourierRenderer", "FourierTransform", "PaintRgbSpectrumAtPositionCommand", "PaneType", "ResetSpectrumCommand", "RestoreSpectrumAtIndexCommand", "Set1dSourceDataCommand", "Set2dSourceDataCommand", "Snapshot", "Spectrum1dChange", "Spectrum2dChange", "SpectrumChange", "SpectrumChangedListener", "SpectrumEditCommand"]
+__all__ = ["ChangeFourierModelCommand", "CompositeSpectrumEditCommand", "EditSpectrumValueAtIndexCommand", "EraseSpectrumAtIndexCommand", "EraseSpectrumAtPositionsCommand", "Fourier1dModel", "Fourier2dModel", "FourierModel", "FourierModelContext", "FourierRenderer", "FourierTransform", "PaintRgbSpectrumAtPositionsCommand", "PaneType", "ResetSpectrumCommand", "RestoreSpectrumAtIndexCommand", "Set1dSourceDataCommand", "Set2dSourceDataCommand", "Snapshot", "Spectrum1dChange", "Spectrum2dChange", "SpectrumChange", "SpectrumChangedListener", "SpectrumEditCommand"]

@@ -46,7 +46,7 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
 
         # SAFE CODE AREA ˅
         # Undo先は元スペクトルではなく編集直前のinteractive値なので、Modelから現在値を取得する。
-        self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(index)
+        self.oldRealPart, self.oldImaginaryPart = self.model.getInteractiveSpectrumAtIndex(index)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -59,7 +59,7 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
 
         # SAFE CODE AREA ˅
         # Redo時も直前のinteractive値を取り直し、Undoで戻す値を最新化する。
-        self.oldRealPart, self.oldImaginaryPart = self.model._getInteractiveSpectrumAtIndex(self.index)
+        self.oldRealPart, self.oldImaginaryPart = self.model.getInteractiveSpectrumAtIndex(self.index)
         # 指定された新しい実部・虚部をModelの編集用スペクトルへ反映する。
         self.model.editSpectrumValueAtIndex(self.index, self.newRealPart, self.newImaginaryPart)
         # SAFE CODE AREA ˄

@@ -36,8 +36,8 @@ class FourierModel(object):
         self.engine: FourierTransform = FourierTransform()
 
         # SAFE CODE AREA ˅
-        # Rendererは状態を持たない補助クラスとして使うため、インスタンスではなくクラス参照を保持する。
-        self.renderer = FourierRenderer
+        # Rendererの生成メソッドとクラスメソッドの両方を同じ呼び方で使えるよう、インスタンスを保持する。
+        self.renderer = FourierRenderer()
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -59,7 +59,7 @@ class FourierModel(object):
         self.interactivePowerSpectrum = np.copy(power_spectrum) if power_spectrum is not None else None
         # 子クラスに逆変換処理がある場合だけ、リセット後の復元データを再計算する。
         try:
-            self._computeInverseData()
+            self.computeInverseData()
         except AttributeError:
             pass
         # SAFE CODE AREA ˄

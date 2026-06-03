@@ -21,17 +21,7 @@ class Fourier1dModel(FourierModel):
     """
 
     # SAFE CODE AREA ˅
-    def computeFourierData(self) -> None:
-        # 自動生成された公開メソッド名から、実際の計算処理を行う内部メソッドへ委譲する。
-        self._computeFourierData()
-
-    def computeInverseData(self) -> None:
-        # 編集用スペクトルを使った逆変換処理を内部メソッドへ委譲する。
-        self._computeInverseData()
-
-    def getInteractiveSpectrumAtIndex(self, index: int) -> tuple:
-        # CommandがUndo用に現在値を取得できるよう、内部取得処理を公開する。
-        return self._getInteractiveSpectrumAtIndex(index)
+    # 追加メソッドは定義しない。処理本体は各生成メソッド内のSAFE CODE AREAへ記述する。
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
@@ -94,14 +84,14 @@ class Fourier1dModel(FourierModel):
         # 呼び出し元の配列変更がModel内部へ影響しないようコピーして保持する。
         self.sourceData = data.copy()
         # 元データの変更に合わせてFFT結果を作り直し、編集用スペクトルを初期状態へ戻す。
-        self._computeFourierData()
+        self.computeFourierData()
         self.resetSpectrum()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.setSourceData ˄
 
 
-    # GENERATED CODE AREA: method._computeFourierData ˅
-    def _computeFourierData(self) -> None:
+    # GENERATED CODE AREA: method.computeFourierData ˅
+    def computeFourierData(self) -> None:
         """
         現在のsourceDataに対してフーリエ変換を行い、realPart、imaginaryPart、powerSpectrumを生成または更新する。
         """
@@ -118,11 +108,11 @@ class Fourier1dModel(FourierModel):
         self.interactiveRealPart, self.interactiveImaginaryPart = np.copy(self.realPart), np.copy(self.imaginaryPart)
         self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._computeFourierData ˄
+    # GENERATED CODE AREA: method.computeFourierData ˄
 
 
-    # GENERATED CODE AREA: method._computeInverseData ˅
-    def _computeInverseData(self) -> None:
+    # GENERATED CODE AREA: method.computeInverseData ˅
+    def computeInverseData(self) -> None:
         """
         現在の（編集後を含む）スペクトルから逆フーリエ変換を行い、復元データを生成/更新する。
         """
@@ -133,7 +123,7 @@ class Fourier1dModel(FourierModel):
         # 逆変換結果はViewのInverse表示で利用する。
         self.inverseData = self.engine.inverseTransform()
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._computeInverseData ˄
+    # GENERATED CODE AREA: method.computeInverseData ˄
 
 
     # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˅
@@ -150,7 +140,7 @@ class Fourier1dModel(FourierModel):
         self.interactiveImaginaryPart[index] = 0
         self.interactivePowerSpectrum[index] = 0
         # 編集後スペクトルをすぐ逆変換し、Inverse表示を最新化する。
-        self._computeInverseData()
+        self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˄
 
@@ -169,7 +159,7 @@ class Fourier1dModel(FourierModel):
         self.interactiveImaginaryPart[index] = self.imaginaryPart[index]
         self.interactivePowerSpectrum[index] = self.powerSpectrum[index]
         # 復元した周波数成分を反映した逆変換結果を再計算する。
-        self._computeInverseData()
+        self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
 
@@ -188,7 +178,7 @@ class Fourier1dModel(FourierModel):
         # 表示用パワースペクトルも同じ値に合わせて更新する。
         self.interactivePowerSpectrum[index] = realPart**2 + imaginaryPart**2
         # 直接編集後の復元波形を即座に更新する。
-        self._computeInverseData()
+        self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
 
@@ -311,13 +301,13 @@ class Fourier1dModel(FourierModel):
         self.interactiveImaginaryPart = np.copy(self.imaginaryPart)
         self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
         # リセット後のスペクトルから復元波形を作り直す。
-        self._computeInverseData()
+        self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.resetSpectrum ˄
 
 
-    # GENERATED CODE AREA: method._getInteractiveSpectrumAtIndex ˅
-    def _getInteractiveSpectrumAtIndex(self, index: int) -> tuple:
+    # GENERATED CODE AREA: method.getInteractiveSpectrumAtIndex ˅
+    def getInteractiveSpectrumAtIndex(self, index: int) -> tuple:
         """
         指定された周波数インデックスにおける編集用スペクトルの値を取得する。CommandがUndo用に編集前の実部と虚部を保存する際に利用する。
         """
@@ -330,14 +320,21 @@ class Fourier1dModel(FourierModel):
             self.interactiveImaginaryPart[index]
         )
         # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.getInteractiveSpectrumAtIndex ˄
 
-    # SAFE CODE AREA ˅
+
+    # GENERATED CODE AREA: method._validateIndex ˅
     def _validateIndex(self, index: int) -> None:
+        """
+        1Dスペクトルindexの範囲チェック
+        """
+
+        # SAFE CODE AREA ˅
         # FFTが未計算の場合は編集対象が存在しないため、編集操作を拒否する。
         if self.interactiveRealPart is None or self.interactiveImaginaryPart is None:
             raise ValueError("Fourier data has not been computed.")
         # Pythonの負数インデックスは許可しつつ、配列サイズ外のアクセスは明示的に例外にする。
         if not -self.interactiveRealPart.size <= index < self.interactiveRealPart.size:
             raise IndexError(f"Spectrum index out of range: {index}")
-    # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._getInteractiveSpectrumAtIndex ˄
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._validateIndex ˄

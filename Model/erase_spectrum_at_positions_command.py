@@ -13,7 +13,7 @@ from .spectrum_edit_command import SpectrumEditCommand
 class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
     # GENERATED CODE AREA: class.header ˅
     """
-    複数位置の2次元スペクトルを一括で無効化するCommandである。
+    2次元スペクトルの指定位置周辺の成分を無効化するCommandである。指定された行、列、半径に基づいて編集範囲を決定し、Undo時に元の値へ戻せるようにする。
     """
 
     # SAFE CODE AREA ˅
@@ -23,29 +23,34 @@ class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
     # GENERATED CODE AREA: class.header ˄
 
     # GENERATED CODE AREA: method.__init__ ˅
-    def __init__(self, model: Fourier2dModel, positions: list[tuple[int, int]], radius: int) -> None:
-        # 操作対象となるFourier2dModelを保持する。
-        self.model: Fourier2dModel = model
+    def __init__(self, model: Fourier2dModel, positions: list, radius: int) -> None:
+        """
+        操作対象のFourier2dModel、編集対象位置、編集半径を受け取り、Commandを初期化する。
+        """
 
-        # 編集対象となる複数の(row, col)を保持する。
-        self.positions: list[tuple[int, int]] = []
+        # 操作対象となるFourier2dModelを保持する。
+        self.model: Fourier2dModel = None
 
         # 編集対象範囲の半径を保持する。
         self.radius: int = 0
 
-        # Undo時に戻す矩形範囲を保持する。
-        self.rect: tuple[int, int, int, int] | None = None
+        # 編集前の範囲に対応する実部配列を保持する。
+        self.oldRealPart: np.ndarray = None
 
-        # 編集前の矩形範囲に対応する実部配列を保持する。
-        self.oldRealPart: np.ndarray | None = None
+        # 編集前の範囲に対応する虚部配列を保持する。
+        self.oldImaginaryPart: np.ndarray = None
 
-        # 編集前の矩形範囲に対応する虚部配列を保持する。
-        self.oldImaginaryPart: np.ndarray | None = None
+        self.positions: list = []
+
+        self.rect: tuple = ()
 
         # SAFE CODE AREA ˅
+        # 自動生成の初期値を実際の引数で上書きし、操作対象Modelを保持する。
+        self.model = model
         # 呼び出し元のリスト変更がCommand内部へ影響しないよう、座標を整数tupleとしてコピーする。
         self.positions = [(int(row), int(col)) for row, col in positions]
         self.radius = max(0, int(radius))
+        self.rect = None
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.__init__ ˄
 
@@ -53,7 +58,7 @@ class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
     # GENERATED CODE AREA: method.execute ˅
     def execute(self) -> None:
         """
-        編集前の矩形範囲を保存し、複数位置のスペクトル成分を一括で無効化する。
+        指定範囲の編集前の実部と虚部を保存し、その範囲のスペクトル成分を無効化する。
         """
 
         # SAFE CODE AREA ˅
@@ -79,7 +84,7 @@ class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
     # GENERATED CODE AREA: method.undo ˅
     def undo(self) -> None:
         """
-        保存しておいた矩形範囲の実部と虚部を用いて、編集前の状態に戻す。
+        保存しておいたoldRealPartとoldImaginaryPartを用いて、指定範囲のスペクトル成分を編集前の状態に戻す。
         """
 
         # SAFE CODE AREA ˅
