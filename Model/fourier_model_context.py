@@ -22,6 +22,8 @@ from .restore_spectrum_at_index_command import RestoreSpectrumAtIndexCommand
 from .edit_spectrum_value_at_index_command import EditSpectrumValueAtIndexCommand
 from .erase_spectrum_at_position_command import EraseSpectrumAtPositionCommand
 from .paint_rgb_spectrum_at_position_command import PaintRgbSpectrumAtPositionCommand
+from .erase_spectrum_at_positions_command import EraseSpectrumAtPositionsCommand
+from .paint_rgb_spectrum_at_positions_command import PaintRgbSpectrumAtPositionsCommand
 from .reset_spectrum_command import ResetSpectrumCommand
 from .spectrum_1_d_change import Spectrum1dChange
 from .spectrum_2_d_change import Spectrum2dChange
@@ -377,11 +379,8 @@ class FourierModelContext(object):
         # 2Dドラッグでイベント間隔が空いた場合に、前回座標と今回座標を線で結んで削除する。
         self._require2dModel()
         points = self._linePoints(startRow, startCol, endRow, endCol)
-        commands = [EraseSpectrumAtPositionCommand(self.currentModel, row, col, radius) for row, col in points]
-        self._executeEditBatch(
-            commands,
-            lambda: self._create2dSpectrumChangeForLine(points, radius),
-        )
+        # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
+        self._executeEdit(EraseSpectrumAtPositionsCommand(self.currentModel, points, radius))
 
     def paintRgbSpectrumLineAtPosition(
         self,
@@ -395,14 +394,8 @@ class FourierModelContext(object):
         # 2Dドラッグでイベント間隔が空いた場合に、前回座標と今回座標を線で結んでRGBペイントする。
         self._require2dModel()
         points = self._linePoints(startRow, startCol, endRow, endCol)
-        commands = [
-            PaintRgbSpectrumAtPositionCommand(self.currentModel, row, col, radius, rgbColor)
-            for row, col in points
-        ]
-        self._executeEditBatch(
-            commands,
-            lambda: self._create2dSpectrumChangeForLine(points, radius),
-        )
+        # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
+        self._executeEdit(PaintRgbSpectrumAtPositionsCommand(self.currentModel, points, radius, rgbColor))
     # SAFE CODE AREA ˄
 
 
@@ -551,6 +544,8 @@ class FourierModelContext(object):
             return self._create1dSpectrumChangeAtIndex(command.index)
         if isinstance(command, (EraseSpectrumAtPositionCommand, PaintRgbSpectrumAtPositionCommand)):
             return self._create2dSpectrumChangeAtPosition(command.row, command.col, command.radius)
+        if isinstance(command, (EraseSpectrumAtPositionsCommand, PaintRgbSpectrumAtPositionsCommand)):
+            return self._create2dSpectrumChangeForLine(command.positions, command.radius)
         if isinstance(command, CompositeSpectrumEditCommand):
             return self._createCompositeSpectrumChange(command)
         return self._createFullSpectrumChange()
@@ -645,9 +640,14 @@ class FourierModelContext(object):
             return self._createFullSpectrumChange()
         rects: list[tuple[int, int, int, int]] = []
         for child in commands:
-            if not isinstance(child, (EraseSpectrumAtPositionCommand, PaintRgbSpectrumAtPositionCommand)):
+            if isinstance(child, (EraseSpectrumAtPositionCommand, PaintRgbSpectrumAtPositionCommand)):
+                rects.append(self._spectrumRect(child.row, child.col, child.radius, spectrum.shape[:2]))
+                continue
+            if isinstance(child, (EraseSpectrumAtPositionsCommand, PaintRgbSpectrumAtPositionsCommand)):
+                rects.append(self._spectrumRectForPoints(child.positions, child.radius, spectrum.shape[:2]))
+                continue
+            else:
                 return self._createFullSpectrumChange()
-            rects.append(self._spectrumRect(child.row, child.col, child.radius, spectrum.shape[:2]))
         if not rects:
             return self._createFullSpectrumChange()
         row_start = min(rect[0] for rect in rects)
@@ -661,12 +661,7 @@ class FourierModelContext(object):
         spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
         if spectrum is None or getattr(spectrum, "ndim", 0) < 2 or not points:
             return Spectrum2dChange(x=0, y=0, width=0, height=0, changedPowerSpectrum=None)
-        rects = [self._spectrumRect(row, col, radius, spectrum.shape[:2]) for row, col in points]
-        row_start = min(rect[0] for rect in rects)
-        row_stop = max(rect[1] for rect in rects)
-        col_start = min(rect[2] for rect in rects)
-        col_stop = max(rect[3] for rect in rects)
-        return self._create2dSpectrumChangeForRect((row_start, row_stop, col_start, col_stop))
+        return self._create2dSpectrumChangeForRect(self._spectrumRectForPoints(points, radius, spectrum.shape[:2]))
 
     def _spectrumRect(self, row: int, col: int, radius: int, shape: tuple[int, int]) -> tuple[int, int, int, int]:
         # 2Dスペクトル配列上で、指定中心と半径を含む矩形範囲を安全に計算する。
@@ -678,6 +673,15 @@ class FourierModelContext(object):
         row_stop = min(height, row + radius + 1)
         col_start = max(0, col - radius)
         col_stop = min(width, col + radius + 1)
+        return row_start, row_stop, col_start, col_stop
+
+    def _spectrumRectForPoints(self, points: list[tuple[int, int]], radius: int, shape: tuple[int, int]) -> tuple[int, int, int, int]:
+        # 複数ブラシを含む1つの矩形範囲を計算する。
+        rects = [self._spectrumRect(row, col, radius, shape) for row, col in points]
+        row_start = min(rect[0] for rect in rects)
+        row_stop = max(rect[1] for rect in rects)
+        col_start = min(rect[2] for rect in rects)
+        col_stop = max(rect[3] for rect in rects)
         return row_start, row_stop, col_start, col_stop
 
     def _linePoints(self, startRow: int, startCol: int, endRow: int, endCol: int) -> list[tuple[int, int]]:

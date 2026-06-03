@@ -86,6 +86,10 @@ def on_spectrum_changed(self, change):
 `set1dSourceData()`、`set2dSourceData()`、`resetSpectrum()`のように全体が変わる操作では、全範囲を表すchangeが渡されます。
 1Dでは`index=0`で全スペクトル配列、2Dでは`x=0`、`y=0`で全矩形データが渡されます。
 
+Viewは、部分changeを受け取った場合、少なくとも未変更の`SOURCE_DATA`と`POWER_SPECTRUM`は再描画しないでください。
+2D編集では`INTERACTIVE_POWER_SPECTRUM`は`change`の矩形だけ更新できます。
+一方で`INVERSE_DATA`は周波数成分の変更が画像全体へ影響するため、通常はInverseペイン全体を再描画してください。
+
 ## ドラッグ時の線分編集
 
 マウス移動イベントは、ペンを動かす速度や処理速度によって間引かれることがあります。
@@ -132,6 +136,7 @@ def paint_2d_drag(self, previous_row, previous_col, current_row, current_col, ra
 
 これらの線分編集メソッドは、線分上の複数点を編集してもView通知は1回にまとめます。
 1Dでは変更された連続index範囲、2Dでは線分とブラシ半径をすべて含む矩形範囲が`change`として渡されます。
+2Dの線分編集では、線分上の複数点を1つのCommandでまとめてModelへ渡すため、逆FFTは線分編集1回につき最後に1回だけ実行されます。
 
 ## 表示用データを取得する
 
