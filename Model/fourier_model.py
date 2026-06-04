@@ -43,6 +43,48 @@ class FourierModel(object):
     # FIXED CODE AREA: method.__init__ ˄
 
 
+    # GENERATED CODE AREA: method.computeInverseData ˅
+    def computeInverseData(self) -> None:
+        """
+        現在の（編集後を含む）スペクトルから逆フーリエ変換を行い、復元データを生成/更新する。
+        """
+
+        # SAFE CODE AREA ˅
+        # 編集後の実部・虚部を複素スペクトルへ戻し、IFFTの入力として渡す。
+        if self.interactiveRealPart is None or self.interactiveImaginaryPart is None:
+            raise ValueError("Interactive Fourier data has not been computed.")
+        self.engine.setIfftInputSpectrum(self.interactiveRealPart + 1j * self.interactiveImaginaryPart)
+        # 逆変換結果はViewのInverse表示で利用する。
+        self.inverseData = self.engine.inverseTransform()
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.computeInverseData ˄
+
+
+    # GENERATED CODE AREA: method.computeFourierData ˅
+    def computeFourierData(self) -> None:
+        """
+        現在のsourceDataに対して2次元フーリエ変換を行い、realPart、imaginaryPart、powerSpectrumを生成または更新する。
+        """
+
+        # SAFE CODE AREA ˅
+        # FourierTransformに元データを渡し、直近のFFT結果を計算させる。
+        source_data = getattr(self, "sourceData", None)
+        if source_data is None:
+            raise ValueError("Source data has not been set.")
+        self.engine.setFftInputSignal(source_data)
+        self.engine.transform()
+        # FFT結果の実部・虚部を分けて保持し、パワーは実部^2+虚部^2で計算する。
+        self.realPart = self.engine.realPart()
+        self.imaginaryPart = self.engine.imaginaryPart()
+        self.powerSpectrum = np.square(self.realPart) + np.square(self.imaginaryPart)
+        # 編集用スペクトルは元スペクトルとは別配列にして、編集が元データ側を壊さないようにする。
+        self.interactiveRealPart = np.copy(self.realPart)
+        self.interactiveImaginaryPart = np.copy(self.imaginaryPart)
+        self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.computeFourierData ˄
+
+
     # GENERATED CODE AREA: method.resetSpectrum ˅
     def resetSpectrum(self) -> None:
         """
@@ -64,6 +106,48 @@ class FourierModel(object):
         self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.resetSpectrum ˄
+
+
+    # GENERATED CODE AREA: method.createSnapshot ˅
+    def createSnapshot(self) -> Snapshot:
+        """
+        現在の1次元モデルの内部状態をSnapshotとして生成する。Undo対象操作の実行前に、sourceData、スペクトル情報、編集用スペクトル、逆変換結果を保存するために使用する。
+        """
+
+        # SAFE CODE AREA ˅
+        # Undo時に参照共有で状態が壊れないよう、ndarrayはすべてcopyしてSnapshotへ入れる。
+        return Snapshot(
+            sourceData=np.copy(getattr(self, "sourceData", None)) if getattr(self, "sourceData", None) is not None else None,
+            realPart=np.copy(getattr(self, "realPart", None)) if getattr(self, "realPart", None) is not None else None,
+            imaginaryPart=np.copy(getattr(self, "imaginaryPart", None)) if getattr(self, "imaginaryPart", None) is not None else None,
+            powerSpectrum=np.copy(getattr(self, "powerSpectrum", None)) if getattr(self, "powerSpectrum", None) is not None else None,
+            interactiveRealPart=np.copy(getattr(self, "interactiveRealPart", None)) if getattr(self, "interactiveRealPart", None) is not None else None,
+            interactiveImaginaryPart=np.copy(getattr(self, "interactiveImaginaryPart", None)) if getattr(self, "interactiveImaginaryPart", None) is not None else None,
+            interactivePowerSpectrum=np.copy(getattr(self, "interactivePowerSpectrum", None)) if getattr(self, "interactivePowerSpectrum", None) is not None else None,
+            inverseData=np.copy(getattr(self, "inverseData", None)) if getattr(self, "inverseData", None) is not None else None,
+        )
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.createSnapshot ˄
+
+
+    # GENERATED CODE AREA: method.restoreSnapshot ˅
+    def restoreSnapshot(self, snapshot: Snapshot) -> None:
+        """
+        指定されたSnapshotの内容を用いて、1次元モデルの内部状態を復元する。Undo処理などで、sourceData、スペクトル情報、編集用スペクトル、逆変換結果を以前の状態へ戻すために使用する。
+        """
+
+        # SAFE CODE AREA ˅
+        # Snapshot内の配列も再度copyし、復元後のModel編集がSnapshot側へ影響しないようにする。
+        self.sourceData = np.copy(snapshot.sourceData) if snapshot.sourceData is not None else None
+        self.realPart = np.copy(snapshot.realPart) if snapshot.realPart is not None else None
+        self.imaginaryPart = np.copy(snapshot.imaginaryPart) if snapshot.imaginaryPart is not None else None
+        self.powerSpectrum = np.copy(snapshot.powerSpectrum) if snapshot.powerSpectrum is not None else None
+        self.interactiveRealPart = np.copy(snapshot.interactiveRealPart) if snapshot.interactiveRealPart is not None else None
+        self.interactiveImaginaryPart = np.copy(snapshot.interactiveImaginaryPart) if snapshot.interactiveImaginaryPart is not None else None
+        self.interactivePowerSpectrum = np.copy(snapshot.interactivePowerSpectrum) if snapshot.interactivePowerSpectrum is not None else None
+        self.inverseData = np.copy(snapshot.inverseData) if snapshot.inverseData is not None else None
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.restoreSnapshot ˄
 
 
     # GENERATED CODE AREA: method.getData ˅
@@ -110,87 +194,3 @@ class FourierModel(object):
         return image_map
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getImage ˄
-
-
-    # GENERATED CODE AREA: method.computeInverseData ˅
-    def computeInverseData(self) -> None:
-        """
-        現在の（編集後を含む）スペクトルから逆フーリエ変換を行い、復元データを生成/更新する。
-        """
-
-        # SAFE CODE AREA ˅
-        # 編集後の実部・虚部を複素スペクトルへ戻し、IFFTの入力として渡す。
-        if self.interactiveRealPart is None or self.interactiveImaginaryPart is None:
-            raise ValueError("Interactive Fourier data has not been computed.")
-        self.engine.setIfftInputSpectrum(self.interactiveRealPart + 1j * self.interactiveImaginaryPart)
-        # 逆変換結果はViewのInverse表示で利用する。
-        self.inverseData = self.engine.inverseTransform()
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.computeInverseData ˄
-
-
-    # GENERATED CODE AREA: method.computeFourierData ˅
-    def computeFourierData(self) -> None:
-        """
-        現在のsourceDataに対して2次元フーリエ変換を行い、realPart、imaginaryPart、powerSpectrumを生成または更新する。
-        """
-
-        # SAFE CODE AREA ˅
-        # FourierTransformに元データを渡し、直近のFFT結果を計算させる。
-        source_data = getattr(self, "sourceData", None)
-        if source_data is None:
-            raise ValueError("Source data has not been set.")
-        self.engine.setFftInputSignal(source_data)
-        self.engine.transform()
-        # FFT結果の実部・虚部を分けて保持し、パワーは実部^2+虚部^2で計算する。
-        self.realPart = self.engine.realPart()
-        self.imaginaryPart = self.engine.imaginaryPart()
-        self.powerSpectrum = np.square(self.realPart) + np.square(self.imaginaryPart)
-        # 編集用スペクトルは元スペクトルとは別配列にして、編集が元データ側を壊さないようにする。
-        self.interactiveRealPart = np.copy(self.realPart)
-        self.interactiveImaginaryPart = np.copy(self.imaginaryPart)
-        self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.computeFourierData ˄
-
-
-    # GENERATED CODE AREA: method.restoreSnapshot ˅
-    def restoreSnapshot(self, snapshot: Snapshot) -> None:
-        """
-        指定されたSnapshotの内容を用いて、1次元モデルの内部状態を復元する。Undo処理などで、sourceData、スペクトル情報、編集用スペクトル、逆変換結果を以前の状態へ戻すために使用する。
-        """
-
-        # SAFE CODE AREA ˅
-        # Snapshot内の配列も再度copyし、復元後のModel編集がSnapshot側へ影響しないようにする。
-        self.sourceData = np.copy(snapshot.sourceData) if snapshot.sourceData is not None else None
-        self.realPart = np.copy(snapshot.realPart) if snapshot.realPart is not None else None
-        self.imaginaryPart = np.copy(snapshot.imaginaryPart) if snapshot.imaginaryPart is not None else None
-        self.powerSpectrum = np.copy(snapshot.powerSpectrum) if snapshot.powerSpectrum is not None else None
-        self.interactiveRealPart = np.copy(snapshot.interactiveRealPart) if snapshot.interactiveRealPart is not None else None
-        self.interactiveImaginaryPart = np.copy(snapshot.interactiveImaginaryPart) if snapshot.interactiveImaginaryPart is not None else None
-        self.interactivePowerSpectrum = np.copy(snapshot.interactivePowerSpectrum) if snapshot.interactivePowerSpectrum is not None else None
-        self.inverseData = np.copy(snapshot.inverseData) if snapshot.inverseData is not None else None
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.restoreSnapshot ˄
-
-
-    # GENERATED CODE AREA: method.createSnapshot ˅
-    def createSnapshot(self) -> Snapshot:
-        """
-        現在の1次元モデルの内部状態をSnapshotとして生成する。Undo対象操作の実行前に、sourceData、スペクトル情報、編集用スペクトル、逆変換結果を保存するために使用する。
-        """
-
-        # SAFE CODE AREA ˅
-        # Undo時に参照共有で状態が壊れないよう、ndarrayはすべてcopyしてSnapshotへ入れる。
-        return Snapshot(
-            sourceData=np.copy(getattr(self, "sourceData", None)) if getattr(self, "sourceData", None) is not None else None,
-            realPart=np.copy(getattr(self, "realPart", None)) if getattr(self, "realPart", None) is not None else None,
-            imaginaryPart=np.copy(getattr(self, "imaginaryPart", None)) if getattr(self, "imaginaryPart", None) is not None else None,
-            powerSpectrum=np.copy(getattr(self, "powerSpectrum", None)) if getattr(self, "powerSpectrum", None) is not None else None,
-            interactiveRealPart=np.copy(getattr(self, "interactiveRealPart", None)) if getattr(self, "interactiveRealPart", None) is not None else None,
-            interactiveImaginaryPart=np.copy(getattr(self, "interactiveImaginaryPart", None)) if getattr(self, "interactiveImaginaryPart", None) is not None else None,
-            interactivePowerSpectrum=np.copy(getattr(self, "interactivePowerSpectrum", None)) if getattr(self, "interactivePowerSpectrum", None) is not None else None,
-            inverseData=np.copy(getattr(self, "inverseData", None)) if getattr(self, "inverseData", None) is not None else None,
-        )
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.createSnapshot ˄

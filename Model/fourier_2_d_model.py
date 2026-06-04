@@ -127,6 +127,80 @@ class Fourier2dModel(FourierModel):
     # GENERATED CODE AREA: method.dataGrayScaleImage ˄
 
 
+    # GENERATED CODE AREA: method._normalizeSpectrumPositions ˅
+    def _normalizeSpectrumPositions(self, positions: list) -> list:
+        """
+        複数座標を配列範囲内へ丸める
+        """
+
+        # SAFE CODE AREA ˅
+        # 入力された複数座標を配列範囲内へ丸め、連続する重複点を取り除く。
+        if not self._hasInteractiveSpectrum():
+            return []
+        height, width = self.interactiveRealPart.shape[:2]
+        points = []
+        for row, col in positions:
+            normalized = (
+                int(np.clip(row, 0, max(height - 1, 0))),
+                int(np.clip(col, 0, max(width - 1, 0))),
+            )
+            if not points or points[-1] != normalized:
+                points.append(normalized)
+        return points
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._normalizeSpectrumPositions ˄
+
+
+    # GENERATED CODE AREA: method._normalizeRect ˅
+    def _normalizeRect(self, rowStart: int, rowStop: int, colStart: int, colStop: int) -> tuple:
+        """
+        矩形範囲を配列範囲内へ丸める
+        """
+
+        # SAFE CODE AREA ˅
+        # 矩形範囲を現在スペクトル配列の有効範囲へ丸める。
+        if not self._hasInteractiveSpectrum():
+            return None
+        height, width = self.interactiveRealPart.shape[:2]
+        r0 = int(np.clip(rowStart, 0, height))
+        r1 = int(np.clip(rowStop, r0, height))
+        c0 = int(np.clip(colStart, 0, width))
+        c1 = int(np.clip(colStop, c0, width))
+        if r1 <= r0 or c1 <= c0:
+            return None
+        return r0, r1, c0, c1
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._normalizeRect ˄
+
+
+    # GENERATED CODE AREA: method._circleMask ˅
+    def _circleMask(self, row: int, col: int, radius: int, r0: int, r1: int, c0: int, c1: int) -> np.ndarray:
+        """
+        矩形内の円形ブラシマスクを作る
+        """
+
+        # SAFE CODE AREA ˅
+        # 矩形の中で円形ブラシに含まれる画素だけをTrueにする。
+        rr, cc = np.ogrid[r0:r1, c0:c1]
+        return (rr - row) ** 2 + (cc - col) ** 2 <= radius ** 2
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._circleMask ˄
+
+
+    # GENERATED CODE AREA: method._normalizePaintColor ˅
+    def _normalizePaintColor(self, rgbColor: list) -> np.ndarray:
+        # SAFE CODE AREA ˅
+        # RGB指定を1次元のfloat配列へ変換し、空指定を明示的なエラーにする。
+        color = np.asarray(rgbColor, dtype=float).reshape(-1)
+        try:
+            _ = color[0]
+        except IndexError as exc:
+            raise ValueError("rgbColor が空です。少なくとも1つ以上の数値を指定してください。空配列は塗りつぶし値に変換できません。") from exc
+        return color
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._normalizePaintColor ˄
+
+
     # GENERATED CODE AREA: method.getSpectrumRectForPositions ˅
     def getSpectrumRectForPositions(self, positions: list, radius: int) -> tuple:
         """
@@ -178,6 +252,25 @@ class Fourier2dModel(FourierModel):
         )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getInteractiveSpectrumAtRect ˄
+
+
+    # GENERATED CODE AREA: method._hasInteractiveSpectrum ˅
+    def _hasInteractiveSpectrum(self) -> bool:
+        """
+        編集対象スペクトルが初期化済みかを確認する
+        """
+
+        # SAFE CODE AREA ˅
+        # 編集対象となる実部・虚部・パワースペクトルがそろっているかを確認する。
+        try:
+            real_shape = self.interactiveRealPart.shape
+            imag_shape = self.interactiveImaginaryPart.shape
+            power_shape = self.interactivePowerSpectrum.shape
+        except Exception:
+            return False
+        return real_shape == imag_shape == power_shape and len(real_shape) >= 2
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._hasInteractiveSpectrum ˄
 
 
     # GENERATED CODE AREA: method.eraseSpectrumAtPositions ˅
@@ -283,97 +376,4 @@ class Fourier2dModel(FourierModel):
         self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreInteractiveSpectrumAtRect ˄
-
-
-    # GENERATED CODE AREA: method._hasInteractiveSpectrum ˅
-    def _hasInteractiveSpectrum(self) -> bool:
-        """
-        編集対象スペクトルが初期化済みかを確認する
-        """
-
-        # SAFE CODE AREA ˅
-        # 編集対象となる実部・虚部・パワースペクトルがそろっているかを確認する。
-        try:
-            real_shape = self.interactiveRealPart.shape
-            imag_shape = self.interactiveImaginaryPart.shape
-            power_shape = self.interactivePowerSpectrum.shape
-        except Exception:
-            return False
-        return real_shape == imag_shape == power_shape and len(real_shape) >= 2
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._hasInteractiveSpectrum ˄
-
-
-    # GENERATED CODE AREA: method._normalizeSpectrumPositions ˅
-    def _normalizeSpectrumPositions(self, positions: list) -> list:
-        """
-        複数座標を配列範囲内へ丸める
-        """
-
-        # SAFE CODE AREA ˅
-        # 入力された複数座標を配列範囲内へ丸め、連続する重複点を取り除く。
-        if not self._hasInteractiveSpectrum():
-            return []
-        height, width = self.interactiveRealPart.shape[:2]
-        points = []
-        for row, col in positions:
-            normalized = (
-                int(np.clip(row, 0, max(height - 1, 0))),
-                int(np.clip(col, 0, max(width - 1, 0))),
-            )
-            if not points or points[-1] != normalized:
-                points.append(normalized)
-        return points
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._normalizeSpectrumPositions ˄
-
-
-    # GENERATED CODE AREA: method._normalizeRect ˅
-    def _normalizeRect(self, rowStart: int, rowStop: int, colStart: int, colStop: int) -> tuple:
-        """
-        矩形範囲を配列範囲内へ丸める
-        """
-
-        # SAFE CODE AREA ˅
-        # 矩形範囲を現在スペクトル配列の有効範囲へ丸める。
-        if not self._hasInteractiveSpectrum():
-            return None
-        height, width = self.interactiveRealPart.shape[:2]
-        r0 = int(np.clip(rowStart, 0, height))
-        r1 = int(np.clip(rowStop, r0, height))
-        c0 = int(np.clip(colStart, 0, width))
-        c1 = int(np.clip(colStop, c0, width))
-        if r1 <= r0 or c1 <= c0:
-            return None
-        return r0, r1, c0, c1
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._normalizeRect ˄
-
-
-    # GENERATED CODE AREA: method._circleMask ˅
-    def _circleMask(self, row: int, col: int, radius: int, r0: int, r1: int, c0: int, c1: int) -> np.ndarray:
-        """
-        矩形内の円形ブラシマスクを作る
-        """
-
-        # SAFE CODE AREA ˅
-        # 矩形の中で円形ブラシに含まれる画素だけをTrueにする。
-        rr, cc = np.ogrid[r0:r1, c0:c1]
-        return (rr - row) ** 2 + (cc - col) ** 2 <= radius ** 2
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._circleMask ˄
-
-
-    # GENERATED CODE AREA: method._normalizePaintColor ˅
-    def _normalizePaintColor(self, rgbColor: list) -> np.ndarray:
-        # SAFE CODE AREA ˅
-        # RGB指定を1次元のfloat配列へ変換し、空指定を明示的なエラーにする。
-        color = np.asarray(rgbColor, dtype=float).reshape(-1)
-        try:
-            _ = color[0]
-        except IndexError as exc:
-            raise ValueError("rgbColor が空です。少なくとも1つ以上の数値を指定してください。空配列は塗りつぶし値に変換できません。") from exc
-        return color
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._normalizePaintColor ˄
 

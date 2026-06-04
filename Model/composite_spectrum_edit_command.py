@@ -28,8 +28,8 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         # 固定領域でcommandsリストを初期化済みのため、追加初期化は不要。
         pass
         # SAFE CODE AREA ˄
-
     # GENERATED CODE AREA: method.__init__ ˄
+
 
     # GENERATED CODE AREA: method.add ˅
     def add(self, command: SpectrumEditCommand) -> None:

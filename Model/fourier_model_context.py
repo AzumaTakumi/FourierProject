@@ -105,6 +105,125 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.set2dSourceData ˄
 
 
+    # GENERATED CODE AREA: method.resetSpectrum ˅
+    def resetSpectrum(self) -> None:
+        """
+        現在のModelの編集用スペクトルを元スペクトル状態に戻すResetSpectrumCommandを実行する。
+        """
+
+        # SAFE CODE AREA ˅
+        # リセットもUndo可能な編集として扱う。
+        self._executeEdit(ResetSpectrumCommand(self.currentModel))
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.resetSpectrum ˄
+
+
+    # GENERATED CODE AREA: method.beginSpectrumEdit ˅
+    def beginSpectrumEdit(self) -> None:
+        """
+        ドラッグによる連続スペクトル編集を開始する。currentCompositeCommandを生成し、以降の編集Commandを1つの操作としてまとめる準備を行う。
+        """
+
+        # SAFE CODE AREA ˅
+        # 以降の連続編集を1回のUndo対象にまとめるため、CompositeCommandを作る。
+        self.currentCompositeCommand = CompositeSpectrumEditCommand()
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.beginSpectrumEdit ˄
+
+
+    # GENERATED CODE AREA: method.endSpectrumEdit ˅
+    def endSpectrumEdit(self) -> None:
+        """
+        ドラッグによる連続スペクトル編集を終了する。currentCompositeCommandをUndo履歴に追加し、Redo履歴を消去する。
+        """
+
+        # SAFE CODE AREA ˅
+        # beginされていない場合は、終了対象がないため何もしない。
+        if self.currentCompositeCommand is None:
+            return
+        # ドラッグ中に実行されたCommandがある場合だけ、CompositeをUndoスタックへ積む。
+        if self.currentCompositeCommand.commands:
+            self.undoStack.append(self.currentCompositeCommand)
+            self.redoStack.clear()
+        # ドラッグ編集のまとめ処理を終了する。
+        self.currentCompositeCommand = None
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.endSpectrumEdit ˄
+
+
+    # GENERATED CODE AREA: method.eraseSpectrumBetweenIndexes ˅
+    def eraseSpectrumBetweenIndexes(self, startIndex: int, endIndex: int) -> None:
+        # SAFE CODE AREA ˅
+        # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として削除する。
+        self._require1dModel()
+        indices = self._indexLine(startIndex, endIndex)
+        commands = [EditSpectrumValueAtIndexCommand(self.currentModel, index, 0.0, 0.0) for index in indices]
+        self._executeEditBatch(
+            commands,
+            lambda: self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1),
+        )
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.eraseSpectrumBetweenIndexes ˄
+
+
+    # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˅
+    def editSpectrumValueAtIndex(self, index: int, realPart: float, imaginaryPart: float) -> None:
+        # SAFE CODE AREA ˅
+        # 1D専用操作なので、現在Modelの型を先に検査する。
+        self._require1dModel()
+        # 指定成分の実部・虚部を直接書き換えるCommandを実行する。
+        self._executeEdit(EditSpectrumValueAtIndexCommand(self.currentModel, index, realPart, imaginaryPart))
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
+
+
+    # GENERATED CODE AREA: method.restoreSpectrumBetweenIndexes ˅
+    def restoreSpectrumBetweenIndexes(self, startIndex: int, endIndex: int) -> None:
+        # SAFE CODE AREA ˅
+        # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として復元する。
+        self._require1dModel()
+        indices = self._indexLine(startIndex, endIndex)
+        commands = [
+            EditSpectrumValueAtIndexCommand(
+                self.currentModel,
+                index,
+                self.currentModel.realPart[index],
+                self.currentModel.imaginaryPart[index],
+            )
+            for index in indices
+        ]
+        self._executeEditBatch(
+            commands,
+            lambda: self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1),
+        )
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.restoreSpectrumBetweenIndexes ˄
+
+
+    # GENERATED CODE AREA: method.eraseSpectrumLineAtPosition ˅
+    def eraseSpectrumLineAtPosition(self, startRow: int, startCol: int, endRow: int, endCol: int, radius: int) -> None:
+        # SAFE CODE AREA ˅
+        # 2Dドラッグでイベント間隔が空いた場合に、前回座標と今回座標を線で結んで削除する。
+        self._require2dModel()
+        points = self._linePoints(startRow, startCol, endRow, endCol)
+        # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
+        self._executeEdit(EraseSpectrumAtPositionsCommand(self.currentModel, points, radius))
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.eraseSpectrumLineAtPosition ˄
+
+
+    # GENERATED CODE AREA: method.paintRgbSpectrumLineAtPosition ˅
+    def paintRgbSpectrumLineAtPosition(self, startRow: int, startCol: int, endRow: int, endCol: int, radius: int, rgbColor: list) -> None:
+        # SAFE CODE AREA ˅
+        # 2Dドラッグでイベント間隔が空いた場合に、前回座標と今回座標を線で結んでRGBペイントする。
+        self._require2dModel()
+        points = self._linePoints(startRow, startCol, endRow, endCol)
+        # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
+        self._executeEdit(PaintRgbSpectrumAtPositionsCommand(self.currentModel, points, radius, rgbColor))
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.paintRgbSpectrumLineAtPosition ˄
+
+
     # GENERATED CODE AREA: method.undo ˅
     def undo(self) -> bool:
         """
@@ -145,91 +264,6 @@ class FourierModelContext(object):
         return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.redo ˄
-
-
-    # GENERATED CODE AREA: method.beginSpectrumEdit ˅
-    def beginSpectrumEdit(self) -> None:
-        """
-        ドラッグによる連続スペクトル編集を開始する。currentCompositeCommandを生成し、以降の編集Commandを1つの操作としてまとめる準備を行う。
-        """
-
-        # SAFE CODE AREA ˅
-        # 以降の連続編集を1回のUndo対象にまとめるため、CompositeCommandを作る。
-        self.currentCompositeCommand = CompositeSpectrumEditCommand()
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.beginSpectrumEdit ˄
-
-
-    # GENERATED CODE AREA: method.endSpectrumEdit ˅
-    def endSpectrumEdit(self) -> None:
-        """
-        ドラッグによる連続スペクトル編集を終了する。currentCompositeCommandをUndo履歴に追加し、Redo履歴を消去する。
-        """
-
-        # SAFE CODE AREA ˅
-        # beginされていない場合は、終了対象がないため何もしない。
-        if self.currentCompositeCommand is None:
-            return
-        # ドラッグ中に実行されたCommandがある場合だけ、CompositeをUndoスタックへ積む。
-        if self.currentCompositeCommand.commands:
-            self.undoStack.append(self.currentCompositeCommand)
-            self.redoStack.clear()
-        # ドラッグ編集のまとめ処理を終了する。
-        self.currentCompositeCommand = None
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.endSpectrumEdit ˄
-
-
-    # GENERATED CODE AREA: method.resetSpectrum ˅
-    def resetSpectrum(self) -> None:
-        """
-        現在のModelの編集用スペクトルを元スペクトル状態に戻すResetSpectrumCommandを実行する。
-        """
-
-        # SAFE CODE AREA ˅
-        # リセットもUndo可能な編集として扱う。
-        self._executeEdit(ResetSpectrumCommand(self.currentModel))
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.resetSpectrum ˄
-
-
-    # GENERATED CODE AREA: method.eraseSpectrumBetweenIndexes ˅
-    def eraseSpectrumBetweenIndexes(self, startIndex: int, endIndex: int) -> None:
-        # SAFE CODE AREA ˅
-        # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として削除する。
-        self._require1dModel()
-        indices = self._indexLine(startIndex, endIndex)
-        commands = [EditSpectrumValueAtIndexCommand(self.currentModel, index, 0.0, 0.0) for index in indices]
-        self._executeEditBatch(
-            commands,
-            lambda: self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1),
-        )
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.eraseSpectrumBetweenIndexes ˄
-
-
-    # GENERATED CODE AREA: method.eraseSpectrumLineAtPosition ˅
-    def eraseSpectrumLineAtPosition(self, startRow: int, startCol: int, endRow: int, endCol: int, radius: int) -> None:
-        # SAFE CODE AREA ˅
-        # 2Dドラッグでイベント間隔が空いた場合に、前回座標と今回座標を線で結んで削除する。
-        self._require2dModel()
-        points = self._linePoints(startRow, startCol, endRow, endCol)
-        # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
-        self._executeEdit(EraseSpectrumAtPositionsCommand(self.currentModel, points, radius))
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.eraseSpectrumLineAtPosition ˄
-
-
-    # GENERATED CODE AREA: method.paintRgbSpectrumLineAtPosition ˅
-    def paintRgbSpectrumLineAtPosition(self, startRow: int, startCol: int, endRow: int, endCol: int, radius: int, rgbColor: list) -> None:
-        # SAFE CODE AREA ˅
-        # 2Dドラッグでイベント間隔が空いた場合に、前回座標と今回座標を線で結んでRGBペイントする。
-        self._require2dModel()
-        points = self._linePoints(startRow, startCol, endRow, endCol)
-        # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
-        self._executeEdit(PaintRgbSpectrumAtPositionsCommand(self.currentModel, points, radius, rgbColor))
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.paintRgbSpectrumLineAtPosition ˄
 
 
     # GENERATED CODE AREA: method.getData ˅
@@ -303,6 +337,44 @@ class FourierModelContext(object):
         return self.currentModel.getInteractiveSpectrumAtIndex(index)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getInteractiveSpectrumAtIndex ˄
+
+
+    # GENERATED CODE AREA: method._require1dModel ˅
+    def _require1dModel(self) -> None:
+        # SAFE CODE AREA ˅
+        # 誤って2Dモデルへ1D編集を実行しないよう、Context入口で型を保証する。
+        if not isinstance(self.currentModel, Fourier1dModel):
+            raise TypeError("Current model is not Fourier1dModel.")
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._require1dModel ˄
+
+
+    # GENERATED CODE AREA: method._require2dModel ˅
+    def _require2dModel(self) -> None:
+        # SAFE CODE AREA ˅
+        # 誤って1Dモデルへ2D編集を実行しないよう、Context入口で型を保証する。
+        if not isinstance(self.currentModel, Fourier2dModel):
+            raise TypeError("Current model is not Fourier2dModel.")
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._require2dModel ˄
+
+
+    # GENERATED CODE AREA: method._executeEdit ˅
+    def _executeEdit(self, command: SpectrumEditCommand) -> None:
+        # SAFE CODE AREA ˅
+        # まずCommandを実行してModel本体の状態を変更する。
+        command.execute()
+        if self.currentCompositeCommand is None:
+            # 通常操作はUndoスタックへ積み、新規編集なのでRedo履歴は破棄する。
+            self.undoStack.append(command)
+            self.redoStack.clear()
+        else:
+            # ドラッグ中は個別CommandをUndoスタックへ積まず、Compositeの中へまとめる。
+            self.currentCompositeCommand.add(command)
+        # Model状態が変わったので、Viewへ変更範囲だけを通知する。
+        self._notifySpectrumChanged(self._createSpectrumChangeForCommand(command))
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._executeEdit ˄
 
 
     # GENERATED CODE AREA: method._executeEditBatch ˅
@@ -404,6 +476,20 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method._create2dSpectrumChangeForRect ˄
 
 
+    # GENERATED CODE AREA: method._create2dSpectrumChangeForLine ˅
+    def _create2dSpectrumChangeForLine(self, points: list, radius: int) -> Spectrum2dChange:
+        # SAFE CODE AREA ˅
+        # 線分上の複数ブラシ編集を、すべて含む1つの矩形changeへまとめる。
+        if not isinstance(self.currentModel, Fourier2dModel):
+            return Spectrum2dChange(x=0, y=0, width=0, height=0, changedPowerSpectrum=None)
+        rect = self.currentModel.getSpectrumRectForPositions(points, radius)
+        if rect is None:
+            return Spectrum2dChange(x=0, y=0, width=0, height=0, changedPowerSpectrum=None)
+        return self._create2dSpectrumChangeForRect(rect)
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._create2dSpectrumChangeForLine ˄
+
+
     # GENERATED CODE AREA: method._createCompositeSpectrumChange ˅
     def _createCompositeSpectrumChange(self, command: CompositeSpectrumEditCommand) -> SpectrumChange:
         # SAFE CODE AREA ˅
@@ -447,20 +533,6 @@ class FourierModelContext(object):
         return self._create2dSpectrumChangeForRect((row_start, row_stop, col_start, col_stop))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._createCompositeSpectrumChange ˄
-
-
-    # GENERATED CODE AREA: method._create2dSpectrumChangeForLine ˅
-    def _create2dSpectrumChangeForLine(self, points: list, radius: int) -> Spectrum2dChange:
-        # SAFE CODE AREA ˅
-        # 線分上の複数ブラシ編集を、すべて含む1つの矩形changeへまとめる。
-        if not isinstance(self.currentModel, Fourier2dModel):
-            return Spectrum2dChange(x=0, y=0, width=0, height=0, changedPowerSpectrum=None)
-        rect = self.currentModel.getSpectrumRectForPositions(points, radius)
-        if rect is None:
-            return Spectrum2dChange(x=0, y=0, width=0, height=0, changedPowerSpectrum=None)
-        return self._create2dSpectrumChangeForRect(rect)
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._create2dSpectrumChangeForLine ˄
 
 
     # GENERATED CODE AREA: method._linePoints ˅
@@ -513,44 +585,6 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method._flattenCommands ˄
 
 
-    # GENERATED CODE AREA: method._require1dModel ˅
-    def _require1dModel(self) -> None:
-        # SAFE CODE AREA ˅
-        # 誤って2Dモデルへ1D編集を実行しないよう、Context入口で型を保証する。
-        if not isinstance(self.currentModel, Fourier1dModel):
-            raise TypeError("Current model is not Fourier1dModel.")
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._require1dModel ˄
-
-
-    # GENERATED CODE AREA: method._require2dModel ˅
-    def _require2dModel(self) -> None:
-        # SAFE CODE AREA ˅
-        # 誤って1Dモデルへ2D編集を実行しないよう、Context入口で型を保証する。
-        if not isinstance(self.currentModel, Fourier2dModel):
-            raise TypeError("Current model is not Fourier2dModel.")
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._require2dModel ˄
-
-
-    # GENERATED CODE AREA: method._executeEdit ˅
-    def _executeEdit(self, command: SpectrumEditCommand) -> None:
-        # SAFE CODE AREA ˅
-        # まずCommandを実行してModel本体の状態を変更する。
-        command.execute()
-        if self.currentCompositeCommand is None:
-            # 通常操作はUndoスタックへ積み、新規編集なのでRedo履歴は破棄する。
-            self.undoStack.append(command)
-            self.redoStack.clear()
-        else:
-            # ドラッグ中は個別CommandをUndoスタックへ積まず、Compositeの中へまとめる。
-            self.currentCompositeCommand.add(command)
-        # Model状態が変わったので、Viewへ変更範囲だけを通知する。
-        self._notifySpectrumChanged(self._createSpectrumChangeForCommand(command))
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._executeEdit ˄
-
-
     # GENERATED CODE AREA: method._notifySpectrumChanged ˅
     def _notifySpectrumChanged(self, change: SpectrumChange) -> None:
         # SAFE CODE AREA ˅
@@ -559,38 +593,4 @@ class FourierModelContext(object):
             self.spectrumChangedListener(change)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._notifySpectrumChanged ˄
-
-
-    # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˅
-    def editSpectrumValueAtIndex(self, index: int, realPart: float, imaginaryPart: float) -> None:
-        # SAFE CODE AREA ˅
-        # 1D専用操作なので、現在Modelの型を先に検査する。
-        self._require1dModel()
-        # 指定成分の実部・虚部を直接書き換えるCommandを実行する。
-        self._executeEdit(EditSpectrumValueAtIndexCommand(self.currentModel, index, realPart, imaginaryPart))
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
-
-
-    # GENERATED CODE AREA: method.restoreSpectrumBetweenIndexes ˅
-    def restoreSpectrumBetweenIndexes(self, startIndex: int, endIndex: int) -> None:
-        # SAFE CODE AREA ˅
-        # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として復元する。
-        self._require1dModel()
-        indices = self._indexLine(startIndex, endIndex)
-        commands = [
-            EditSpectrumValueAtIndexCommand(
-                self.currentModel,
-                index,
-                self.currentModel.realPart[index],
-                self.currentModel.imaginaryPart[index],
-            )
-            for index in indices
-        ]
-        self._executeEditBatch(
-            commands,
-            lambda: self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1),
-        )
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.restoreSpectrumBetweenIndexes ˄
 

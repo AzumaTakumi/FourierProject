@@ -89,6 +89,103 @@ class Fourier1dModel(FourierModel):
     # GENERATED CODE AREA: method.setSourceData ˄
 
 
+    # GENERATED CODE AREA: method.dataSampleWave ˅
+    def dataSampleWave(self) -> np.ndarray:
+        """
+        動作確認用の1次元サンプル波形データを生成して返す。
+        """
+
+        # SAFE CODE AREA ˅
+        # 複数の周波数成分を合成し、スペクトル編集の効果が見えやすいサンプル波形を作る。
+        t = np.linspace(0.0, 1.0, 512, endpoint=False)
+        return (
+            np.sin(2.0 * np.pi * 5.0 * t)
+            + 0.5 * np.sin(2.0 * np.pi * 17.0 * t)
+            + 0.25 * np.sin(2.0 * np.pi * 43.0 * t)
+        )
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.dataSampleWave ˄
+
+
+    # GENERATED CODE AREA: method.dataSquareWave ˅
+    def dataSquareWave(self) -> np.ndarray:
+        """
+        矩形波のサンプルデータを生成して返す。
+        """
+
+        # SAFE CODE AREA ˅
+        # 正弦波の符号だけを使い、値が1または-1になる矩形波を作る。
+        t = np.linspace(0.0, 1.0, 512, endpoint=False)
+        return np.where(np.sin(2.0 * np.pi * 6.0 * t) >= 0.0, 1.0, -1.0)
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.dataSquareWave ˄
+
+
+    # GENERATED CODE AREA: method.dataSawtoothWave ˅
+    def dataSawtoothWave(self) -> np.ndarray:
+        """
+        のこぎり波のサンプルデータを生成して返す。
+        """
+
+        # SAFE CODE AREA ˅
+        # cycles回分の線形増加を小数部として取り出し、-1から1ののこぎり波へ変換する。
+        t = np.linspace(0.0, 1.0, 512, endpoint=False)
+        cycles = 6.0
+        return 2.0 * (cycles * t - np.floor(0.5 + cycles * t))
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.dataSawtoothWave ˄
+
+
+    # GENERATED CODE AREA: method.dataChirpSignal ˅
+    def dataChirpSignal(self) -> np.ndarray:
+        """
+        周波数が時間とともに変化するチャープ信号のサンプルデータを生成して返す。
+        """
+
+        # SAFE CODE AREA ˅
+        # 0秒から1秒までの等間隔サンプルを作り、時間とともに周波数が上がる波を生成する。
+        t = np.linspace(0.0, 1.0, 512, endpoint=False)
+        return np.sin(2.0 * np.pi * (4.0 * t + 24.0 * t * t))
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.dataChirpSignal ˄
+
+
+    # GENERATED CODE AREA: method._validateIndex ˅
+    def _validateIndex(self, index: int) -> None:
+        """
+        1Dスペクトルindexの範囲チェック
+        """
+
+        # SAFE CODE AREA ˅
+        # FFTが未計算の場合は編集対象が存在しないため、編集操作を拒否する。
+        if self.interactiveRealPart is None or self.interactiveImaginaryPart is None:
+            raise ValueError("Fourier data has not been computed.")
+        # Pythonの負数インデックスは許可しつつ、配列サイズ外のアクセスは明示的に例外にする。
+        if not -self.interactiveRealPart.size <= index < self.interactiveRealPart.size:
+            raise IndexError(f"Spectrum index out of range: {index}")
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method._validateIndex ˄
+
+
+    # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˅
+    def editSpectrumValueAtIndex(self, index: int, realPart: float, imaginaryPart: float) -> None:
+        """
+        指定されたインデックスの編集用スペクトル値を、指定された実部と虚部の値に変更する。任意の値への編集や、Undo時の値復元に利用される。
+        """
+
+        # SAFE CODE AREA ˅
+        # 直接入力やUndoから渡された値で、編集用スペクトルの1成分を書き換える。
+        self._validateIndex(index)
+        self.interactiveRealPart[index] = realPart
+        self.interactiveImaginaryPart[index] = imaginaryPart
+        # 表示用パワースペクトルも同じ値に合わせて更新する。
+        self.interactivePowerSpectrum[index] = realPart**2 + imaginaryPart**2
+        # 直接編集後の復元波形を即座に更新する。
+        self.computeInverseData()
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
+
+
     # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˅
     def eraseSpectrumAtIndex(self, index: int) -> None:
         """
@@ -127,86 +224,6 @@ class Fourier1dModel(FourierModel):
     # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
 
 
-    # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˅
-    def editSpectrumValueAtIndex(self, index: int, realPart: float, imaginaryPart: float) -> None:
-        """
-        指定されたインデックスの編集用スペクトル値を、指定された実部と虚部の値に変更する。任意の値への編集や、Undo時の値復元に利用される。
-        """
-
-        # SAFE CODE AREA ˅
-        # 直接入力やUndoから渡された値で、編集用スペクトルの1成分を書き換える。
-        self._validateIndex(index)
-        self.interactiveRealPart[index] = realPart
-        self.interactiveImaginaryPart[index] = imaginaryPart
-        # 表示用パワースペクトルも同じ値に合わせて更新する。
-        self.interactivePowerSpectrum[index] = realPart**2 + imaginaryPart**2
-        # 直接編集後の復元波形を即座に更新する。
-        self.computeInverseData()
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
-
-
-    # GENERATED CODE AREA: method.dataChirpSignal ˅
-    def dataChirpSignal(self) -> np.ndarray:
-        """
-        周波数が時間とともに変化するチャープ信号のサンプルデータを生成して返す。
-        """
-
-        # SAFE CODE AREA ˅
-        # 0秒から1秒までの等間隔サンプルを作り、時間とともに周波数が上がる波を生成する。
-        t = np.linspace(0.0, 1.0, 512, endpoint=False)
-        return np.sin(2.0 * np.pi * (4.0 * t + 24.0 * t * t))
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.dataChirpSignal ˄
-
-
-    # GENERATED CODE AREA: method.dataSawtoothWave ˅
-    def dataSawtoothWave(self) -> np.ndarray:
-        """
-        のこぎり波のサンプルデータを生成して返す。
-        """
-
-        # SAFE CODE AREA ˅
-        # cycles回分の線形増加を小数部として取り出し、-1から1ののこぎり波へ変換する。
-        t = np.linspace(0.0, 1.0, 512, endpoint=False)
-        cycles = 6.0
-        return 2.0 * (cycles * t - np.floor(0.5 + cycles * t))
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.dataSawtoothWave ˄
-
-
-    # GENERATED CODE AREA: method.dataSquareWave ˅
-    def dataSquareWave(self) -> np.ndarray:
-        """
-        矩形波のサンプルデータを生成して返す。
-        """
-
-        # SAFE CODE AREA ˅
-        # 正弦波の符号だけを使い、値が1または-1になる矩形波を作る。
-        t = np.linspace(0.0, 1.0, 512, endpoint=False)
-        return np.where(np.sin(2.0 * np.pi * 6.0 * t) >= 0.0, 1.0, -1.0)
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.dataSquareWave ˄
-
-
-    # GENERATED CODE AREA: method.dataSampleWave ˅
-    def dataSampleWave(self) -> np.ndarray:
-        """
-        動作確認用の1次元サンプル波形データを生成して返す。
-        """
-
-        # SAFE CODE AREA ˅
-        # 複数の周波数成分を合成し、スペクトル編集の効果が見えやすいサンプル波形を作る。
-        t = np.linspace(0.0, 1.0, 512, endpoint=False)
-        return (
-            np.sin(2.0 * np.pi * 5.0 * t)
-            + 0.5 * np.sin(2.0 * np.pi * 17.0 * t)
-            + 0.25 * np.sin(2.0 * np.pi * 43.0 * t)
-        )
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.dataSampleWave ˄
-
-
     # GENERATED CODE AREA: method.getInteractiveSpectrumAtIndex ˅
     def getInteractiveSpectrumAtIndex(self, index: int) -> tuple:
         """
@@ -222,21 +239,4 @@ class Fourier1dModel(FourierModel):
         )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getInteractiveSpectrumAtIndex ˄
-
-
-    # GENERATED CODE AREA: method._validateIndex ˅
-    def _validateIndex(self, index: int) -> None:
-        """
-        1Dスペクトルindexの範囲チェック
-        """
-
-        # SAFE CODE AREA ˅
-        # FFTが未計算の場合は編集対象が存在しないため、編集操作を拒否する。
-        if self.interactiveRealPart is None or self.interactiveImaginaryPart is None:
-            raise ValueError("Fourier data has not been computed.")
-        # Pythonの負数インデックスは許可しつつ、配列サイズ外のアクセスは明示的に例外にする。
-        if not -self.interactiveRealPart.size <= index < self.interactiveRealPart.size:
-            raise IndexError(f"Spectrum index out of range: {index}")
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._validateIndex ˄
 
