@@ -127,8 +127,8 @@ class Fourier2dModel(FourierModel):
     # GENERATED CODE AREA: method.dataGrayScaleImage ˄
 
 
-    # GENERATED CODE AREA: method._normalizeSpectrumPositions ˅
-    def _normalizeSpectrumPositions(self, positions: list) -> list:
+    # FIXED CODE AREA: method._normalizeSpectrumPositions ˅
+    def _normalizeSpectrumPositions(self, positions: list[tuple[int, int]]) -> list[tuple[int, int]]:
         """
         複数座標を配列範囲内へ丸める
         """
@@ -148,11 +148,11 @@ class Fourier2dModel(FourierModel):
                 points.append(normalized)
         return points
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._normalizeSpectrumPositions ˄
+    # FIXED CODE AREA: method._normalizeSpectrumPositions ˄
 
 
-    # GENERATED CODE AREA: method._normalizeRect ˅
-    def _normalizeRect(self, rowStart: int, rowStop: int, colStart: int, colStop: int) -> tuple:
+    # FIXED CODE AREA: method._normalizeRect ˅
+    def _normalizeRect(self, rowStart: int, rowStop: int, colStart: int, colStop: int) -> tuple[int, int, int, int] | None:
         """
         矩形範囲を配列範囲内へ丸める
         """
@@ -170,7 +170,7 @@ class Fourier2dModel(FourierModel):
             return None
         return r0, r1, c0, c1
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._normalizeRect ˄
+    # FIXED CODE AREA: method._normalizeRect ˄
 
 
     # GENERATED CODE AREA: method._circleMask ˅
@@ -187,8 +187,8 @@ class Fourier2dModel(FourierModel):
     # GENERATED CODE AREA: method._circleMask ˄
 
 
-    # GENERATED CODE AREA: method._normalizePaintColor ˅
-    def _normalizePaintColor(self, rgbColor: list) -> np.ndarray:
+    # FIXED CODE AREA: method._normalizePaintColor ˅
+    def _normalizePaintColor(self, rgbColor: list[float]) -> np.ndarray:
         # SAFE CODE AREA ˅
         # RGB指定を1次元のfloat配列へ変換し、空指定を明示的なエラーにする。
         color = np.asarray(rgbColor, dtype=float).reshape(-1)
@@ -198,11 +198,11 @@ class Fourier2dModel(FourierModel):
             raise ValueError("rgbColor が空です。少なくとも1つ以上の数値を指定してください。空配列は塗りつぶし値に変換できません。") from exc
         return color
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._normalizePaintColor ˄
+    # FIXED CODE AREA: method._normalizePaintColor ˄
 
 
-    # GENERATED CODE AREA: method.getSpectrumRectForPositions ˅
-    def getSpectrumRectForPositions(self, positions: list, radius: int) -> tuple:
+    # FIXED CODE AREA: method.getSpectrumRectForPositions ˅
+    def getSpectrumRectForPositions(self, positions: list[tuple[int, int]], radius: int) -> tuple[int, int, int, int] | None:
         """
         複数ブラシ位置を含むUndo用の現在値を取得する
         """
@@ -231,11 +231,11 @@ class Fourier2dModel(FourierModel):
             max(rect[3] for rect in rects),
         )
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.getSpectrumRectForPositions ˄
+    # FIXED CODE AREA: method.getSpectrumRectForPositions ˄
 
 
-    # GENERATED CODE AREA: method.getInteractiveSpectrumAtRect ˅
-    def getInteractiveSpectrumAtRect(self, rowStart: int, rowStop: int, colStart: int, colStop: int) -> tuple:
+    # FIXED CODE AREA: method.getInteractiveSpectrumAtRect ˅
+    def getInteractiveSpectrumAtRect(self, rowStart: int, rowStop: int, colStart: int, colStop: int) -> tuple[np.ndarray, np.ndarray]:
         """
         一括編集CommandがUndoように矩形範囲を保存する
         """
@@ -251,7 +251,7 @@ class Fourier2dModel(FourierModel):
             np.copy(self.interactiveImaginaryPart[r0:r1, c0:c1]),
         )
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.getInteractiveSpectrumAtRect ˄
+    # FIXED CODE AREA: method.getInteractiveSpectrumAtRect ˄
 
 
     # GENERATED CODE AREA: method._hasInteractiveSpectrum ˅
@@ -273,8 +273,8 @@ class Fourier2dModel(FourierModel):
     # GENERATED CODE AREA: method._hasInteractiveSpectrum ˄
 
 
-    # GENERATED CODE AREA: method.eraseSpectrumAtPositions ˅
-    def eraseSpectrumAtPositions(self, positions: list, radius: int) -> None:
+    # FIXED CODE AREA: method.eraseSpectrumAtPositions ˅
+    def eraseSpectrumAtPositions(self, positions: list[tuple[int, int]], radius: int) -> None:
         """
         複数点をまとめて消去し、逆FFTを最後に1回だけ行う
         """
@@ -306,11 +306,11 @@ class Fourier2dModel(FourierModel):
 
         self.computeInverseData()
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.eraseSpectrumAtPositions ˄
+    # FIXED CODE AREA: method.eraseSpectrumAtPositions ˄
 
 
-    # GENERATED CODE AREA: method.paintRgbSpectrumAtPositions ˅
-    def paintRgbSpectrumAtPositions(self, positions: list, radius: int, rgbColor: list) -> None:
+    # FIXED CODE AREA: method.paintRgbSpectrumAtPositions ˅
+    def paintRgbSpectrumAtPositions(self, positions: list[tuple[int, int]], radius: int, rgbColor: list[float]) -> None:
         """
         複数点をまとめてRGBペイントし、逆FFTを最後に1回だけ行う
         """
@@ -350,7 +350,7 @@ class Fourier2dModel(FourierModel):
 
         self.computeInverseData()
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.paintRgbSpectrumAtPositions ˄
+    # FIXED CODE AREA: method.paintRgbSpectrumAtPositions ˄
 
 
     # GENERATED CODE AREA: method.restoreInteractiveSpectrumAtRect ˅
@@ -376,4 +376,3 @@ class Fourier2dModel(FourierModel):
         self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreInteractiveSpectrumAtRect ˄
-

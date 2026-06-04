@@ -22,8 +22,8 @@ class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
-    def __init__(self, model: Fourier2dModel, positions: list, radius: int) -> None:
+    # FIXED CODE AREA: method.__init__ ˅
+    def __init__(self, model: Fourier2dModel, positions: list[tuple[int, int]], radius: int) -> None:
         """
         操作対象のFourier2dModel、編集対象位置、編集半径を受け取り、Commandを初期化する。
         """
@@ -40,9 +40,9 @@ class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
         # 編集前の範囲に対応する虚部配列を保持する。
         self.oldImaginaryPart: np.ndarray = None
 
-        self.positions: list = []
+        self.positions: list[tuple[int, int]] = []
 
-        self.rect: tuple = ()
+        self.rect: tuple[int, int, int, int] | None = None
 
         # SAFE CODE AREA ˅
         # 自動生成の初期値を実際の引数で上書きし、操作対象Modelを保持する。
@@ -52,7 +52,7 @@ class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
         self.radius = max(0, int(radius))
         self.rect = None
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.execute ˅

@@ -224,8 +224,8 @@ class Fourier1dModel(FourierModel):
     # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
 
 
-    # GENERATED CODE AREA: method.getInteractiveSpectrumAtIndex ˅
-    def getInteractiveSpectrumAtIndex(self, index: int) -> tuple:
+    # FIXED CODE AREA: method.getInteractiveSpectrumAtIndex ˅
+    def getInteractiveSpectrumAtIndex(self, index: int) -> tuple[float, float]:
         """
         指定された周波数インデックスにおける編集用スペクトルの値を取得する。CommandがUndo用に編集前の実部と虚部を保存する際に利用する。
         """
@@ -238,5 +238,4 @@ class Fourier1dModel(FourierModel):
             self.interactiveImaginaryPart[index]
         )
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.getInteractiveSpectrumAtIndex ˄
-
+    # FIXED CODE AREA: method.getInteractiveSpectrumAtIndex ˄

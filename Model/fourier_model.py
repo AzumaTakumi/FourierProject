@@ -2,6 +2,7 @@ from __future__ import annotations
 
 # FIXED CODE AREA: module.imports ˅
 import numpy as np
+from PIL import Image
 from .fourier_transform import FourierTransform
 from .fourier_renderer import FourierRenderer
 from .pane_type import PaneType
@@ -150,8 +151,8 @@ class FourierModel(object):
     # GENERATED CODE AREA: method.restoreSnapshot ˄
 
 
-    # GENERATED CODE AREA: method.getData ˅
-    def getData(self) -> dict:
+    # FIXED CODE AREA: method.getData ˅
+    def getData(self) -> dict[PaneType, np.ndarray | None]:
         """
         各表示領域に対応するデータを取得する。PaneTypeをキー、np.ndarrayを値とする辞書を返し、View側はこのデータを用いて元データ、パワースペクトル、編集用パワースペクトル、逆変換結果を描画する。
         """
@@ -165,11 +166,11 @@ class FourierModel(object):
             PaneType.INVERSE_DATA: getattr(self, "inverseData", None),
         }
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.getData ˄
+    # FIXED CODE AREA: method.getData ˄
 
 
-    # GENERATED CODE AREA: method.getImage ˅
-    def getImage(self) -> dict:
+    # FIXED CODE AREA: method.getImage ˅
+    def getImage(self) -> dict[PaneType, Image.Image | None]:
         """
         各表示領域に対応する画像データを取得する。PaneTypeをキー、PIL.Imageを値とする辞書を返し、View側や保存処理で画像として扱う場合に利用する。
         """
@@ -177,7 +178,7 @@ class FourierModel(object):
         # SAFE CODE AREA ˅
         # getDataで取得した数値配列を、PaneTypeごとに適切な描画方法へ振り分ける。
         data_map = self.getData()
-        image_map: dict = {}
+        image_map: dict[PaneType, Image.Image | None] = {}
         for pane_type, data in data_map.items():
             if data is None:
                 # 未初期化ペインはView側で空表示にできるようNoneのまま返す。
@@ -193,4 +194,4 @@ class FourierModel(object):
                 image_map[pane_type] = self.renderer.imageFromSpectrum(data)
         return image_map
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.getImage ˄
+    # FIXED CODE AREA: method.getImage ˄

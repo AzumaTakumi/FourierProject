@@ -19,16 +19,16 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # GENERATED CODE AREA: method.__init__ ˅
+    # FIXED CODE AREA: method.__init__ ˅
     def __init__(self) -> None:
         # まとめて管理するSpectrumEditCommandのリストを保持する。
-        self.commands: list = []
+        self.commands: list[SpectrumEditCommand] = []
 
         # SAFE CODE AREA ˅
         # 固定領域でcommandsリストを初期化済みのため、追加初期化は不要。
         pass
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.__init__ ˄
+    # FIXED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.add ˅
