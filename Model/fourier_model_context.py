@@ -16,11 +16,8 @@ from .spectrum_edit_command import SpectrumEditCommand
 # ContextはControllerの代わりに各Commandを生成するため、具体ModelとCommandをここで読み込む。
 from .fourier_1_d_model import Fourier1dModel
 from .fourier_2_d_model import Fourier2dModel
-from .set_1_d_source_data_command import Set1dSourceDataCommand
-from .set_2_d_source_data_command import Set2dSourceDataCommand
 from .change_fourier_model_command import ChangeFourierModelCommand
-from .erase_spectrum_at_index_command import EraseSpectrumAtIndexCommand
-from .restore_spectrum_at_index_command import RestoreSpectrumAtIndexCommand
+from .set_source_data_command import SetSourceDataCommand
 from .edit_spectrum_value_at_index_command import EditSpectrumValueAtIndexCommand
 from .erase_spectrum_at_positions_command import EraseSpectrumAtPositionsCommand
 from .paint_rgb_spectrum_at_positions_command import PaintRgbSpectrumAtPositionsCommand
@@ -71,7 +68,7 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.set1dSourceData ˅
     def set1dSourceData(self, sourceData: np.ndarray) -> None:
         """
-        1次元元データを設定する。現在のModelが1次元の場合はSet1dSourceDataCommandを実行し、2次元Modelから1次元Modelへ切り替える必要がある場合はChangeFourierModelCommandを実行する。
+        1次元元データを設定する。現在のModelが1次元の場合はSetSourceDataCommandを実行し、2次元Modelから1次元Modelへ切り替える必要がある場合はChangeFourierModelCommandを実行する。
         """
 
         # SAFE CODE AREA ˅
@@ -79,7 +76,7 @@ class FourierModelContext(object):
         data = np.asarray(sourceData, dtype=float)
         # すでに1Dモデルならデータ差し替えCommand、2DモデルならModel切り替えCommandを使う。
         command = (
-            Set1dSourceDataCommand(self.currentModel, data)
+            SetSourceDataCommand(self.currentModel, data)
             if isinstance(self.currentModel, Fourier1dModel)
             else ChangeFourierModelCommand(self, Fourier1dModel(data))
         )
@@ -91,7 +88,7 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.set2dSourceData ˅
     def set2dSourceData(self, sourceData: np.ndarray) -> None:
         """
-        2次元元データを設定する。現在のModelが2次元の場合はSet2dSourceDataCommandを実行し、1次元Modelから2次元Modelへ切り替える必要がある場合はChangeFourierModelCommandを実行する。
+        2次元元データを設定する。現在のModelが2次元の場合はSetSourceDataCommandを実行し、1次元Modelから2次元Modelへ切り替える必要がある場合はChangeFourierModelCommandを実行する。
         """
 
         # SAFE CODE AREA ˅
@@ -99,7 +96,7 @@ class FourierModelContext(object):
         data = np.asarray(sourceData, dtype=float)
         # すでに2Dモデルならデータ差し替えCommand、1DモデルならModel切り替えCommandを使う。
         command = (
-            Set2dSourceDataCommand(self.currentModel, data)
+            SetSourceDataCommand(self.currentModel, data)
             if isinstance(self.currentModel, Fourier2dModel)
             else ChangeFourierModelCommand(self, Fourier2dModel(data))
         )
@@ -202,7 +199,7 @@ class FourierModelContext(object):
         # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として削除する。
         self._require1dModel()
         indices = self._indexLine(startIndex, endIndex)
-        commands = [EraseSpectrumAtIndexCommand(self.currentModel, index) for index in indices]
+        commands = [EditSpectrumValueAtIndexCommand(self.currentModel, index, 0.0, 0.0) for index in indices]
         self._executeEditBatch(
             commands,
             lambda: self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1),
@@ -337,7 +334,7 @@ class FourierModelContext(object):
     def _createSpectrumChangeForCommand(self, command: SpectrumEditCommand) -> SpectrumChange:
         # SAFE CODE AREA ˅
         # Commandの種類から、Viewが部分更新できる最小範囲の変更情報を作る。
-        if isinstance(command, (EraseSpectrumAtIndexCommand, RestoreSpectrumAtIndexCommand, EditSpectrumValueAtIndexCommand)):
+        if isinstance(command, EditSpectrumValueAtIndexCommand):
             return self._create1dSpectrumChangeForRange(command.index, command.index + 1)
         if isinstance(command, (EraseSpectrumAtPositionsCommand, PaintRgbSpectrumAtPositionsCommand)):
             return self._create2dSpectrumChangeForLine(command.positions, command.radius)
@@ -419,7 +416,7 @@ class FourierModelContext(object):
             spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
             size = int(spectrum.shape[0]) if spectrum is not None and spectrum.ndim >= 1 else 0
             for child in commands:
-                if not isinstance(child, (EraseSpectrumAtIndexCommand, RestoreSpectrumAtIndexCommand, EditSpectrumValueAtIndexCommand)):
+                if not isinstance(child, EditSpectrumValueAtIndexCommand):
                     return self._createFullSpectrumChange()
                 index = int(child.index)
                 if size > 0 and index < 0:
@@ -581,7 +578,15 @@ class FourierModelContext(object):
         # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として復元する。
         self._require1dModel()
         indices = self._indexLine(startIndex, endIndex)
-        commands = [RestoreSpectrumAtIndexCommand(self.currentModel, index) for index in indices]
+        commands = [
+            EditSpectrumValueAtIndexCommand(
+                self.currentModel,
+                index,
+                self.currentModel.realPart[index],
+                self.currentModel.imaginaryPart[index],
+            )
+            for index in indices
+        ]
         self._executeEditBatch(
             commands,
             lambda: self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1),

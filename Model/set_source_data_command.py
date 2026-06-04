@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # GENERATED CODE AREA: module.imports ˅
 import numpy as np
-from .fourier_2_d_model import Fourier2dModel
+from .fourier_model import FourierModel
 from .snapshot import Snapshot
 from .spectrum_edit_command import SpectrumEditCommand
 
@@ -11,10 +11,10 @@ from .spectrum_edit_command import SpectrumEditCommand
 # SAFE CODE AREA ˅
 # SAFE CODE AREA ˄
 
-class Set2dSourceDataCommand(SpectrumEditCommand):
+class SetSourceDataCommand(SpectrumEditCommand):
     # GENERATED CODE AREA: class.header ˅
     """
-    2次元モデルに新しい元データを設定するCommandである。実行前の状態をSnapshotとして保存し、Undo時には読み込み前の状態に戻す。
+    1次元モデルに新しい元データを設定するCommandである。実行前の状態をSnapshotとして保存し、Undo時には読み込み前の状態に戻す。
     """
 
     # SAFE CODE AREA ˅
@@ -22,38 +22,42 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
 
     # GENERATED CODE AREA: class.header ˄
 
-    # FIXED CODE AREA: method.__init__ ˅
-    def __init__(self, model: Fourier2dModel, newSourceData: np.ndarray) -> None:
+    # GENERATED CODE AREA: method.__init__ ˅
+    def __init__(self, model: FourierModel, newSourceData: np.ndarray) -> None:
         """
-        操作対象のFourier2dModelと新しい2次元元データを受け取り、Commandを初期化する。
+        操作対象のFourier1dModelと新しい1次元元データを受け取り、Commandを初期化する。
         """
 
-        # 操作対象となるFourier2dModelを保持する。
-        self.model: Fourier2dModel = model
+        # 操作対象となるFourier1dModelを保持する。
+        self.model: FourierModel = None
 
-        # 新しい2次元データを設定する前のModel状態を保持する。
-        self.oldSnapshot: Snapshot = model.createSnapshot()
+        # 新しい1次元データを設定する前のModel状態を保持する。
+        self.oldSnapshot: Snapshot = None
 
-        # 新しく設定する2次元元データを保持する。
-        self.newSourceData: np.ndarray = newSourceData
+        # 新しく設定する1次元元データを保持する。
+        self.newSourceData: np.ndarray = None
 
         # SAFE CODE AREA ˅
+        # 自動生成の初期値を実際の引数で上書きし、操作対象Modelを保持する。
+        self.model = model
+        # データ差し替え前の状態へUndoできるよう、現在のModel全体をSnapshot化する。
+        self.oldSnapshot = model.createSnapshot()
         # 呼び出し元配列の後続変更に影響されないよう、新しい元データをcopyして保持する。
         self.newSourceData = np.copy(newSourceData)
         # SAFE CODE AREA ˄
-    # FIXED CODE AREA: method.__init__ ˄
+    # GENERATED CODE AREA: method.__init__ ˄
 
 
     # GENERATED CODE AREA: method.execute ˅
     def execute(self) -> None:
         """
-        現在のModel状態をSnapshotとして保存した後、新しい2次元元データをModelに設定する。
+        現在のModel状態をSnapshotとして保存した後、新しい1次元元データをModelに設定する。
         """
 
         # SAFE CODE AREA ˅
         # Redo時にも「実行直前」の状態へUndoできるようSnapshotを取り直す。
         self.oldSnapshot = self.model.createSnapshot()
-        # Modelへ新しい2Dデータを設定し、FFT/逆変換の再計算を行わせる。
+        # 1D/2DそれぞれのModelが持つsetSourceDataへ委譲する。
         self.model.setSourceData(self.newSourceData)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.execute ˄
@@ -62,7 +66,7 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
     # GENERATED CODE AREA: method.undo ˅
     def undo(self) -> None:
         """
-        保存しておいたoldSnapshotを用いて、2次元元データ設定前の状態に戻す。
+        保存しておいたoldSnapshotを用いて、1次元元データ設定前の状態に戻す。
         """
 
         # SAFE CODE AREA ˅
@@ -80,6 +84,6 @@ class Set2dSourceDataCommand(SpectrumEditCommand):
 
         # SAFE CODE AREA ˅
         # デバッグや履歴表示用の固定説明を返す。
-        return "Set 2D Source Data"
+        return "Set Source Data"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄

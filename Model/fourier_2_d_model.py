@@ -3,7 +3,6 @@ from __future__ import annotations
 # GENERATED CODE AREA: module.imports ˅
 import numpy as np
 from .fourier_model import FourierModel
-from .snapshot import Snapshot
 
 # GENERATED CODE AREA: module.imports ˄
 
@@ -93,42 +92,6 @@ class Fourier2dModel(FourierModel):
     # GENERATED CODE AREA: method.setSourceData ˄
 
 
-    # GENERATED CODE AREA: method.computeFourierData ˅
-    def computeFourierData(self) -> None:
-        """
-        現在のsourceDataに対して2次元フーリエ変換を行い、realPart、imaginaryPart、powerSpectrumを生成または更新する。
-        """
-
-        # SAFE CODE AREA ˅
-        # FourierTransformへ元画像を渡し、2次元FFTを実行する。
-        self.engine.setFftInputSignal(self.sourceData)
-        self.engine.transform()
-        # FFT結果を実部・虚部へ分離し、表示用のパワースペクトルを計算する。
-        self.realPart = self.engine.realPart()
-        self.imaginaryPart = self.engine.imaginaryPart()
-        self.powerSpectrum = np.square(self.realPart) + np.square(self.imaginaryPart)
-        # 編集用スペクトルは元スペクトルと別配列にして、消しゴムやペイントの変更を分離する。
-        self.interactiveRealPart, self.interactiveImaginaryPart = np.copy(self.realPart), np.copy(self.imaginaryPart)
-        self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.computeFourierData ˄
-
-
-    # GENERATED CODE AREA: method.computeInverseData ˅
-    def computeInverseData(self) -> None:
-        """
-        現在の（編集後を含む）スペクトルから逆フーリエ変換を行い、復元データを生成/更新する。
-        """
-
-        # SAFE CODE AREA ˅
-        # 編集済みの実部・虚部を複素スペクトルに戻してIFFT入力にする。
-        self.engine.setIfftInputSpectrum(self.interactiveRealPart + 1j * self.interactiveImaginaryPart)
-        # 逆変換結果はInverse画像表示に利用する。
-        self.inverseData = self.engine.inverseTransform()
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.computeInverseData ˄
-
-
     # GENERATED CODE AREA: method.dataColorImage ˅
     def dataColorImage(self) -> np.ndarray:
         """
@@ -162,69 +125,6 @@ class Fourier2dModel(FourierModel):
         )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.dataGrayScaleImage ˄
-
-
-    # GENERATED CODE AREA: method.createSnapshot ˅
-    def createSnapshot(self) -> Snapshot:
-        """
-        現在の2次元モデルの内部状態をSnapshotとして生成する。Undo対象操作の実行前に、sourceData、スペクトル情報、編集用スペクトル、逆変換結果を保存するために使用する。
-        """
-
-        # SAFE CODE AREA ˅
-        # Undo時に配列参照が共有されないよう、Model内の状態をすべてcopyして保存する。
-        return Snapshot(
-            sourceData=np.copy(self.sourceData) if self.sourceData is not None else None,
-            realPart=np.copy(self.realPart) if self.realPart is not None else None,
-            imaginaryPart=np.copy(self.imaginaryPart) if self.imaginaryPart is not None else None,
-            powerSpectrum=np.copy(self.powerSpectrum) if self.powerSpectrum is not None else None,
-            interactiveRealPart=np.copy(self.interactiveRealPart) if self.interactiveRealPart is not None else None,
-            interactiveImaginaryPart=np.copy(self.interactiveImaginaryPart) if self.interactiveImaginaryPart is not None else None,
-            interactivePowerSpectrum=np.copy(self.interactivePowerSpectrum) if self.interactivePowerSpectrum is not None else None,
-            inverseData=np.copy(self.inverseData) if self.inverseData is not None else None
-        )
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.createSnapshot ˄
-
-
-    # GENERATED CODE AREA: method.restoreSnapshot ˅
-    def restoreSnapshot(self, snapshot: Snapshot) -> None:
-        """
-        指定されたSnapshotの内容を用いて、2次元モデルの内部状態を復元する。Undo処理などで、sourceData、スペクトル情報、編集用スペクトル、逆変換結果を以前の状態へ戻すために使用する。
-        """
-
-        # SAFE CODE AREA ˅
-        # Snapshot側の配列を再度copyし、復元後の編集が保存済み状態へ影響しないようにする。
-        self.sourceData = np.copy(snapshot.sourceData) if snapshot.sourceData is not None else None
-        self.realPart = np.copy(snapshot.realPart) if snapshot.realPart is not None else None
-        self.imaginaryPart = np.copy(snapshot.imaginaryPart) if snapshot.imaginaryPart is not None else None
-        self.powerSpectrum = np.copy(snapshot.powerSpectrum) if snapshot.powerSpectrum is not None else None
-        self.interactiveRealPart = np.copy(snapshot.interactiveRealPart) if snapshot.interactiveRealPart is not None else None
-        self.interactiveImaginaryPart = np.copy(snapshot.interactiveImaginaryPart) if snapshot.interactiveImaginaryPart is not None else None
-        self.interactivePowerSpectrum = np.copy(snapshot.interactivePowerSpectrum) if snapshot.interactivePowerSpectrum is not None else None
-        self.inverseData = np.copy(snapshot.inverseData) if snapshot.inverseData is not None else None
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.restoreSnapshot ˄
-
-
-    # GENERATED CODE AREA: method.resetSpectrum ˅
-    def resetSpectrum(self) -> None:
-        """
-        2次元の編集用スペクトルを、フーリエ変換直後の元スペクトル状態に戻す。編集によって変更されたinteractiveRealPart、interactiveImaginaryPart、interactivePowerSpectrumを初期状態に戻し、逆変換結果を再計算する。
-        """
-
-        # SAFE CODE AREA ˅
-        # FFT結果が無い場合は、リセット対象がまだ存在しないため何もしない。
-        if self.realPart is None or self.imaginaryPart is None or self.powerSpectrum is None:
-            return
-        # 編集用スペクトルをFFT直後の元スペクトルのコピーへ戻す。
-        self.interactiveRealPart = np.copy(self.realPart)
-        self.interactiveImaginaryPart = np.copy(self.imaginaryPart)
-        self.interactivePowerSpectrum = np.copy(self.powerSpectrum)
-        
-        # 元スペクトルから復元画像を再計算する。
-        self.computeInverseData()
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.resetSpectrum ˄
 
 
     # GENERATED CODE AREA: method.getSpectrumRectForPositions ˅
@@ -476,3 +376,4 @@ class Fourier2dModel(FourierModel):
         return color
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._normalizePaintColor ˄
+
