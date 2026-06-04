@@ -599,10 +599,8 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˅
     def eraseSpectrumAtIndex(self, index: int) -> None:
         # SAFE CODE AREA ˅
-        # 1D専用操作なので、現在Modelの型を先に検査する。
-        self._require1dModel()
-        # 実際の編集とUndo用保存はCommandへ任せる。
-        self._executeEdit(EraseSpectrumAtIndexCommand(self.currentModel, index))
+        # 1点削除も範囲削除の特殊ケースとして扱い、Context側の編集入口を集約する。
+        self.eraseSpectrumBetweenIndexes(index, index)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˄
 
