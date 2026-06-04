@@ -150,20 +150,6 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.redo ˄
 
 
-    # GENERATED CODE AREA: method._clearStack ˅
-    def _clearStack(self) -> None:
-        """
-        Undo履歴とRedo履歴を消去する。
-        """
-
-        # SAFE CODE AREA ˅
-        # 新しいファイル読み込みや初期化時に、Undo/Redo履歴を完全に消す。
-        self.undoStack.clear()
-        self.redoStack.clear()
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._clearStack ˄
-
-
     # GENERATED CODE AREA: method.beginSpectrumEdit ˅
     def beginSpectrumEdit(self) -> None:
         """
@@ -352,7 +338,7 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         # Commandの種類から、Viewが部分更新できる最小範囲の変更情報を作る。
         if isinstance(command, (EraseSpectrumAtIndexCommand, RestoreSpectrumAtIndexCommand, EditSpectrumValueAtIndexCommand)):
-            return self._create1dSpectrumChangeAtIndex(command.index)
+            return self._create1dSpectrumChangeForRange(command.index, command.index + 1)
         if isinstance(command, (EraseSpectrumAtPositionsCommand, PaintRgbSpectrumAtPositionsCommand)):
             return self._create2dSpectrumChangeForLine(command.positions, command.radius)
         if isinstance(command, CompositeSpectrumEditCommand):
@@ -380,28 +366,6 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method._createFullSpectrumChange ˄
 
 
-    # GENERATED CODE AREA: method._create1dSpectrumChangeAtIndex ˅
-    def _create1dSpectrumChangeAtIndex(self, index: int) -> Spectrum1dChange:
-        # SAFE CODE AREA ˅
-        # 1Dの単一点編集では、変更されたindexとその1要素だけをViewへ渡す。
-        spectrum = getattr(self.currentModel, "interactivePowerSpectrum", None)
-        if spectrum is None:
-            return Spectrum1dChange(index=0, changedPowerSpectrum=None)
-        size = int(spectrum.shape[0]) if spectrum.ndim >= 1 else 0
-        if size <= 0:
-            return Spectrum1dChange(index=0, changedPowerSpectrum=np.array([]))
-        normalized_index = int(index)
-        if normalized_index < 0:
-            normalized_index += size
-        normalized_index = int(np.clip(normalized_index, 0, size - 1))
-        return Spectrum1dChange(
-            index=normalized_index,
-            changedPowerSpectrum=np.copy(spectrum[normalized_index:normalized_index + 1]),
-        )
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._create1dSpectrumChangeAtIndex ˄
-
-
     # GENERATED CODE AREA: method._create1dSpectrumChangeForRange ˅
     def _create1dSpectrumChangeForRange(self, start: int, stop: int) -> Spectrum1dChange:
         # SAFE CODE AREA ˅
@@ -412,8 +376,12 @@ class FourierModelContext(object):
         size = int(spectrum.shape[0]) if spectrum.ndim >= 1 else 0
         if size <= 0:
             return Spectrum1dChange(index=0, changedPowerSpectrum=np.array([]))
-        start = int(np.clip(start, 0, size - 1))
-        stop = int(np.clip(stop, start + 1, size))
+        raw_start = int(start)
+        raw_stop = int(stop)
+        normalized_start = raw_start + size if raw_start < 0 else raw_start
+        normalized_stop = raw_stop + size if raw_stop < 0 or (raw_start < 0 and raw_stop == 0) else raw_stop
+        start = int(np.clip(normalized_start, 0, size - 1))
+        stop = int(np.clip(normalized_stop, start + 1, size))
         return Spectrum1dChange(index=start, changedPowerSpectrum=np.copy(spectrum[start:stop]))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._create1dSpectrumChangeForRange ˄
@@ -596,26 +564,6 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method._notifySpectrumChanged ˄
 
 
-    # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˅
-    def eraseSpectrumAtIndex(self, index: int) -> None:
-        # SAFE CODE AREA ˅
-        # 1点削除も範囲削除の特殊ケースとして扱い、Context側の編集入口を集約する。
-        self.eraseSpectrumBetweenIndexes(index, index)
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˄
-
-
-    # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˅
-    def restoreSpectrumAtIndex(self, index: int) -> None:
-        # SAFE CODE AREA ˅
-        # 1D専用操作なので、現在Modelの型を先に検査する。
-        self._require1dModel()
-        # 指定成分を元スペクトルへ戻すCommandを実行する。
-        self._executeEdit(RestoreSpectrumAtIndexCommand(self.currentModel, index))
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
-
-
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˅
     def editSpectrumValueAtIndex(self, index: int, realPart: float, imaginaryPart: float) -> None:
         # SAFE CODE AREA ˅
@@ -640,3 +588,4 @@ class FourierModelContext(object):
         )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSpectrumBetweenIndexes ˄
+

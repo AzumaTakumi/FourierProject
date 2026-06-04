@@ -93,30 +93,6 @@ class Fourier2dModel(FourierModel):
     # GENERATED CODE AREA: method.setSourceData ˄
 
 
-    # GENERATED CODE AREA: method._fill ˅
-    def _fill(self, value: float) -> None:
-        """
-        指定したndarray全体を同一値で埋めるユーティリティ。初期化やマスク生成に利用する。
-        """
-
-        # SAFE CODE AREA ˅
-        # 指定名の配列が存在する場合だけfillし、未初期化のフィールドはそのままにする。
-        for name in (
-            "realPart",
-            "imaginaryPart",
-            "powerSpectrum",
-            "interactiveRealPart",
-            "interactiveImaginaryPart",
-            "interactivePowerSpectrum",
-            "inverseData",
-        ):
-            array = getattr(self, name, None)
-            if array is not None:
-                array.fill(value)
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._fill ˄
-
-
     # GENERATED CODE AREA: method.computeFourierData ˅
     def computeFourierData(self) -> None:
         """
