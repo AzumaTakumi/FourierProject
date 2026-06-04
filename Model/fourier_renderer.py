@@ -19,57 +19,9 @@ class FourierRenderer(object):
     """
 
     # SAFE CODE AREA ˅
-    # 0除算判定などで使う閾値。
-    accuracy: float = 1.0e-12
-    # 1D描画時の出力画像幅。
-    imageWidth: int = 512
-    # 1D描画時の出力画像高さ。
-    imageHeight: int = 256
     # SAFE CODE AREA ˄
 
     # GENERATED CODE AREA: class.header ˄
-
-    # FIXED CODE AREA: method.setAccuracy ˅
-    @classmethod
-    def setAccuracy(cls, accuracy: float) -> None:
-        """
-        レンダリング設定（accuracy）を設定する。以後の画像生成処理に反映される。
-        """
-
-        # SAFE CODE AREA ˅
-        # 入力をfloatへ変換して設定する。
-        cls.accuracy = float(accuracy)
-        # SAFE CODE AREA ˄
-    # FIXED CODE AREA: method.setAccuracy ˄
-
-
-    # FIXED CODE AREA: method.setImageWidth ˅
-    @classmethod
-    def setImageWidth(cls, imageWidth: int) -> None:
-        """
-        レンダリング設定（imageWidth）を設定する。以後の画像生成処理に反映される。
-        """
-
-        # SAFE CODE AREA ˅
-        # 入力を整数化して画像幅へ設定する。
-        cls.imageWidth = int(imageWidth)
-        # SAFE CODE AREA ˄
-    # FIXED CODE AREA: method.setImageWidth ˄
-
-
-    # FIXED CODE AREA: method.setImageHeight ˅
-    @classmethod
-    def setImageHeight(cls, imageHeight: int) -> None:
-        """
-        レンダリング設定（imageHeight）を設定する。以後の画像生成処理に反映される。
-        """
-
-        # SAFE CODE AREA ˅
-        # 入力を整数化して画像高さへ設定する。
-        cls.imageHeight = int(imageHeight)
-        # SAFE CODE AREA ˄
-    # FIXED CODE AREA: method.setImageHeight ˄
-
 
     # GENERATED CODE AREA: method.imageFromImageData ˅
     def imageFromImageData(self, data: np.ndarray) -> Image.Image:
@@ -123,9 +75,9 @@ class FourierRenderer(object):
         array = np.abs(array) * complex_mask + array * (1.0 - complex_mask)
         values = np.nan_to_num(array.astype(float, copy=False)).reshape(-1)
 
-        # 出力画像サイズを取得し、白背景のグレースケール画像を作成する。
-        width = max(1, int(getattr(cls, "imageWidth", 512)))
-        height = max(1, int(getattr(cls, "imageHeight", 256)))
+        # 1D表示用の固定サイズで、白背景のグレースケール画像を作成する。
+        width = 512
+        height = 256
         image = Image.new("L", (width, height), 255)
         draw = ImageDraw.Draw(image)
 
@@ -145,7 +97,7 @@ class FourierRenderer(object):
         min_value = float(np.min(values))
         max_value = float(np.max(values))
         span = max_value - min_value
-        flat_mask = float(abs(span) <= getattr(cls, "accuracy", 1.0e-12))
+        flat_mask = float(abs(span) <= 1.0e-12)
         safe_span = span + flat_mask
         normalized = (values - min_value) / safe_span
         scaled = (1.0 - normalized) * (plot_height - 1) + plot_top
@@ -247,7 +199,7 @@ class FourierRenderer(object):
 
         # 値域が極小の場合も安全に扱い、0〜255の uint8 にスケーリングする。
         span = max_value - min_value
-        flat_mask = float(abs(span) <= getattr(cls, "accuracy", 1.0e-12))
+        flat_mask = float(abs(span) <= 1.0e-12)
         safe_span = span + flat_mask
         normalized = (array - min_value) / safe_span
         scaled = np.clip(normalized * 255.0, 0, 255) * (1.0 - flat_mask)
