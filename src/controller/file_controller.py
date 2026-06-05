@@ -2,6 +2,7 @@ import os
 import numpy as np
 from PIL import Image
 from PyQt6.QtWidgets import QFileDialog
+from src.model import FourierModelContext
 
 class ImageReader:
 	"""2次元画像を処理するストラテジークラス。"""
@@ -47,6 +48,7 @@ class FileLoader(FileController):
 	"""
 	def __init__(self, aView) -> None:
 		super().__init__(aView)
+		self.model = FourierModelContext()
 		
 		# 1. エラー用のオブジェクトをあらかじめ生成しておく
 		self.default_reader = NullReader()
@@ -80,11 +82,11 @@ class FileLoader(FileController):
 
 	def process1DModel(self, aData: np.ndarray) -> None:
 		# modelオブジェクトが持つ「データセット用関数」に、NumPy配列をいれる
-		# self.model.Fourier1dModel.setSourceData(aData)　modelの関数が決まったらここのコメントアウトを取る
-		print("-> 1次元データをModelへデータを送信しました。")
+		self.model.set1dSourceData(aData)
+		# print("-> 1次元データをModelへデータを送信しました。")
         
 	def process2DModel(self, aData: np.ndarray) -> None:
 		# modelオブジェクトが持つ「データセット用関数」に、NumPy配列を入れる。
-		# self.model.Fourier1dModel.setSourceData(aData)  modelの関数が決まったらここのコメントアウトを取る
-		print("-> 2次元データをModelへデータを送信しました。")
+		self.model.set2dSourceData(aData)
+		# print("-> 2次元データをModelへデータを送信しました。")
 		
