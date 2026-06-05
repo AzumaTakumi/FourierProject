@@ -1,9 +1,11 @@
 # === Macのシステムが自動生成するゴミファイル ===
 .DS_Store
+**/.DS_Store
 Thumbs.db
 
 # === Pythonの実行時に自動生成されるキャッシュ（重要） ===
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -18,3 +20,17 @@ ENV/
 
 # === グラフプロットやテストで出力された一時データ ===
 *.log
+
+# === ルート直下のローカル実験用アプリ ===
+Controller/
+View/
+src/gui_app.py
+
+# === model内のローカルテスト・生成物 ===
+src/model/test_programs/
+src/model/VIEW_CONTROLLER_MODEL_GUIDE.md
+src/model/tools/COMMIT_MESSAGE_RULES.md
+src/model/tools/FourierSignalModelUndoRedo.xml
+src/model/tools/FourierSignalModelUndoRedo.xml.bak
+src/model/tools/FourierSignalModelUndoRedo.asta
+src/model/tools/FourierSignalModelUndoRedo.asta.lock
