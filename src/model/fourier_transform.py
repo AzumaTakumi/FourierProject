@@ -32,7 +32,7 @@ class FourierTransform(object):
         """
 
         # FFT（フーリエ変換）の入力信号を保持するフィールド。
-        self.fftInputSignal: np.ndarray = None
+        self.fftInputSignal: np.ndarray | None = fftInputSignal
 
         # FFTの結果（スペクトル）を保持するフィールド。
         self.fftResultSpectrum: np.ndarray | None = None
@@ -44,7 +44,7 @@ class FourierTransform(object):
         self.ifftResultSignal: np.ndarray | None = None
 
         # SAFE CODE AREA ˅
-        pass
+        # 初期値の入力信号が渡された場合でも、変換は明示的に呼び出すまで行わない。
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.__init__ ˄
 
@@ -56,7 +56,8 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.fftInputSignal = np.asarray(fftInputSignal)
+        self.fftResultSpectrum = None
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.setFftInputSignal ˄
 
@@ -68,7 +69,8 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        self.ifftInputSpectrum = np.asarray(ifftInputSpectrum)
+        self.ifftResultSignal = None
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.setIfftInputSpectrum ˄
 
@@ -80,7 +82,10 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        if self.fftInputSignal is None:
+            raise ValueError("FFT input signal has not been set.")
+        self.fftResultSpectrum = np.fft.fftn(self.fftInputSignal)
+        return self.fftResultSpectrum
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.transform ˄
 
@@ -92,7 +97,9 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        if self.fftResultSpectrum is None:
+            raise ValueError("FFT result spectrum has not been computed.")
+        return np.real(self.fftResultSpectrum)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.realPart ˄
 
@@ -104,7 +111,9 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        if self.fftResultSpectrum is None:
+            raise ValueError("FFT result spectrum has not been computed.")
+        return np.imag(self.fftResultSpectrum)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.imaginaryPart ˄
 
@@ -116,7 +125,9 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        if self.fftResultSpectrum is None:
+            raise ValueError("FFT result spectrum has not been computed.")
+        return np.abs(self.fftResultSpectrum)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.amplitudeSpectrum ˄
 
@@ -128,7 +139,11 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        spectrum = self.amplitudeSpectrum()
+        max_value = float(np.max(spectrum))
+        if max_value <= 0.0:
+            return np.zeros_like(spectrum, dtype=float)
+        return spectrum.astype(float) / max_value
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.normalizedSpectrum ˄
 
@@ -140,7 +155,11 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        spectrum = np.log1p(self.amplitudeSpectrum())
+        max_value = float(np.max(spectrum))
+        if max_value <= 0.0:
+            return np.zeros_like(spectrum, dtype=float)
+        return spectrum.astype(float) / max_value
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.normalizedLogSpectrum ˄
 
@@ -152,7 +171,9 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        if self.fftResultSpectrum is None:
+            raise ValueError("FFT result spectrum has not been computed.")
+        return np.square(np.abs(self.fftResultSpectrum))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.powerSpectrum ˄
 
@@ -164,7 +185,11 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        spectrum = self.powerSpectrum()
+        max_value = float(np.max(spectrum))
+        if max_value <= 0.0:
+            return np.zeros_like(spectrum, dtype=float)
+        return spectrum.astype(float) / max_value
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.normalizedPowerSpectrum ˄
 
@@ -176,7 +201,11 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        spectrum = np.log1p(self.powerSpectrum())
+        max_value = float(np.max(spectrum))
+        if max_value <= 0.0:
+            return np.zeros_like(spectrum, dtype=float)
+        return spectrum.astype(float) / max_value
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.normalizedLogPowerSpectrum ˄
 
@@ -188,7 +217,9 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        if self.fftResultSpectrum is None:
+            raise ValueError("FFT result spectrum has not been computed.")
+        return np.fft.fftshift(self.fftResultSpectrum)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.shiftSpectrum ˄
 
@@ -200,7 +231,11 @@ class FourierTransform(object):
         """
 
         # SAFE CODE AREA ˅
-        pass
+        if self.ifftInputSpectrum is None:
+            raise ValueError("IFFT input spectrum has not been set.")
+        result = np.fft.ifftn(self.ifftInputSpectrum)
+        self.ifftResultSignal = result
+        return self.ifftResultSignal
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.inverseTransform ˄
 
