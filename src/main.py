@@ -5,7 +5,7 @@ from src.controller.file_controller import FileLoader
 
 def main() -> int:
 	"""
-	アプリケーションのメインプログラム。
+	アプリケーションのメインプログラムです。
 	"""
 	app = QApplication(sys.argv)
 	

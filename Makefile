@@ -30,7 +30,7 @@ doc:
 # 5. 不要ファイルの掃除（納品リポジトリを綺麗に保つため）
 clean:
 	@find . -name "*.pyc" -exec rm -f {} \;
-	@find . -name "__pycache__" -exec rm -rf {} \;
+	@find . -name "__pycache__" -type d 2>/dev/null | xargs rm -rf
 	@if [ -e $(LINTRST) ] ; then rm -f $(LINTRST) ; fi
 
 wipe: clean
