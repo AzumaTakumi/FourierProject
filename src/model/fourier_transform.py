@@ -252,18 +252,16 @@ class FourierTransform(object):
         データの次元数からFFTをかける空間軸を返す。
         チャンネル軸（最終軸）は除外する。
 
-        1Dデータ : (N,)    → axes=(0,)  チャンネルなし
-        2Dデータ : (H, W)  → axes=(0,1) チャンネルなし
-                (H, W, C) → axes=(0,1) 最終軸はチャンネル
+        1Dデータ : (N,)    → axes=(0,)
+        2Dデータ : (H, W)  → axes=(0,1)
+                (H, W, C) → axes=(0,1) 最終軸はチャンネルとして除外
         """
 
         ndim = data.ndim
 
-        if data.ndim == 1:
-            return (0,)       # (N,)      空間軸は0のみ
-        elif data.ndim == 2:
-            return (0, 1)     # (H, W)    空間軸は0,1
-        elif data.ndim == 3:
-            return (0, 1)     # (H, W, C) チャンネル軸(2)を除いた0,1
+        if ndim == 1:
+            return (0,)
+        elif ndim in (2, 3):
+            return (0, 1)
         else:
             raise ValueError(f"Unsupported data shape: {data.shape}")
