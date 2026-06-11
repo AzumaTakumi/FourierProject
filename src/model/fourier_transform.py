@@ -239,9 +239,10 @@ class FourierTransform(object):
         # SAFE CODE AREA ˅
         if self.ifftInputSpectrum is None:
             raise ValueError("IFFT input spectrum has not been set.")
-        axes = self._get_spatial_axes(self.fftInputSignal)
-        self.fftResultSpectrum = np.fft.fftn(self.fftInputSignal, axes=axes)
-        return self.fftResultSpectrum
+        axes = self._get_spatial_axes(self.ifftInputSpectrum)
+        result = np.fft.ifftn(self.ifftInputSpectrum, axes=axes)
+        self.ifftResultSignal = result
+        return self.ifftResultSignal
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.inverseTransform ˄
 
