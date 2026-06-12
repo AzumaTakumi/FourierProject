@@ -79,12 +79,16 @@ class FourierTransform(object):
     def transform(self) -> np.ndarray:
         """
         内部の fft_input_signal にFFTを適用し、結果を fft_result_spectrum として保持して返す。
+        1次元データ (shape: (N,) または (N, C)) と
+        2次元データ (shape: (H, W) または (H, W, C)) に対応。
         """
 
         # SAFE CODE AREA ˅
         if self.fftInputSignal is None:
             raise ValueError("FFT input signal has not been set.")
-        self.fftResultSpectrum = np.fft.fftn(self.fftInputSignal)
+
+        axes = self._get_spatial_axes(self.fftInputSignal)
+        self.fftResultSpectrum = np.fft.fftn(self.fftInputSignal, axes=axes)
         return self.fftResultSpectrum
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.transform ˄
@@ -228,14 +232,36 @@ class FourierTransform(object):
     def inverseTransform(self) -> np.ndarray:
         """
         内部の ifft_input_spectrum にFFTを適用し、結果を ifft_result_signal として保持して返す。
+        1次元データ (shape: (N,) または (N, C)) と
+        2次元データ (shape: (H, W) または (H, W, C)) に対応。
         """
 
         # SAFE CODE AREA ˅
         if self.ifftInputSpectrum is None:
             raise ValueError("IFFT input spectrum has not been set.")
-        result = np.fft.ifftn(self.ifftInputSpectrum)
+        axes = self._get_spatial_axes(self.ifftInputSpectrum)
+        result = np.fft.ifftn(self.ifftInputSpectrum, axes=axes)
         self.ifftResultSignal = result
         return self.ifftResultSignal
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.inverseTransform ˄
 
+    @staticmethod
+    def _get_spatial_axes(data: np.ndarray) -> tuple[int, ...]:
+        """
+        データの次元数からFFTをかける空間軸を返す。
+        チャンネル軸（最終軸）は除外する。
+
+        1Dデータ : (N,)    → axes=(0,)
+        2Dデータ : (H, W)  → axes=(0,1)
+                (H, W, C) → axes=(0,1) 最終軸はチャンネルとして除外
+        """
+
+        ndim = data.ndim
+
+        if ndim == 1:
+            return (0,)
+        elif ndim in (2, 3):
+            return (0, 1)
+        else:
+            raise ValueError(f"Unsupported data shape: {data.shape}")
