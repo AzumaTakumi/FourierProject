@@ -1,4 +1,4 @@
-[MAIN]
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111[MAIN]
 analyse-fallback-blocks=no
 extension-pkg-allow-list=
 extension-pkg-whitelist=
@@ -12,7 +12,7 @@ jobs=1
 limit-inference-results=100
 load-plugins=
 persistent=yes
-py-version=3.10
+py-version=3.12
 recursive=no
 unsafe-load-any-extension=no
 
@@ -28,7 +28,7 @@ const-naming-style=UPPER_CASE
 docstring-min-length=-1
 function-naming-style=snake_case
 
-# 信号処理の数式やインデックスで使う1文字・2文字の変数名を特別に許可 [cite: 50, 51]
+# 信号処理の数式やインデックスで使う1文字・2文字の変数名を特別に許可
 good-names=i,j,k,ex,Run,_,d,h,m,n,u,v,w,x,y,z
 
 good-names-rgxs=
@@ -43,8 +43,8 @@ variable-naming-style=snake_case
 
 [CLASSES]
 check-protected-access-in-special-methods=no
-defining-attr-methods=__init__,__new__,setUp,__post_init__ [cite: 68]
-exclude-protected=_asdict,_fields,_replace,_source,_make [cite: 69]
+defining-attr-methods=__init__,__new__,setUp,__post_init__
+exclude-protected=_asdict,_fields,_replace,_source,_make
 valid-classmethod-first-arg=cls
 valid-metaclass-classmethod-first-arg=cls
 
@@ -52,7 +52,7 @@ valid-metaclass-classmethod-first-arg=cls
 exclude-too-few-public-methods=
 ignored-parents=
 max-args=5
-max-attributes=15 [cite: 73]
+max-attributes=15
 max-bool-expr=5
 max-branches=12
 max-locals=15
@@ -63,7 +63,7 @@ max-statements=50
 min-public-methods=2
 
 [EXCEPTIONS]
-overgeneral-exceptions=builtins.BaseException,builtins.Exception [cite: 80]
+overgeneral-exceptions=builtins.BaseException,builtins.Exception
 
 [FORMAT]
 expected-line-ending-format=
@@ -73,7 +73,7 @@ indent-after-paren=4
 # 青木先生の指定：インデントはスペース4つではなく「タブ（\t）」とする 
 indent-string='\t'
 
-# 1行の長さの上限を128文字に緩和 [cite: 85]
+# 1行の長さの上限を128文字に緩和
 max-line-length=128
 max-module-lines=1000
 single-line-class-stmt=no
@@ -95,9 +95,9 @@ logging-format-style=old
 logging-modules=logging
 
 [MESSAGES CONTROL]
-confidence=HIGH,CONTROL_FLOW,INFERENCE,INFERENCE_FAILURE,UNDEFINED [cite: 99]
+confidence=HIGH,CONTROL_FLOW,INFERENCE,INFERENCE_FAILURE,UNDEFINED
 
-# 仕様書の「ロワーキャメルケース」に対応するため、名称違反（invalid-name）の警告を無効化 [cite: 104, 105]
+# 仕様書の「ロワーキャメルケース」に対応するため、名称違反（invalid-name）の警告を無効化
 disable=raw-checker-failed,
         bad-inline-option,
         locally-disabled,
@@ -110,23 +110,23 @@ disable=raw-checker-failed,
         deprecated-module,
         unnecessary-direct-lambda-call,
         unnecessary-lambda-assignment,
-        superfluous-parens [cite: 104, 105]
+        superfluous-parens
 
 enable=c-extension-no-member
 
 [METHOD_ARGS]
-timeout-methods=requests.api.delete,requests.api.get,requests.api.head,requests.api.options,requests.api.patch,requests.api.post,requests.api.put,requests.api.request [cite: 108]
+timeout-methods=requests.api.delete,requests.api.get,requests.api.head,requests.api.options,requests.api.patch,requests.api.post,requests.api.put,requests.api.request
 
 [MISCELLANEOUS]
-notes=FIXME,XXX,TODO [cite: 109]
+notes=FIXME,XXX,TODO
 notes-rgx=
 
 [REFACTORING]
 max-nested-blocks=5
-never-returning-functions=sys.exit,argparse.parse_error [cite: 112]
+never-returning-functions=sys.exit,argparse.parse_error
 
 [REPORTS]
-evaluation=max(0, 0 if fatal else 10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)) [cite: 114]
+evaluation=max(0, 0 if fatal else 10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10))
 msg-template=
 reports=no
 score=yes
@@ -141,7 +141,7 @@ min-similarity-lines=4
 [SPELLING]
 max-spelling-suggestions=4
 spelling-dict=
-spelling-ignore-comment-directives=fmt: on,fmt: off,noqa:,noqa,nosec,isort:skip,mypy: [cite: 122]
+spelling-ignore-comment-directives=fmt: on,fmt: off,noqa:,noqa,nosec,isort:skip,mypy
 spelling-ignore-words=
 spelling-private-dict-file=
 spelling-store-unknown-words=no
@@ -155,8 +155,8 @@ contextmanager-decorators=contextlib.contextmanager
 generated-members=
 ignore-none=yes
 ignore-on-opaque-inference=yes
-ignored-checks-for-mixins=no-member,not-async-context-manager,not-context-manager,attribute-defined-outside-init [cite: 135]
-ignored-classes=optparse.Values,thread._local,_thread._local,argparse.Namespace [cite: 136]
+ignored-checks-for-mixins=no-member,not-async-context-manager,not-context-manager,attribute-defined-outside-init
+ignored-classes=optparse.Values,thread._local,_thread._local,argparse.Namespace
 missing-member-hint=yes
 missing-member-hint-distance=1
 missing-member-max-choices=1
@@ -167,8 +167,8 @@ signature-mutators=
 additional-builtins=
 allow-global-unused-variables=yes
 allowed-redefined-builtins=
-callbacks=cb_,_cb [cite: 147]
-dummy-variables-rgx=_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_ [cite: 148]
-ignored-argument-names=_.*|^ignored_|^unused_ [cite: 149]
+callbacks=cb_,_cb
+dummy-variables-rgx=_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_
+ignored-argument-names=_.*|^ignored_|^unused_
 init-import=no
 redefining-builtins-modules=six.moves,past.builtins,future.builtins,builtins,io

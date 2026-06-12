@@ -21,7 +21,7 @@ test:
 # 3. 静的解析の実行（コーディング規約遵守の検証環境）
 lint: clean
 	@if [ ! -e $(LINTRCF) ] ; then $(PYLINT) --generate-rcfile > $(LINTRCF) 2> /dev/null ; fi
-	$(PYLINT) --rcfile=$(LINTRCF) `find src test -name "*.py"` > $(LINTRST) ; less $(LINTRST)
+	$(PYLINT) --rcfile=$(LINTRCF) `find src test -name "*.py"`
 
 # 4. ドキュメント自動生成（HTML文書化要件への補助）
 doc:
