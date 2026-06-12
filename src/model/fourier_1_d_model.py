@@ -3,6 +3,7 @@ from __future__ import annotations
 # GENERATED CODE AREA: module.imports ˅
 import numpy as np
 from .fourier_model import FourierModel
+from .pane_type import PaneType
 
 # GENERATED CODE AREA: module.imports ˄
 
@@ -59,6 +60,13 @@ class Fourier1dModel(FourierModel):
         self.inverseData: np.ndarray | None = None
 
         # SAFE CODE AREA ˅
+        # 1Dモデルの全表示領域は折れ線波形として描画する。
+        self.imageRenderers = {
+            PaneType.SOURCE_DATA: self.renderer.imageFrom1dData,
+            PaneType.POWER_SPECTRUM: self.renderer.imageFrom1dData,
+            PaneType.INTERACTIVE_POWER_SPECTRUM: self.renderer.imageFrom1dData,
+            PaneType.INVERSE_DATA: self.renderer.imageFrom1dData,
+        }
         # 初期データが渡された場合は、通常のデータ設定経路を通してFFTと逆変換まで初期化する。
         self.setSourceData(sourceData)
         # SAFE CODE AREA ˄

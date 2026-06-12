@@ -40,6 +40,8 @@ class FourierModel(object):
         # SAFE CODE AREA ˅
         # Rendererの生成メソッドとクラスメソッドの両方を同じ呼び方で使えるよう、インスタンスを保持する。
         self.renderer = FourierRenderer()
+        # 具体Model側でPaneTypeごとの描画関数を設定する。
+        self.imageRenderers = {}
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -67,7 +69,7 @@ class FourierModel(object):
 
         # SAFE CODE AREA ˅
         # FourierTransformに元データを渡し、直近のFFT結果を計算させる。
-        source_data = getattr(self, "sourceData", None)
+        source_data = self.sourceData
         self.engine.setFftInputSignal(source_data)
         self.engine.transform()
         # FFT結果の実部・虚部を分けて保持し、パワーは実部^2+虚部^2で計算する。
@@ -90,11 +92,9 @@ class FourierModel(object):
 
         # SAFE CODE AREA ˅
         # 子クラスが持つFFT結果を共通処理で扱えるよう、属性名で取得する。
-        real_part = getattr(self, "realPart", None)
-        imaginary_part = getattr(self, "imaginaryPart", None)
-        power_spectrum = getattr(self, "powerSpectrum", None)
-        if real_part is None or imaginary_part is None or power_spectrum is None:
-            return
+        real_part = self.realPart
+        imaginary_part = self.imaginaryPart
+        power_spectrum = self.powerSpectrum
         # 編集用スペクトルを元スペクトルのコピーへ戻し、以降の編集が元スペクトルを変更しないようにする。
         self.interactiveRealPart = np.copy(real_part)
         self.interactiveImaginaryPart = np.copy(imaginary_part)
@@ -114,14 +114,14 @@ class FourierModel(object):
         # SAFE CODE AREA ˅
         # Undo時に参照共有で状態が壊れないよう、ndarrayはすべてcopyしてSnapshotへ入れる。
         return Snapshot(
-            sourceData=np.copy(getattr(self, "sourceData", None)) if getattr(self, "sourceData", None) is not None else None,
-            realPart=np.copy(getattr(self, "realPart", None)) if getattr(self, "realPart", None) is not None else None,
-            imaginaryPart=np.copy(getattr(self, "imaginaryPart", None)) if getattr(self, "imaginaryPart", None) is not None else None,
-            powerSpectrum=np.copy(getattr(self, "powerSpectrum", None)) if getattr(self, "powerSpectrum", None) is not None else None,
-            interactiveRealPart=np.copy(getattr(self, "interactiveRealPart", None)) if getattr(self, "interactiveRealPart", None) is not None else None,
-            interactiveImaginaryPart=np.copy(getattr(self, "interactiveImaginaryPart", None)) if getattr(self, "interactiveImaginaryPart", None) is not None else None,
-            interactivePowerSpectrum=np.copy(getattr(self, "interactivePowerSpectrum", None)) if getattr(self, "interactivePowerSpectrum", None) is not None else None,
-            inverseData=np.copy(getattr(self, "inverseData", None)) if getattr(self, "inverseData", None) is not None else None,
+            sourceData=np.copy(self.sourceData),
+            realPart=np.copy(self.realPart),
+            imaginaryPart=np.copy(self.imaginaryPart),
+            powerSpectrum=np.copy(self.powerSpectrum),
+            interactiveRealPart=np.copy(self.interactiveRealPart),
+            interactiveImaginaryPart=np.copy(self.interactiveImaginaryPart),
+            interactivePowerSpectrum=np.copy(self.interactivePowerSpectrum),
+            inverseData=np.copy(self.inverseData),
         )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.createSnapshot ˄
@@ -135,14 +135,14 @@ class FourierModel(object):
 
         # SAFE CODE AREA ˅
         # Snapshot内の配列も再度copyし、復元後のModel編集がSnapshot側へ影響しないようにする。
-        self.sourceData = np.copy(snapshot.sourceData) if snapshot.sourceData is not None else None
-        self.realPart = np.copy(snapshot.realPart) if snapshot.realPart is not None else None
-        self.imaginaryPart = np.copy(snapshot.imaginaryPart) if snapshot.imaginaryPart is not None else None
-        self.powerSpectrum = np.copy(snapshot.powerSpectrum) if snapshot.powerSpectrum is not None else None
-        self.interactiveRealPart = np.copy(snapshot.interactiveRealPart) if snapshot.interactiveRealPart is not None else None
-        self.interactiveImaginaryPart = np.copy(snapshot.interactiveImaginaryPart) if snapshot.interactiveImaginaryPart is not None else None
-        self.interactivePowerSpectrum = np.copy(snapshot.interactivePowerSpectrum) if snapshot.interactivePowerSpectrum is not None else None
-        self.inverseData = np.copy(snapshot.inverseData) if snapshot.inverseData is not None else None
+        self.sourceData = np.copy(snapshot.sourceData)
+        self.realPart = np.copy(snapshot.realPart)
+        self.imaginaryPart = np.copy(snapshot.imaginaryPart)
+        self.powerSpectrum = np.copy(snapshot.powerSpectrum)
+        self.interactiveRealPart = np.copy(snapshot.interactiveRealPart)
+        self.interactiveImaginaryPart = np.copy(snapshot.interactiveImaginaryPart)
+        self.interactivePowerSpectrum = np.copy(snapshot.interactivePowerSpectrum)
+        self.inverseData = np.copy(snapshot.inverseData)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSnapshot ˄
 
@@ -156,10 +156,10 @@ class FourierModel(object):
         # SAFE CODE AREA ˅
         # Viewが4つの表示領域を同じ形式で取得できるよう、PaneTypeをキーにして現在データを返す。
         return {
-            PaneType.SOURCE_DATA: getattr(self, "sourceData", None),
-            PaneType.POWER_SPECTRUM: getattr(self, "powerSpectrum", None),
-            PaneType.INTERACTIVE_POWER_SPECTRUM: getattr(self, "interactivePowerSpectrum", None),
-            PaneType.INVERSE_DATA: getattr(self, "inverseData", None),
+            PaneType.SOURCE_DATA: self.sourceData,
+            PaneType.POWER_SPECTRUM: self.powerSpectrum,
+            PaneType.INTERACTIVE_POWER_SPECTRUM: self.interactivePowerSpectrum,
+            PaneType.INVERSE_DATA: self.inverseData,
         }
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.getData ˄
@@ -174,20 +174,9 @@ class FourierModel(object):
         # SAFE CODE AREA ˅
         # getDataで取得した数値配列を、PaneTypeごとに適切な描画方法へ振り分ける。
         data_map = self.getData()
-        image_map: dict[PaneType, Image.Image | None] = {}
-        for pane_type, data in data_map.items():
-            if data is None:
-                # 未初期化ペインはView側で空表示にできるようNoneのまま返す。
-                image_map[pane_type] = None
-            elif getattr(data, "ndim", 0) == 1:
-                # 1次元データは画像ではなく波形として折れ線描画する。
-                image_map[pane_type] = self.renderer.imageFrom1dData(data)
-            elif pane_type in (PaneType.SOURCE_DATA, PaneType.INVERSE_DATA):
-                # 元画像と逆変換画像は、画素値としてそのまま見える画像へ変換する。
-                image_map[pane_type] = self.renderer.imageFromImageData(data)
-            else:
-                # スペクトル系ペインはlogスケール・fftshift込みのスペクトル画像として描画する。
-                image_map[pane_type] = self.renderer.imageFromSpectrum(data)
-        return image_map
+        return {
+            pane_type: self.imageRenderers[pane_type](data)
+            for pane_type, data in data_map.items()
+        }
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.getImage ˄

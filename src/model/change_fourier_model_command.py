@@ -41,8 +41,8 @@ class ChangeFourierModelCommand(SpectrumEditCommand):
         self.newModel: FourierModel = newModel
 
         # SAFE CODE AREA ˅
-        # 固定領域でoldModel/newModelを設定済みのため、追加初期化は不要。
-        pass
+        # View通知ではスペクトル全体更新として扱う。
+        self.spectrumChangeKind: str = "full"
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 

@@ -45,6 +45,8 @@ class EditSpectrumValueAtIndexCommand(SpectrumEditCommand):
         self.newImaginaryPart: float = newImaginaryPart
 
         # SAFE CODE AREA ˅
+        # View通知では1Dスペクトルの部分更新として扱う。
+        self.spectrumChangeKind: str = "1d"
         # Undo先は元スペクトルではなく編集直前のinteractive値なので、Modelから現在値を取得する。
         self.oldRealPart, self.oldImaginaryPart = self.model.getInteractiveSpectrumAtIndex(index)
         # SAFE CODE AREA ˄

@@ -48,6 +48,8 @@ class PaintRgbSpectrumAtPositionsCommand(SpectrumEditCommand):
         self.rect: tuple[int, int, int, int] = (0, 0, 0, 0)
 
         # SAFE CODE AREA ˅
+        # View通知では2Dスペクトルの矩形部分更新として扱う。
+        self.spectrumChangeKind: str = "2d"
         # 自動生成の初期値を実際の引数で上書きし、操作対象Modelを保持する。
         # 呼び出し元のリスト変更がCommand内部へ影響しないよう、座標とRGB値をコピーする。
         self.positions = [(int(row), int(col)) for row, col in positions]

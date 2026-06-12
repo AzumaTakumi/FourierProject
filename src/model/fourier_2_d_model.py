@@ -3,6 +3,7 @@ from __future__ import annotations
 # GENERATED CODE AREA: module.imports ˅
 import numpy as np
 from .fourier_model import FourierModel
+from .pane_type import PaneType
 
 # GENERATED CODE AREA: module.imports ˄
 
@@ -26,7 +27,7 @@ class Fourier2dModel(FourierModel):
     # GENERATED CODE AREA: class.header ˄
 
     # FIXED CODE AREA: method.__init__ ˅
-    def __init__(self, sourceData: np.ndarray | None = None) -> None:
+    def __init__(self, sourceData: np.ndarray = np.array([[], []])) -> None:
         """
         Fourier2dModelを初期化する。必要に応じてsourceDataを受け取り、内部状態として各スペクトル、編集用スペクトル、逆変換結果を初期化する。
         """
@@ -35,7 +36,7 @@ class Fourier2dModel(FourierModel):
         super().__init__()
 
         # 入力となる2次元ソースデータ（元画像/元行列）。フーリエ変換の計算元として保持する。
-        self.sourceData: np.ndarray | None = sourceData
+        self.sourceData: np.ndarray = sourceData
 
         # 2次元フーリエ変換結果の実部。engine計算結果を保持し、描画用データ生成に利用する。
         self.realPart: np.ndarray | None = None
@@ -59,9 +60,15 @@ class Fourier2dModel(FourierModel):
         self.inverseData: np.ndarray | None = None
 
         # SAFE CODE AREA ˅
+        # 2Dモデルでは画像ペインは画素画像、スペクトルペインはスペクトル画像として描画する。
+        self.imageRenderers = {
+            PaneType.SOURCE_DATA: self.renderer.imageFromImageData,
+            PaneType.POWER_SPECTRUM: self.renderer.imageFromSpectrum,
+            PaneType.INTERACTIVE_POWER_SPECTRUM: self.renderer.imageFromSpectrum,
+            PaneType.INVERSE_DATA: self.renderer.imageFromImageData,
+        }
         # 初期画像が渡された場合は、通常の設定処理を通してFFTと逆変換まで初期化する。
-        if sourceData is not None:
-            self.setSourceData(sourceData)
+        self.setSourceData(sourceData)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -73,9 +80,9 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        # 画像処理で扱いやすいよう、入力をfloat配列へ変換する。
-        data = np.asarray(sourceData, dtype=float)
-        # グレースケール画像またはRGB画像が渡される前提で、呼び出し元の配列変更がModel内部へ影響しないようコピーして保持する。
+        # 画像処理で扱いやすいよう、入力をfloat配列へ変換し、グレースケールもR=G=BのRGB配列として扱う。
+        source_array = np.atleast_3d(np.asarray(sourceData, dtype=float))
+        data = np.repeat(source_array, 3 // source_array.shape[-1], axis=-1)
 
         self.sourceData = data.copy()
         # 元画像の変更に合わせてFFT結果を作り直し、編集用スペクトルを元状態に戻す。
@@ -128,8 +135,6 @@ class Fourier2dModel(FourierModel):
 
         # SAFE CODE AREA ˅
         # 入力された複数座標を配列範囲内へ丸め、連続する重複点を取り除く。
-        if not self._hasInteractiveSpectrum():
-            return []
         height, width = self.interactiveRealPart.shape[:2]
         points = []
         for row, col in positions:
@@ -137,8 +142,7 @@ class Fourier2dModel(FourierModel):
                 int(np.clip(row, 0, max(height - 1, 0))),
                 int(np.clip(col, 0, max(width - 1, 0))),
             )
-            if not points or points[-1] != normalized:
-                points.append(normalized)
+            points.append(normalized)
         return points
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method._normalizeSpectrumPositions ˄
@@ -152,15 +156,11 @@ class Fourier2dModel(FourierModel):
 
         # SAFE CODE AREA ˅
         # 矩形範囲を現在スペクトル配列の有効範囲へ丸める。
-        if not self._hasInteractiveSpectrum():
-            return None
         height, width = self.interactiveRealPart.shape[:2]
         r0 = int(np.clip(rowStart, 0, height))
         r1 = int(np.clip(rowStop, r0, height))
         c0 = int(np.clip(colStart, 0, width))
         c1 = int(np.clip(colStop, c0, width))
-        if r1 <= r0 or c1 <= c0:
-            return None
         return r0, r1, c0, c1
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method._normalizeRect ˄
@@ -183,13 +183,8 @@ class Fourier2dModel(FourierModel):
     # FIXED CODE AREA: method._normalizePaintColor ˅
     def _normalizePaintColor(self, rgbColor: list[float]) -> np.ndarray:
         # SAFE CODE AREA ˅
-        # RGB指定を1次元のfloat配列へ変換し、空指定を明示的なエラーにする。
-        color = np.asarray(rgbColor, dtype=float).reshape(-1)
-        try:
-            _ = color[0]
-        except IndexError as exc:
-            raise ValueError("rgbColor が空です。少なくとも1つ以上の数値を指定してください。空配列は塗りつぶし値に変換できません。") from exc
-        return color
+        # RGB指定を1次元のfloat配列へ変換する。
+        return np.asarray(rgbColor, dtype=float).reshape(-1)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method._normalizePaintColor ˄
 
@@ -202,11 +197,7 @@ class Fourier2dModel(FourierModel):
 
         # SAFE CODE AREA ˅
         # 複数の円形ブラシをすべて含むUndo保存用矩形を計算する。
-        if not self._hasInteractiveSpectrum():
-            return None
         points = self._normalizeSpectrumPositions(positions)
-        if not points:
-            return None
         height, width = self.interactiveRealPart.shape[:2]
         radius = max(0, int(radius))
         rects = []
@@ -236,8 +227,6 @@ class Fourier2dModel(FourierModel):
         # SAFE CODE AREA ˅
         # Undo用に矩形範囲の実部・虚部をcopyして返す。
         rect = self._normalizeRect(rowStart, rowStop, colStart, colStop)
-        if rect is None:
-            return (np.array([]), np.array([]))
         r0, r1, c0, c1 = rect
         return (
             np.copy(self.interactiveRealPart[r0:r1, c0:c1]),
@@ -254,14 +243,8 @@ class Fourier2dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        # 編集対象となる実部・虚部・パワースペクトルがそろっているかを確認する。
-        try:
-            real_shape = self.interactiveRealPart.shape
-            imag_shape = self.interactiveImaginaryPart.shape
-            power_shape = self.interactivePowerSpectrum.shape
-        except Exception:
-            return False
-        return real_shape == imag_shape == power_shape and len(real_shape) >= 2
+        # アプリ側で編集対象スペクトルが初期化済みであることを保証する。
+        return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._hasInteractiveSpectrum ˄
 
@@ -274,11 +257,7 @@ class Fourier2dModel(FourierModel):
 
         # SAFE CODE AREA ˅
         # 複数ブラシ位置をまとめて消去し、逆FFTは全点の編集が終わった後に1回だけ行う。
-        if not self._hasInteractiveSpectrum():
-            return
         points = self._normalizeSpectrumPositions(positions)
-        if not points:
-            return
         height, width = self.interactiveRealPart.shape[:2]
         radius = max(0, int(radius))
 
@@ -310,11 +289,7 @@ class Fourier2dModel(FourierModel):
 
         # SAFE CODE AREA ˅
         # 複数ブラシ位置をまとめてRGBペイントし、逆FFTは全点の編集が終わった後に1回だけ行う。
-        if not self._hasInteractiveSpectrum():
-            return
         points = self._normalizeSpectrumPositions(positions)
-        if not points:
-            return
         height, width = self.interactiveRealPart.shape[:2]
         radius = max(0, int(radius))
         color = self._normalizePaintColor(rgbColor)
@@ -329,11 +304,7 @@ class Fourier2dModel(FourierModel):
             real_view = self.interactiveRealPart[r0:r1, c0:c1]
             imag_view = self.interactiveImaginaryPart[r0:r1, c0:c1]
 
-            if real_view.ndim == 3:
-                channels = real_view.shape[-1]
-                real_view[mask] = color[:channels].astype(real_view.dtype, copy=False)
-            else:
-                real_view[mask] = float(np.mean(color[:3]))
+            real_view[mask] = color[:3].astype(real_view.dtype, copy=False)
             imag_view[mask] = 0
 
             power_view = self.interactivePowerSpectrum[r0:r1, c0:c1]
@@ -353,8 +324,6 @@ class Fourier2dModel(FourierModel):
         # SAFE CODE AREA ˅
         # 一括編集CommandのUndoで、保存した矩形範囲を1回で戻し、逆FFTも最後に1回だけ行う。
         rect = self._normalizeRect(rowStart, rowStop, colStart, colStop)
-        if rect is None:
-            return
         r0, r1, c0, c1 = rect
 
         real_view = self.interactiveRealPart[r0:r1, c0:c1]
