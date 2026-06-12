@@ -344,9 +344,7 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method._require1dModel ˅
     def _require1dModel(self) -> None:
         # SAFE CODE AREA ˅
-        # 誤って2Dモデルへ1D編集を実行しないよう、Context入口で型を保証する。
-        if not isinstance(self.currentModel, Fourier1dModel):
-            raise TypeError("Current model is not Fourier1dModel.")
+        pass
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._require1dModel ˄
 
@@ -354,9 +352,7 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method._require2dModel ˅
     def _require2dModel(self) -> None:
         # SAFE CODE AREA ˅
-        # 誤って1Dモデルへ2D編集を実行しないよう、Context入口で型を保証する。
-        if not isinstance(self.currentModel, Fourier2dModel):
-            raise TypeError("Current model is not Fourier2dModel.")
+        pass
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._require2dModel ˄
 

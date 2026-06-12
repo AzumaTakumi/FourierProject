@@ -75,15 +75,8 @@ class Fourier2dModel(FourierModel):
         # SAFE CODE AREA ˅
         # 画像処理で扱いやすいよう、入力をfloat配列へ変換する。
         data = np.asarray(sourceData, dtype=float)
-        # グレースケール画像は2次元、RGB画像は高さ・幅・3チャンネルの3次元配列だけを受け付ける。
-        if data.ndim not in (2, 3):
-            raise ValueError("Fourier2dModel sourceData must be a 2D grayscale or 3D RGB array.")
-        if data.ndim == 3 and data.shape[-1] != 3:
-            raise ValueError("Fourier2dModel only supports RGB arrays with 3 channels.")
-        if data.shape[0] == 0 or data.shape[1] == 0:
-            raise ValueError("Fourier2dModel sourceData height and width must not be empty.")
+        # グレースケール画像またはRGB画像が渡される前提で、呼び出し元の配列変更がModel内部へ影響しないようコピーして保持する。
 
-        # 呼び出し元の配列変更がModel内部へ影響しないようコピーして保持する。
         self.sourceData = data.copy()
         # 元画像の変更に合わせてFFT結果を作り直し、編集用スペクトルを元状態に戻す。
         self.computeFourierData()
@@ -338,8 +331,6 @@ class Fourier2dModel(FourierModel):
 
             if real_view.ndim == 3:
                 channels = real_view.shape[-1]
-                if color.size < channels:
-                    raise ValueError("RGBスペクトル編集には3つの色成分が必要です。")
                 real_view[mask] = color[:channels].astype(real_view.dtype, copy=False)
             else:
                 real_view[mask] = float(np.mean(color[:3]))

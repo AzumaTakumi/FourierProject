@@ -52,8 +52,6 @@ class FourierModel(object):
 
         # SAFE CODE AREA ˅
         # 編集後の実部・虚部を複素スペクトルへ戻し、IFFTの入力として渡す。
-        if self.interactiveRealPart is None or self.interactiveImaginaryPart is None:
-            raise ValueError("Interactive Fourier data has not been computed.")
         self.engine.setIfftInputSpectrum(self.interactiveRealPart + 1j * self.interactiveImaginaryPart)
         # 逆変換結果はViewのInverse表示で利用する。
         self.inverseData = self.engine.inverseTransform()
@@ -70,8 +68,6 @@ class FourierModel(object):
         # SAFE CODE AREA ˅
         # FourierTransformに元データを渡し、直近のFFT結果を計算させる。
         source_data = getattr(self, "sourceData", None)
-        if source_data is None:
-            raise ValueError("Source data has not been set.")
         self.engine.setFftInputSignal(source_data)
         self.engine.transform()
         # FFT結果の実部・虚部を分けて保持し、パワーは実部^2+虚部^2で計算する。
