@@ -40,10 +40,13 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: class.header ˄
 
     # FIXED CODE AREA: method.__init__ ˅
-    def __init__(self, spectrumChangedListener: Callable[[SpectrumChange], None] | None = None) -> None:
+    def __init__(self, spectrumChangedListener: Callable[[SpectrumChange], None]) -> None:
         """
         FourierModelContextを初期化する。初期Model、Undo/Redo履歴、通知用関数などを設定する。
         """
+
+        if spectrumChangedListener is None:
+            raise ValueError("spectrumChangedListener must not be None")
 
         # 現在操作対象となっているFourierModelを保持する。
         self.currentModel: Fourier1dModel | Fourier2dModel = Fourier2dModel(sourceData=np.zeros((1, 1)))
@@ -55,7 +58,7 @@ class FourierModelContext(object):
         self.redoStack: list[CompositeSpectrumEditCommand] = []
 
         # スペクトル変更時に呼び出す通知用関数を保持する。View側から渡された操作を保持し、SpectrumChangeを引数として呼び出す。
-        self.spectrumChangedListener: Callable[[SpectrumChange], None] | None = spectrumChangedListener
+        self.spectrumChangedListener: Callable[[SpectrumChange], None] = spectrumChangedListener
 
         # ドラッグ操作中に発生した複数の編集Commandを一時的にまとめるCompositeSpectrumEditCommandを保持する。
         self.currentCompositeCommand: CompositeSpectrumEditCommand | None = None
@@ -81,7 +84,7 @@ class FourierModelContext(object):
         # 入力データを1Dモデル用のfloat配列へそろえる。
         data = np.asarray(sourceData, dtype=float)
         # データ設定は常に新しいModelインスタンスへの差し替えとして扱う。
-        self._executeSingleEdit(ChangeFourierModelCommand(self, Fourier1dModel(data)))
+        self._executeUndoableCommand(ChangeFourierModelCommand(self, Fourier1dModel(data)))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.set1dSourceData ˄
 
@@ -96,7 +99,7 @@ class FourierModelContext(object):
         # 入力データを2Dモデル用のfloat配列へそろえる。
         data = np.asarray(sourceData, dtype=float)
         # データ設定は常に新しいModelインスタンスへの差し替えとして扱う。
-        self._executeSingleEdit(ChangeFourierModelCommand(self, Fourier2dModel(data)))
+        self._executeUndoableCommand(ChangeFourierModelCommand(self, Fourier2dModel(data)))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.set2dSourceData ˄
 
@@ -109,7 +112,7 @@ class FourierModelContext(object):
 
         # SAFE CODE AREA ˅
         # リセットもUndo可能な編集として扱う。
-        self._executeSingleEdit(ResetSpectrumCommand(self.currentModel))
+        self._executeUndoableCommand(ResetSpectrumCommand(self.currentModel))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.resetSpectrum ˄
 
@@ -122,6 +125,8 @@ class FourierModelContext(object):
 
         # SAFE CODE AREA ˅
         # 以降の連続編集を1回のUndo対象にまとめるため、CompositeCommandを作る。
+        if self.currentCompositeCommand is not None:
+            raise RuntimeError("spectrum edit is already open")
         self.currentCompositeCommand = CompositeSpectrumEditCommand()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.beginSpectrumEdit ˄
@@ -135,10 +140,12 @@ class FourierModelContext(object):
 
         # SAFE CODE AREA ˅
         # ドラッグ中に実行されたCommandをCompositeとしてUndoスタックへ積む。
-        self.undoStack.append(self.currentCompositeCommand)
-        self.redoStack.clear()
-        # ドラッグ編集のまとめ処理を終了する。
+        command = self.currentCompositeCommand
         self.currentCompositeCommand = None
+        if command is None or len(command.commands) == 0:
+            return
+        self.undoStack.append(command)
+        self.redoStack.clear()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.endSpectrumEdit ˄
 
@@ -148,10 +155,12 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として削除する。
         indices = self._indexLine(startIndex, endIndex)
+        # 1回のドラッグイベントで通過した複数indexを、まとめて実行するためのローカルComposite。
+        # Undo履歴へ積む単位は外側のcurrentCompositeCommandが管理する。
         composite = CompositeSpectrumEditCommand()
         for index in indices:
             composite.add(EditSpectrumValueAtIndexCommand(self.currentModel, index, 0.0, 0.0))
-        self._executeSingleEdit(composite)
+        self._executeCommandInOpenEdit(composite)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumBetweenIndexes ˄
 
@@ -160,7 +169,7 @@ class FourierModelContext(object):
     def editSpectrumValueAtIndex(self, index: int, realPart: float, imaginaryPart: float) -> None:
         # SAFE CODE AREA ˅
         # 指定成分の実部・虚部を直接書き換えるCommandを実行する。
-        self._executeSingleEdit(EditSpectrumValueAtIndexCommand(self.currentModel, index, realPart, imaginaryPart))
+        self._executeUndoableCommand(EditSpectrumValueAtIndexCommand(self.currentModel, index, realPart, imaginaryPart))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
 
@@ -170,6 +179,8 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として復元する。
         indices = self._indexLine(startIndex, endIndex)
+        # 1回のドラッグイベントで通過した複数indexを、まとめて実行するためのローカルComposite。
+        # Undo履歴へ積む単位は外側のcurrentCompositeCommandが管理する。
         composite = CompositeSpectrumEditCommand()
         for index in indices:
             composite.add(EditSpectrumValueAtIndexCommand(
@@ -178,7 +189,7 @@ class FourierModelContext(object):
                 self.currentModel.realPart[index],
                 self.currentModel.imaginaryPart[index],
             ))
-        self._executeSingleEdit(composite)
+        self._executeCommandInOpenEdit(composite)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSpectrumBetweenIndexes ˄
 
@@ -188,7 +199,7 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         points = self._linePoints(startRow, startCol, endRow, endCol)
         # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
-        self._executeSingleEdit(EraseSpectrumAtPositionsCommand(self.currentModel, points, radius))
+        self._executeCommandInOpenEdit(EraseSpectrumAtPositionsCommand(self.currentModel, points, radius))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumLineAtPosition ˄
 
@@ -198,10 +209,9 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         points = self._linePoints(startRow, startCol, endRow, endCol)
         # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
-        self._executeSingleEdit(PaintRgbSpectrumAtPositionsCommand(self.currentModel, points, radius, rgbColor))
+        self._executeCommandInOpenEdit(PaintRgbSpectrumAtPositionsCommand(self.currentModel, points, radius, rgbColor))
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.paintRgbSpectrumLineAtPosition ˄
-
 
     # GENERATED CODE AREA: method.undo ˅
     def undo(self) -> bool:
@@ -311,9 +321,14 @@ class FourierModelContext(object):
     # FIXED CODE AREA: method.getInteractiveSpectrumAtIndex ˄
 
 
-    # GENERATED CODE AREA: method._executeEdit ˅
-    def _executeEdit(self, command: SpectrumEditCommand) -> None:
+    # FIXED CODE AREA: method._executeCommandInOpenEdit ˅
+    def _executeCommandInOpenEdit(self, command: SpectrumEditCommand) -> None:
         # SAFE CODE AREA ˅
+        # beginSpectrumEdit()で開いた編集単位の中でだけCommandを実行する。
+        open_command = self.currentCompositeCommand
+        if open_command is None:
+            raise RuntimeError("beginSpectrumEdit() must be called before drag spectrum edits")
+
         # 履歴・通知の単位をCompositeCommandへ統一する。
         composite = CompositeSpectrumEditCommand()
         for child in getattr(command, "commands", [command]):
@@ -321,22 +336,26 @@ class FourierModelContext(object):
         # まずCommandを実行してModel本体の状態を変更する。
         composite.execute()
         for child in composite.commands:
-            self.currentCompositeCommand.add(child)
+            open_command.add(child)
         # Model状態が変わったので、Viewへ変更範囲だけを通知する。
         self._notifySpectrumChanged(self._createCompositeSpectrumChange(composite))
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._executeEdit ˄
+    # FIXED CODE AREA: method._executeCommandInOpenEdit ˄
 
 
-    # FIXED CODE AREA: method._executeSingleEdit ˅
-    def _executeSingleEdit(self, command: SpectrumEditCommand) -> None:
+    # FIXED CODE AREA: method._executeUndoableCommand ˅
+    def _executeUndoableCommand(self, command: SpectrumEditCommand) -> None:
         # SAFE CODE AREA ˅
-        # 通常操作を1つのCompositeCommandとして実行・保存する。
+        # 単発操作だけを1つのCompositeCommandとして実行・保存する。
+        if self.currentCompositeCommand is not None:
+            raise RuntimeError("single spectrum edit cannot run during an open spectrum edit")
         self.beginSpectrumEdit()
-        self._executeEdit(command)
-        self.endSpectrumEdit()
+        try:
+            self._executeCommandInOpenEdit(command)
+        finally:
+            self.endSpectrumEdit()
         # SAFE CODE AREA ˄
-    # FIXED CODE AREA: method._executeSingleEdit ˄
+    # FIXED CODE AREA: method._executeUndoableCommand ˄
 
 
     # FIXED CODE AREA: method._createFull1dSpectrumChange ˅
