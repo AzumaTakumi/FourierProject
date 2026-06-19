@@ -16,6 +16,8 @@ class TextReader:
 	"""1次元テキストを処理するストラテジークラス。"""
 	def read(self, aPath: str, aLoader) -> None:
 		signal_data = np.loadtxt(aPath, dtype=np.float64)
+		if signal_data.size == 0:
+			raise ValueError("Empty input file")
 		print(f"[判別結果] 1次元信号データ（要素数: {len(signal_data)}）")
 		aLoader.process1DModel(signal_data)
 
