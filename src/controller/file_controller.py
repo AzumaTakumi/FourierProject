@@ -48,7 +48,7 @@ class FileLoader(FileController):
 	"""
 	def __init__(self, aView) -> None:
 		super().__init__(aView)
-		self.model = FourierModelContext()
+		self.model = FourierModelContext(aView.renderDirtyRegion)
 		
 		# 1. エラー用のオブジェクトをあらかじめ生成しておく
 		self.default_reader = NullReader()
@@ -65,7 +65,8 @@ class FileLoader(FileController):
 	def start(self) -> None:
 		"""ファイル選択プロセスを開始する。"""
 		selected_path = self.openFileChooser()
-		self.loadSignalData(selected_path)
+		if selected_path: # キャンセルされていない場合のみ続行
+			self.loadSignalData(selected_path)
 
 	def loadSignalData(self, aPath: str) -> None:
 		"""
@@ -81,12 +82,22 @@ class FileLoader(FileController):
 		reader.read(aPath, self)
 
 	def process1DModel(self, aData: np.ndarray) -> None:
-		# modelオブジェクトが持つ「データセット用関数」に、NumPy配列をいれる
+		"""1次元データをModelへ送信し、計算結果をViewに反映する"""
 		self.model.set1dSourceData(aData)
-		# print("-> 1次元データをModelへデータを送信しました。")
+		print("-> 1次元データをModelへ送信しました。")
+		
+		# 【重要】Modelから計算完了後の各種データを引き出す
+		# ※ Model側の実際のメソッド名（getOriginalData等）に合わせて適宜修正してください
+
+		# 新しい MainWindowView にデータを流し込んで画面を出力させる
+
         
 	def process2DModel(self, aData: np.ndarray) -> None:
-		# modelオブジェクトが持つ「データセット用関数」に、NumPy配列を入れる。
+		"""2次元データをModelへ送信し、計算結果をViewに反映する"""
 		self.model.set2dSourceData(aData)
-		# print("-> 2次元データをModelへデータを送信しました。")
+		print("-> 2次元データをModelへ送信しました。")
 		
+		# 【重要】Modelから計算完了後の各種データを引き出す
+		# ※ ここはModelの仕様に合わせて「Image形式（PIL.Image）」で取得します
+
+		# 新しい MainWindowView にデータを流し込んで画面を出力させる
