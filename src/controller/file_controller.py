@@ -48,7 +48,7 @@ class FileLoader(FileController):
 	"""
 	def __init__(self, aView) -> None:
 		super().__init__(aView)
-		self.model = FourierModelContext(aView.renderDirtyRegion)
+		self.model = FourierModelContext()
 		
 		# 1. エラー用のオブジェクトをあらかじめ生成しておく
 		self.default_reader = NullReader()
