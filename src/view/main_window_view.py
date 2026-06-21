@@ -2,249 +2,26 @@ import numpy as np
 from PIL import Image
 from PIL.ImageQt import ImageQt
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QWidget, QGridLayout
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QVBoxLayout
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 
-
-class InteractiveSpectrumComponent(QLabel):
-    """
-    編集可能なパワースペクトルコンポーネントのインタフェース
-    """
-    def renderAll(self, data: np.ndarray) -> None:
-        """
-        パワースペクトルを全て描画する
-        """
-        pass
-
-    def renderDirtyRegion(self, spectrumChange) -> None:
-        """
-        spectrumChangeを元に矩形領域で再描画を行う
-        """
-        pass
-
-    def addMouseMoveEventListener(self) -> None:
-        """
-        マウス移動イベント発火時に呼び出される関数を登録する
-        """
-        pass
-
-    def addMousePressEventListener(self) -> None:
-        """
-        マウスプレスイベント発火時に呼び出される関数を登録する
-        """
-        pass
-
-    def addMouseReleaseEventListener(self) -> None:
-        """
-        マウスリリースイベント発火時に呼び出される関数を登録する
-        """
-        pass
-
-
-class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
-    """
-    1次元データの編集可能なパワースペクトルコンポーネント
-    """
-    def __init__(self):
-        super().__init__()
-        self._mouseMoveListeners = []
-        self._mousePressListeners = []
-        self._mouseReleaseListeners = []
-
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setText("1D Spectrum")
-
-    def _emitMouseMoveEvent(self, event) -> None:
-        """
-        PyQt6からマウス移動イベント発火時に呼び出され、
-        対応するリスナーに引数MouseEventを渡し呼び出す。
-        """
-        for listener in self._mouseMoveListeners:
-            listener(event)
-            
-    def _emitMousePressEvent(self, event) -> None:
-        """
-        PyQt6からマウスプレスイベント発火時に呼び出され、
-        対応するリスナーに引数MouseEventを渡し呼び出す。
-        """
-        for listener in self._mousePressListeners:
-            listener(event)
-
-    def _emitMouseReleaseEvent(self, event) -> None:
-        """
-        PyQt6からマウスリリースイベント発火時に呼び出され、
-        対応するリスナーに引数MouseEventを渡し呼び出す。
-        """
-        for listener in self._mouseReleaseListeners:
-            listener(event)
-
-    def mouseMoveEvent(self, event) -> None:
-        """
-        PyQt6からマウス移動イベント発火時に呼び出され、
-        登録されたリスナーイベントに通知する。
-        """
-        self._emitMouseMoveEvent(event)
-
-    def mousePressEvent(self, event) -> None:
-        """
-        PyQt6からマウスプレスイベント発火時に呼び出され、
-        登録されたリスナーイベントに通知する。
-        """
-        self._emitMousePressEvent(event)
-
-    def mouseReleaseEvent(self, event) -> None:
-        """
-        PyQt6からマウスリリースイベント発火時に呼び出され、
-        登録されたリスナーイベントに通知する。
-        """
-        self._emitMouseReleaseEvent(event)
-
-    def renderAll(self, data: np.ndarray) -> None:
-        """
-        パワースペクトルを全て描画する
-        """
-        image = Image.fromarray(data.astype(np.uint8))
-        pixmap = QPixmap.fromImage(ImageQt(image))
-        self.setPixmap(pixmap.scaled(
-            self.width(),
-            self.height(),
-            Qt.AspectRatioMode.KeepAspectRatio
-        ))
-
-    def renderDirtyRegion(self, spectrumChange) -> None:
-        """
-        spectrumChangeを元に矩形領域で再描画を行
-        """
-        self.renderAll(spectrumChange.changedPowerSpectrum)
-
-    def addMouseMoveEventListener(self, callback) -> None:
-        """
-        マウス移動イベント発火時に呼び出される関数を登録する
-        """
-        self._mouseMoveListeners.append(callback)
-
-    def addMousePressEventListener(self, callback) -> None:
-        """
-        マウスプレスイベント発火時に呼び出される関数を登録する
-        """
-        self._mousePressListeners.append(callback)
-
-    def addMouseReleaseEventListener(self, callback) -> None:
-        """
-        マウスリリースイベント発火時に呼び出される関数を登録する
-        """
-        self._mouseReleaseListeners.append(callback)
-        
-
-
-class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
-    """
-    2次元データの編集可能なパワースペクトルコンポーネント
-    """
-    def __init__(self):
-        super().__init__()
-        self._mouseMoveListeners = []
-        self._mousePressListeners = []
-        self._mouseReleaseListeners = []
-
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setText("2D Spectrum")
-
-    def _emitMouseMoveEvent(self, event) -> None:
-        """
-        PyQt6からマウス移動イベント発火時に呼び出され、
-        対応するリスナーに引数MouseEventを渡し呼び出す。
-        """
-        for listener in self._mouseMoveListeners:
-            listener(event)
-            
-    def _emitMousePressEvent(self, event) -> None:
-        """
-        PyQt6からマウスプレスイベント発火時に呼び出され、
-        対応するリスナーに引数MouseEventを渡し呼び出す。
-        """
-        for listener in self._mousePressListeners:
-            listener(event)
-
-
-    def _emitMouseReleaseEvent(self, event) -> None:
-        """
-        PyQt6からマウスリリースイベント発火時に呼び出され、
-        対応するリスナーに引数MouseEventを渡し呼び出す。
-        """
-        for listener in self._mouseReleaseListeners:
-            listener(event)
-
-    def mouseMoveEvent(self, event) -> None:
-        """
-        PyQt6からマウス移動イベント発火時に呼び出され、
-        登録されたリスナーイベントに通知する。
-        """
-        self._emitMouseMoveEvent(event)
-
-    def mousePressEvent(self, event) -> None:
-        """
-        PyQt6からマウスプレスイベント発火時に呼び出され、
-        登録されたリスナーイベントに通知する。
-        """
-        self._emitMousePressEvent(event)
-
-    def mouseReleaseEvent(self, event) -> None:
-        """
-        PyQt6からマウスリリースイベント発火時に呼び出され、
-        登録されたリスナーイベントに通知する。
-        """
-        self._emitMouseReleaseEvent(event)
-
-    def renderAll(self, data: np.ndarray) -> None:
-        """
-        パワースペクトルを全て描画する
-        """
-        image = Image.fromarray(data.astype(np.uint8))
-        pixmap = QPixmap.fromImage(ImageQt(image))
-        self.setPixmap(pixmap.scaled(
-            self.width(),
-            self.height(),
-            Qt.AspectRatioMode.KeepAspectRatio
-        ))
-
-    def renderDirtyRegion(self, spectrumChange) -> None:
-        """
-        spectrumChangeを元に矩形領域で再描画を行う
-        """
-        self.renderAll(spectrumChange.changedPowerSpectrum)
-
-    def addMouseMoveEventListener(self, callback) -> None:
-        """
-        マウス移動イベント発火時に呼び出される関数を登録する
-        """
-        self._mouseMoveListeners.append(callback)
-
-    def addMousePressEventListener(self, callback) -> None:
-        """
-        マウスプレスイベント発火時に呼び出される関数を登録する
-        """
-        self._mousePressListeners.append(callback)
-
-    def addMouseReleaseEventListener(self, callback) -> None:
-        """
-        マウスリリースイベント発火時に呼び出される関数を登録する
-        """
-        self._mouseReleaseListeners.append(callback)
-
+from src.view.interactive_spectrum_component import (
+    InteractiveSpectrumComponent
+)
+from src.model.pane_type import PaneType
 
 class MainWindowView(QMainWindow):
     """
     メインウィンドウの描画を管理するView
     """
-    def __init__(self, spectrumComponent: InteractiveSpectrumComponent):
+    def __init__(self):
         super().__init__()
 
         self._originalData = None
         self._originalSpectrum = None
         self._restoredDataImage = None
-        self._spectrumComponent = spectrumComponent
+        self._spectrumComponent = None
 
         self._originalDataLabel = QLabel()
         self._originalSpectrumLabel = QLabel()
@@ -257,37 +34,90 @@ class MainWindowView(QMainWindow):
         self.setWindowTitle("Result")
 
         widget = QWidget()
-        layout = QGridLayout()
+        self._layout = QGridLayout()
 
-        layout.addWidget(self._originalDataLabel, 0, 0)
-        layout.addWidget(self._originalSpectrumLabel, 0, 1)
-        layout.addWidget(self._restoredDataImageLabel, 1, 0)
-        layout.addWidget(self._spectrumComponent, 1, 1)
+        self._layout.addWidget(self._originalDataLabel, 0, 0)
+        self._layout.addWidget(self._originalSpectrumLabel, 0, 1)
+        self._layout.addWidget(self._restoredDataImageLabel, 1, 0)
 
-        widget.setLayout(layout)
+        # 0行目と1行目の引き伸ばし比率を 1:1 に設定
+        self._layout.setRowStretch(0, 1)
+        self._layout.setRowStretch(1, 1)
+        
+        # 0列目と1列目の引き伸ばし比率を 1:1 に設定
+        self._layout.setColumnStretch(0, 1)
+        self._layout.setColumnStretch(1, 1)
+
+        widget.setLayout(self._layout)
         self.setCentralWidget(widget)
 
-    def display(
-        self,
-        originalData: Image.Image,
-        originalSpectrum: Image.Image,
-        restoredDataImage: Image.Image
-    ) -> None:
+    def display(self, model) -> None:
         """
         元データ、元データのパワースペクトル、復元したデータ、
         編集可能なパワースペクトルを2x2で表示する
         """
-        self._originalData = originalData
-        self._originalSpectrum = originalSpectrum
-        self._restoredDataImage = restoredDataImage
+        images = model.getImage()
 
-        self._originalDataLabel.setPixmap(QPixmap.fromImage(ImageQt(originalData)))
-        self._originalSpectrumLabel.setPixmap(QPixmap.fromImage(ImageQt(originalSpectrum)))
-        self._restoredDataImageLabel.setPixmap(QPixmap.fromImage(ImageQt(restoredDataImage)))
+        self._originalData = images[PaneType.SOURCE_DATA]
+        self._originalSpectrum = images[PaneType.POWER_SPECTRUM]
+        self._restoredDataImage = images[PaneType.INVERSE_DATA]
 
-        self._spectrumComponent.renderAll(np.array(originalSpectrum))
+        self._spectrumComponent = model.getSpectrumComponent()
+        self._layout.addWidget(self._spectrumComponent, 1, 1)
 
+        self._spectrumComponent.renderAll(np.array(images[PaneType.INTERACTIVE_POWER_SPECTRUM]))
+
+        self.setMinimumSize(900, 650)
+        self.resize(1000, 750)
         self.show()
+
+        QTimer.singleShot(0, self._refreshImages)
+
+    def _refreshImages(self) -> None:
+        """
+        4つのラベル・コンポーネントそれぞれの現在の表示領域に合わせて、
+        縦横比を維持したまま最大サイズで画像をぴったり表示する
+        """
+        if self._originalData is None:
+            return
+
+        # 1. 左上：元画像
+        w1, h1 = self._originalDataLabel.width(), self._originalDataLabel.height()
+        self._originalDataLabel.setPixmap(
+            QPixmap.fromImage(ImageQt(self._originalData)).scaled(w1, h1, Qt.AspectRatioMode.KeepAspectRatio)
+        )
+
+        # 2. 右上：元スペクトラム
+        w2, h2 = self._originalSpectrumLabel.width(), self._originalSpectrumLabel.height()
+        self._originalSpectrumLabel.setPixmap(
+            QPixmap.fromImage(ImageQt(self._originalSpectrum)).scaled(w2, h2, Qt.AspectRatioMode.KeepAspectRatio)
+        )
+
+        # 3. 左下：復元画像
+        w3, h3 = self._restoredDataImageLabel.width(), self._restoredDataImageLabel.height()
+        self._restoredDataImageLabel.setPixmap(
+            QPixmap.fromImage(ImageQt(self._restoredDataImage)).scaled(w3, h3, Qt.AspectRatioMode.KeepAspectRatio)
+        )
+        
+        # 4. 右下：編集用スペクトラム（ここが今回の主役！）
+        if self._spectrumComponent and hasattr(self._spectrumComponent, "_powerSpectrum") and self._spectrumComponent._powerSpectrum is not None:
+            # 右下のセルの幅と高さをそのまま取得する
+            w4, h4 = self._spectrumComponent.width(), self._spectrumComponent.height()
+            
+            # 部分編集用の配列から画像を生成
+            img = Image.fromarray(self._spectrumComponent._powerSpectrum.astype(np.uint8))
+            
+            # 【ここがポイント！】右下自身に .scaled() をさせて突っ張らせるのではなく、
+            # View側がセルのサイズに合わせて「比率を維持（KeepAspectRatio）」して綺麗にはめ込みます！
+            pix = QPixmap.fromImage(ImageQt(img)).scaled(w4, h4, Qt.AspectRatioMode.KeepAspectRatio)
+            self._spectrumComponent.setPixmap(pix)
+        
+
+    def resizeEvent(self, event) -> None:
+        """ ウィンドウ全体のサイズが変更されたら、自動的に画像をリサイズする """
+        super().resizeEvent(event)
+        # マウスでウィンドウをびよーんと伸ばした瞬間に、この関数がリアルタイムに実行されるよ
+        self._refreshImages()
 
     def getSpectrumComponent(self) -> InteractiveSpectrumComponent:
         """
