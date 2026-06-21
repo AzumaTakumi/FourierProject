@@ -184,45 +184,7 @@ class Fourier1dModel(FourierModel):
         self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
-
-
-    # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˅
-    def eraseSpectrumAtIndex(self, index: int) -> None:
-        """
-        指定されたインデックスの周波数成分を無効化する。interactiveRealPart、interactiveImaginaryPart、interactivePowerSpectrumを更新し、必要に応じて逆変換結果を再計算する。
-        """
-
-        # SAFE CODE AREA ˅
-        # 存在しない周波数インデックスへ編集しないよう先に検証する。
-        self._validateIndex(index)
-        # 指定成分の実部・虚部を0にし、その成分の強度表示も0にする。
-        self.interactiveRealPart[index] = 0
-        self.interactiveImaginaryPart[index] = 0
-        self.interactivePowerSpectrum[index] = 0
-        # 編集後スペクトルをすぐ逆変換し、Inverse表示を最新化する。
-        self.computeInverseData()
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˄
-
-
-    # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˅
-    def restoreSpectrumAtIndex(self, index: int) -> None:
-        """
-        指定されたインデックスの周波数成分を、フーリエ変換直後の元スペクトル値に戻す。interactiveRealPart、interactiveImaginaryPart、interactivePowerSpectrumを更新し、必要に応じて逆変換結果を再計算する。
-        """
-
-        # SAFE CODE AREA ˅
-        # 指定成分が配列範囲内にあることを確認してから復元する。
-        self._validateIndex(index)
-        # 編集用スペクトルだけをFFT直後の元スペクトル値へ戻す。
-        self.interactiveRealPart[index] = self.realPart[index]
-        self.interactiveImaginaryPart[index] = self.imaginaryPart[index]
-        self.interactivePowerSpectrum[index] = self.powerSpectrum[index]
-        # 復元した周波数成分を反映した逆変換結果を再計算する。
-        self.computeInverseData()
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
-
+    
 
     # FIXED CODE AREA: method.getInteractiveSpectrumAtIndex ˅
     def getInteractiveSpectrumAtIndex(self, index: int) -> tuple[float, float]:

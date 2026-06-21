@@ -149,7 +149,7 @@ class Fourier2dModel(FourierModel):
 
 
     # FIXED CODE AREA: method._normalizeRect ˅
-    def _normalizeRect(self, rowStart: int, rowStop: int, colStart: int, colStop: int) -> tuple[int, int, int, int] | None:
+    def _normalizeRect(self, rowStart: int, rowStop: int, colStart: int, colStop: int) -> tuple[int, int, int, int]:
         """
         矩形範囲を配列範囲内へ丸める
         """
@@ -190,7 +190,7 @@ class Fourier2dModel(FourierModel):
 
 
     # FIXED CODE AREA: method.getSpectrumRectForPositions ˅
-    def getSpectrumRectForPositions(self, positions: list[tuple[int, int]], radius: int) -> tuple[int, int, int, int] | None:
+    def getSpectrumRectForPositions(self, positions: list[tuple[int, int]], radius: int) -> tuple[int, int, int, int]:
         """
         複数ブラシ位置を含むUndo用の現在値を取得する
         """
