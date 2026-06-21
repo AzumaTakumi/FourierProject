@@ -18,7 +18,7 @@ from PIL import Image
 from .fourier_1_d_model import Fourier1dModel
 from .fourier_2_d_model import Fourier2dModel
 from .change_fourier_model_command import ChangeFourierModelCommand
-from .edit_spectrum_value_at_index_command import EditSpectrumValueAtIndexCommand
+from .edit_spectrum_values_at_indexes_command import EditSpectrumValuesAtIndexesCommand
 from .erase_spectrum_at_positions_command import EraseSpectrumAtPositionsCommand
 from .paint_rgb_spectrum_at_positions_command import PaintRgbSpectrumAtPositionsCommand
 from .reset_spectrum_command import ResetSpectrumCommand
@@ -158,8 +158,12 @@ class FourierModelContext(object):
         # 1回のドラッグイベントで通過した複数indexを、まとめて実行するためのローカルComposite。
         # Undo履歴へ積む単位は外側のcurrentCompositeCommandが管理する。
         composite = CompositeSpectrumEditCommand()
-        for index in indices:
-            composite.add(EditSpectrumValueAtIndexCommand(self.currentModel, index, 0.0, 0.0))
+        composite.add(EditSpectrumValuesAtIndexesCommand(
+            self.currentModel,
+            indices,
+            np.zeros(len(indices), dtype=float),
+            np.zeros(len(indices), dtype=float),
+        ))
         self._executeCommandInOpenEdit(composite)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumBetweenIndexes ˄
@@ -168,8 +172,13 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˅
     def editSpectrumValueAtIndex(self, index: int, realPart: float, imaginaryPart: float) -> None:
         # SAFE CODE AREA ˅
-        # 指定成分の実部・虚部を直接書き換えるCommandを実行する。
-        self._executeUndoableCommand(EditSpectrumValueAtIndexCommand(self.currentModel, index, realPart, imaginaryPart))
+        # 指定成分の実部・虚部を、複数index用Commandの1要素編集として実行する。
+        self._executeUndoableCommand(EditSpectrumValuesAtIndexesCommand(
+            self.currentModel,
+            [index],
+            np.array([realPart], dtype=float),
+            np.array([imaginaryPart], dtype=float),
+        ))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
 
@@ -182,13 +191,12 @@ class FourierModelContext(object):
         # 1回のドラッグイベントで通過した複数indexを、まとめて実行するためのローカルComposite。
         # Undo履歴へ積む単位は外側のcurrentCompositeCommandが管理する。
         composite = CompositeSpectrumEditCommand()
-        for index in indices:
-            composite.add(EditSpectrumValueAtIndexCommand(
-                self.currentModel,
-                index,
-                self.currentModel.realPart[index],
-                self.currentModel.imaginaryPart[index],
-            ))
+        composite.add(EditSpectrumValuesAtIndexesCommand(
+            self.currentModel,
+            indices,
+            self.currentModel.realPart[indices],
+            self.currentModel.imaginaryPart[indices],
+        ))
         self._executeCommandInOpenEdit(composite)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSpectrumBetweenIndexes ˄
@@ -431,7 +439,7 @@ class FourierModelContext(object):
         # 1D編集Command群のindexをまとめ、連続範囲として通知する。
         indices = []
         for child in command.commands:
-            indices.append(int(child.index))
+            indices.extend(child.indexes)
         return self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method._createComposite1dSpectrumChange ˄

@@ -184,6 +184,21 @@ class Fourier1dModel(FourierModel):
         self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
+
+
+    # FIXED CODE AREA: method.editSpectrumValuesAtIndexes ˅
+    def editSpectrumValuesAtIndexes(self, indexes: list[int], realParts: np.ndarray, imaginaryParts: np.ndarray) -> None:
+        # SAFE CODE AREA ˅
+        # 複数indexをまとめて書き換え、逆変換は最後に1回だけ行う。
+        index_array = np.asarray(indexes, dtype=int)
+        real_values = np.asarray(realParts, dtype=float)
+        imaginary_values = np.asarray(imaginaryParts, dtype=float)
+        self.interactiveRealPart[index_array] = real_values
+        self.interactiveImaginaryPart[index_array] = imaginary_values
+        self.interactivePowerSpectrum[index_array] = np.square(real_values) + np.square(imaginary_values)
+        self.computeInverseData()
+        # SAFE CODE AREA ˄
+    # FIXED CODE AREA: method.editSpectrumValuesAtIndexes ˄
     
 
     # FIXED CODE AREA: method.getInteractiveSpectrumAtIndex ˅

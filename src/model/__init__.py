@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .change_fourier_model_command import ChangeFourierModelCommand
 from .composite_spectrum_edit_command import CompositeSpectrumEditCommand
-from .edit_spectrum_value_at_index_command import EditSpectrumValueAtIndexCommand
+from .edit_spectrum_values_at_indexes_command import EditSpectrumValuesAtIndexesCommand
 from .erase_spectrum_at_positions_command import EraseSpectrumAtPositionsCommand
 from .fourier_1_d_model import Fourier1dModel
 from .fourier_2_d_model import Fourier2dModel
@@ -20,4 +20,4 @@ from .spectrum_change import SpectrumChange
 from .spectrum_changed_listener import SpectrumChangedListener
 from .spectrum_edit_command import SpectrumEditCommand
 
-__all__ = ["ChangeFourierModelCommand", "CompositeSpectrumEditCommand", "EditSpectrumValueAtIndexCommand", "EraseSpectrumAtPositionsCommand", "Fourier1dModel", "Fourier2dModel", "FourierModel", "FourierModelContext", "FourierRenderer", "FourierTransform", "PaintRgbSpectrumAtPositionsCommand", "PaneType", "ResetSpectrumCommand", "Snapshot", "Spectrum1dChange", "Spectrum2dChange", "SpectrumChange", "SpectrumChangedListener", "SpectrumEditCommand"]
+__all__ = ["ChangeFourierModelCommand", "CompositeSpectrumEditCommand", "EditSpectrumValuesAtIndexesCommand", "EraseSpectrumAtPositionsCommand", "Fourier1dModel", "Fourier2dModel", "FourierModel", "FourierModelContext", "FourierRenderer", "FourierTransform", "PaintRgbSpectrumAtPositionsCommand", "PaneType", "ResetSpectrumCommand", "Snapshot", "Spectrum1dChange", "Spectrum2dChange", "SpectrumChange", "SpectrumChangedListener", "SpectrumEditCommand"]
