@@ -64,11 +64,11 @@ class FourierModelContext(object):
         self.currentCompositeCommand: CompositeSpectrumEditCommand | None = None
 
         # SAFE CODE AREA ˅
-        # CompositeCommandの変更種別から通知範囲生成処理を選ぶ。
-        self.compositeChangeFactories = {
-            "1d": self._createComposite1dSpectrumChange,
-            "2d": self._createComposite2dSpectrumChange,
-            "full": self._createCompositeFullSpectrumChange,
+        # Commandの変更種別から通知範囲生成処理を選ぶ。
+        self.spectrumChangeFactories = {
+            "1d": self._create1dSpectrumChangeForCommand,
+            "2d": self._create2dSpectrumChangeForCommand,
+            "full": self._createFullSpectrumChangeForCommand,
         }
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
@@ -155,16 +155,13 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として削除する。
         indices = self._indexLine(startIndex, endIndex)
-        # 1回のドラッグイベントで通過した複数indexを、まとめて実行するためのローカルComposite。
-        # Undo履歴へ積む単位は外側のcurrentCompositeCommandが管理する。
-        composite = CompositeSpectrumEditCommand()
-        composite.add(EditSpectrumValuesAtIndexesCommand(
+        # 1回のドラッグイベントで通過した複数indexを、1つのCommandとして実行する。
+        self._executeCommandInOpenEdit(EditSpectrumValuesAtIndexesCommand(
             self.currentModel,
             indices,
             np.zeros(len(indices), dtype=float),
             np.zeros(len(indices), dtype=float),
         ))
-        self._executeCommandInOpenEdit(composite)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumBetweenIndexes ˄
 
@@ -188,16 +185,13 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         # 1Dドラッグで点が飛んだ場合に、前回indexから今回indexまでを線として復元する。
         indices = self._indexLine(startIndex, endIndex)
-        # 1回のドラッグイベントで通過した複数indexを、まとめて実行するためのローカルComposite。
-        # Undo履歴へ積む単位は外側のcurrentCompositeCommandが管理する。
-        composite = CompositeSpectrumEditCommand()
-        composite.add(EditSpectrumValuesAtIndexesCommand(
+        # 1回のドラッグイベントで通過した複数indexを、1つのCommandとして実行する。
+        self._executeCommandInOpenEdit(EditSpectrumValuesAtIndexesCommand(
             self.currentModel,
             indices,
             self.currentModel.realPart[indices],
             self.currentModel.imaginaryPart[indices],
         ))
-        self._executeCommandInOpenEdit(composite)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreSpectrumBetweenIndexes ˄
 
@@ -207,9 +201,9 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         points = self._linePoints(startRow, startCol, endRow, endCol)
         # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
-        composite = CompositeSpectrumEditCommand()
-        composite.add(EraseSpectrumAtPositionsCommand(self.currentModel, points, radius))
-        self._executeCommandInOpenEdit(composite)
+        self._executeCommandInOpenEdit(
+            EraseSpectrumAtPositionsCommand(self.currentModel, points, radius)
+        )
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumLineAtPosition ˄
 
@@ -219,9 +213,9 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         points = self._linePoints(startRow, startCol, endRow, endCol)
         # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
-        composite = CompositeSpectrumEditCommand()
-        composite.add(PaintRgbSpectrumAtPositionsCommand(self.currentModel, points, radius, rgbColor))
-        self._executeCommandInOpenEdit(composite)
+        self._executeCommandInOpenEdit(
+            PaintRgbSpectrumAtPositionsCommand(self.currentModel, points, radius, rgbColor)
+        )
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.paintRgbSpectrumLineAtPosition ˄
 
@@ -237,7 +231,7 @@ class FourierModelContext(object):
         command.undo()
         self.redoStack.append(command)
         # Undo後の変更範囲だけをViewへ通知する。
-        self._notifySpectrumChanged(self._createCompositeSpectrumChange(command))
+        self._notifySpectrumChanged(self._createSpectrumChange(command))
         return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
@@ -255,7 +249,7 @@ class FourierModelContext(object):
         command.execute()
         self.undoStack.append(command)
         # Redo後の変更範囲だけをViewへ通知する。
-        self._notifySpectrumChanged(self._createCompositeSpectrumChange(command))
+        self._notifySpectrumChanged(self._createSpectrumChange(command))
         return True
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.redo ˄
@@ -334,19 +328,18 @@ class FourierModelContext(object):
 
 
     # FIXED CODE AREA: method._executeCommandInOpenEdit ˅
-    def _executeCommandInOpenEdit(self, composite: CompositeSpectrumEditCommand) -> None:
+    def _executeCommandInOpenEdit(self, command: SpectrumEditCommand) -> None:
         # SAFE CODE AREA ˅
-        # beginSpectrumEdit()で開いた編集単位の中でだけCompositeCommandを実行する。
+        # beginSpectrumEdit()で開いた編集単位の中でだけCommandを実行する。
         open_command = self.currentCompositeCommand
         if open_command is None:
             raise RuntimeError("beginSpectrumEdit() must be called before drag spectrum edits")
 
         # まずCommandを実行してModel本体の状態を変更する。
-        composite.execute()
-        for child in composite.commands:
-            open_command.add(child)
+        command.execute()
+        open_command.add(command)
         # Model状態が変わったので、Viewへ変更範囲だけを通知する。
-        self._notifySpectrumChanged(self._createCompositeSpectrumChange(composite))
+        self._notifySpectrumChanged(self._createSpectrumChange(command))
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method._executeCommandInOpenEdit ˄
 
@@ -357,11 +350,9 @@ class FourierModelContext(object):
         # 単発操作だけを1つのCompositeCommandとして実行・保存する。
         if self.currentCompositeCommand is not None:
             raise RuntimeError("single spectrum edit cannot run during an open spectrum edit")
-        composite = CompositeSpectrumEditCommand()
-        composite.add(command)
         self.beginSpectrumEdit()
         try:
-            self._executeCommandInOpenEdit(composite)
+            self._executeCommandInOpenEdit(command)
         finally:
             self.endSpectrumEdit()
         # SAFE CODE AREA ˄
@@ -424,33 +415,44 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method._create2dSpectrumChangeForRect ˄
 
-    # GENERATED CODE AREA: method._createCompositeSpectrumChange ˅
-    def _createCompositeSpectrumChange(self, command: CompositeSpectrumEditCommand) -> SpectrumChange:
+    # GENERATED CODE AREA: method._createSpectrumChange ˅
+    def _createSpectrumChange(self, command: SpectrumEditCommand) -> SpectrumChange:
         # SAFE CODE AREA ˅
-        # CompositeCommandが保持する変更種別に応じて、部分更新または全体更新の通知を作る。
-        return self.compositeChangeFactories[command.spectrumChangeKind](command)
+        # Commandが保持する変更種別に応じて、部分更新または全体更新の通知を作る。
+        return self.spectrumChangeFactories[command.spectrumChangeKind](command)
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method._createCompositeSpectrumChange ˄
+    # GENERATED CODE AREA: method._createSpectrumChange ˄
 
 
-    # FIXED CODE AREA: method._createComposite1dSpectrumChange ˅
-    def _createComposite1dSpectrumChange(self, command: CompositeSpectrumEditCommand) -> Spectrum1dChange:
+    # FIXED CODE AREA: method._editCommandsIn ˅
+    def _editCommandsIn(self, command: SpectrumEditCommand) -> list[SpectrumEditCommand]:
+        # SAFE CODE AREA ˅
+        # Undo/Redo通知ではComposite、通常通知では単一Commandを同じ形で扱う。
+        if isinstance(command, CompositeSpectrumEditCommand):
+            return command.commands
+        return [command]
+        # SAFE CODE AREA ˄
+    # FIXED CODE AREA: method._editCommandsIn ˄
+
+
+    # FIXED CODE AREA: method._create1dSpectrumChangeForCommand ˅
+    def _create1dSpectrumChangeForCommand(self, command: SpectrumEditCommand) -> Spectrum1dChange:
         # SAFE CODE AREA ˅
         # 1D編集Command群のindexをまとめ、連続範囲として通知する。
         indices = []
-        for child in command.commands:
+        for child in self._editCommandsIn(command):
             indices.extend(child.indexes)
         return self._create1dSpectrumChangeForRange(min(indices), max(indices) + 1)
         # SAFE CODE AREA ˄
-    # FIXED CODE AREA: method._createComposite1dSpectrumChange ˄
+    # FIXED CODE AREA: method._create1dSpectrumChangeForCommand ˄
 
 
-    # FIXED CODE AREA: method._createComposite2dSpectrumChange ˅
-    def _createComposite2dSpectrumChange(self, command: CompositeSpectrumEditCommand) -> Spectrum2dChange:
+    # FIXED CODE AREA: method._create2dSpectrumChangeForCommand ˅
+    def _create2dSpectrumChangeForCommand(self, command: SpectrumEditCommand) -> Spectrum2dChange:
         # SAFE CODE AREA ˅
         # 2D編集Command群の矩形範囲をまとめ、すべてを含む1つの矩形として通知する。
         rects = []
-        for child in command.commands:
+        for child in self._editCommandsIn(command):
             rect = self.currentModel.getSpectrumRectForPositions(child.positions, child.radius)
             rects.append(rect)
 
@@ -460,11 +462,11 @@ class FourierModelContext(object):
         col_stop = max(rect[3] for rect in rects)
         return self._create2dSpectrumChangeForRect((row_start, row_stop, col_start, col_stop))
         # SAFE CODE AREA ˄
-    # FIXED CODE AREA: method._createComposite2dSpectrumChange ˄
+    # FIXED CODE AREA: method._create2dSpectrumChangeForCommand ˄
 
 
-    # FIXED CODE AREA: method._createCompositeFullSpectrumChange ˅
-    def _createCompositeFullSpectrumChange(self, command: CompositeSpectrumEditCommand) -> SpectrumChange:
+    # FIXED CODE AREA: method._createFullSpectrumChangeForCommand ˅
+    def _createFullSpectrumChangeForCommand(self, command: SpectrumEditCommand) -> SpectrumChange:
         # SAFE CODE AREA ˅
         # Model差し替えやResetは、現在Modelの次元に応じた全体更新として通知する。
         return {
@@ -472,7 +474,7 @@ class FourierModelContext(object):
             Fourier2dModel: self._createFull2dSpectrumChange,
         }[type(self.currentModel)]()
         # SAFE CODE AREA ˄
-    # FIXED CODE AREA: method._createCompositeFullSpectrumChange ˄
+    # FIXED CODE AREA: method._createFullSpectrumChangeForCommand ˄
 
 
     # FIXED CODE AREA: method._linePoints ˅
