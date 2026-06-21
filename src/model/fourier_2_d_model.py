@@ -27,9 +27,9 @@ class Fourier2dModel(FourierModel):
     # GENERATED CODE AREA: class.header ˄
 
     # FIXED CODE AREA: method.__init__ ˅
-    def __init__(self, sourceData: np.ndarray = np.array([[], []])) -> None:
+    def __init__(self, sourceData: np.ndarray) -> None:
         """
-        Fourier2dModelを初期化する。必要に応じてsourceDataを受け取り、内部状態として各スペクトル、編集用スペクトル、逆変換結果を初期化する。
+        Fourier2dModelを初期化する。sourceDataを受け取り、内部状態として各スペクトル、編集用スペクトル、逆変換結果を初期化する。
         """
 
         # FourierModelの初期化を行う。
@@ -67,7 +67,7 @@ class Fourier2dModel(FourierModel):
             PaneType.INTERACTIVE_POWER_SPECTRUM: self.renderer.imageFromSpectrum,
             PaneType.INVERSE_DATA: self.renderer.imageFromImageData,
         }
-        # 初期画像が渡された場合は、通常の設定処理を通してFFTと逆変換まで初期化する。
+        # 通常の設定処理を通してFFTと逆変換まで初期化する。
         self.setSourceData(sourceData)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄

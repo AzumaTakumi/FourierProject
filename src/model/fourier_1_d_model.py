@@ -27,9 +27,9 @@ class Fourier1dModel(FourierModel):
     # GENERATED CODE AREA: class.header ˄
 
     # FIXED CODE AREA: method.__init__ ˅
-    def __init__(self, sourceData: np.ndarray = np.array([])) -> None:
+    def __init__(self, sourceData: np.ndarray) -> None:
         """
-        Fourier1dModelを初期化する。必要に応じてsourceDataを受け取り、内部状態（スペクトル/表示用データ）を初期化する。
+        Fourier1dModelを初期化する。sourceDataを受け取り、内部状態（スペクトル/表示用データ）を初期化する。
         """
 
         # FourierModelの初期化を行う。
@@ -67,7 +67,7 @@ class Fourier1dModel(FourierModel):
             PaneType.INTERACTIVE_POWER_SPECTRUM: self.renderer.imageFrom1dData,
             PaneType.INVERSE_DATA: self.renderer.imageFrom1dData,
         }
-        # 初期データが渡された場合は、通常のデータ設定経路を通してFFTと逆変換まで初期化する。
+        # 通常のデータ設定経路を通してFFTと逆変換まで初期化する。
         self.setSourceData(sourceData)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
