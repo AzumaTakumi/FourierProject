@@ -199,7 +199,9 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         points = self._linePoints(startRow, startCol, endRow, endCol)
         # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
-        self._executeCommandInOpenEdit(EraseSpectrumAtPositionsCommand(self.currentModel, points, radius))
+        composite = CompositeSpectrumEditCommand()
+        composite.add(EraseSpectrumAtPositionsCommand(self.currentModel, points, radius))
+        self._executeCommandInOpenEdit(composite)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.eraseSpectrumLineAtPosition ˄
 
@@ -209,7 +211,9 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˅
         points = self._linePoints(startRow, startCol, endRow, endCol)
         # 線分上の全点を1つのCommandで処理し、逆FFTとView通知を1回にまとめる。
-        self._executeCommandInOpenEdit(PaintRgbSpectrumAtPositionsCommand(self.currentModel, points, radius, rgbColor))
+        composite = CompositeSpectrumEditCommand()
+        composite.add(PaintRgbSpectrumAtPositionsCommand(self.currentModel, points, radius, rgbColor))
+        self._executeCommandInOpenEdit(composite)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.paintRgbSpectrumLineAtPosition ˄
 
@@ -322,17 +326,13 @@ class FourierModelContext(object):
 
 
     # FIXED CODE AREA: method._executeCommandInOpenEdit ˅
-    def _executeCommandInOpenEdit(self, command: SpectrumEditCommand) -> None:
+    def _executeCommandInOpenEdit(self, composite: CompositeSpectrumEditCommand) -> None:
         # SAFE CODE AREA ˅
-        # beginSpectrumEdit()で開いた編集単位の中でだけCommandを実行する。
+        # beginSpectrumEdit()で開いた編集単位の中でだけCompositeCommandを実行する。
         open_command = self.currentCompositeCommand
         if open_command is None:
             raise RuntimeError("beginSpectrumEdit() must be called before drag spectrum edits")
 
-        # 履歴・通知の単位をCompositeCommandへ統一する。
-        composite = CompositeSpectrumEditCommand()
-        for child in getattr(command, "commands", [command]):
-            composite.add(child)
         # まずCommandを実行してModel本体の状態を変更する。
         composite.execute()
         for child in composite.commands:
@@ -349,9 +349,11 @@ class FourierModelContext(object):
         # 単発操作だけを1つのCompositeCommandとして実行・保存する。
         if self.currentCompositeCommand is not None:
             raise RuntimeError("single spectrum edit cannot run during an open spectrum edit")
+        composite = CompositeSpectrumEditCommand()
+        composite.add(command)
         self.beginSpectrumEdit()
         try:
-            self._executeCommandInOpenEdit(command)
+            self._executeCommandInOpenEdit(composite)
         finally:
             self.endSpectrumEdit()
         # SAFE CODE AREA ˄
