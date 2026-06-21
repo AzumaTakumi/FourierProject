@@ -3,6 +3,7 @@ from __future__ import annotations
 # GENERATED CODE AREA: module.imports ˅
 import numpy as np
 from .fourier_model import FourierModel
+from src.view.interactive_spectrum_component import Interactive1dSpectrumComponent
 
 # GENERATED CODE AREA: module.imports ˄
 
@@ -239,3 +240,15 @@ class Fourier1dModel(FourierModel):
         )
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.getInteractiveSpectrumAtIndex ˄
+
+    # GENERATED CODE AREA: method.getSpectrumComponent ˅
+    def getSpectrumComponent(self):
+        """
+        1次元スペクトル編集用コンポーネントを取得する。
+        """
+
+        # SAFE CODE AREA ˅
+        # 1次元Modelなので、1次元編集用Componentを返す。
+        return Interactive1dSpectrumComponent()
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.getSpectrumComponent ˄

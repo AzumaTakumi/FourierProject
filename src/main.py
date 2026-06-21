@@ -1,7 +1,11 @@
 import sys
 from PyQt6.QtWidgets import QApplication
 # 1. 読み込むViewを FourierView から MainWindowView（およびコンポーネント）に変更
+<<<<<<< HEAD
 from src.view.main_window_view import MainWindowView, Interactive2dSpectrumComponent
+=======
+from src.view.main_window_view import MainWindowView
+>>>>>>> 3ff34ce (編集したファイルを追加し直しました)
 from src.controller.file_controller import FileLoader
 
 def main() -> int:
@@ -9,6 +13,7 @@ def main() -> int:
     アプリケーションのメインプログラムです。
     """
     app = QApplication(sys.argv)
+<<<<<<< HEAD
     
     # 2. 編集可能な2次元スペクトルコンポーネントを生成
     spectrum_component = Interactive2dSpectrumComponent()
@@ -27,6 +32,15 @@ def main() -> int:
     # 5. Controller側でファイル選択画面を表示・処理させる
     file_loader.start()
     
+=======
+
+    view = MainWindowView()
+    file_loader = FileLoader(view)
+
+    file_loader.model.spectrumChangedListener = lambda change: view.display(file_loader.model)
+
+    file_loader.start()
+>>>>>>> 3ff34ce (編集したファイルを追加し直しました)
     return app.exec()
 
 if __name__ == "__main__":

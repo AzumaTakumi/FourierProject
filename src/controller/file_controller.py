@@ -37,7 +37,7 @@ class FileController:
 			self.view,
 			"ファイルを開く",
 			current_directory,
-			"すべての対応形式 (*.png *.bmp *.csv *.txt);;画像ファイル (*.png *.bmp);;テキストデータ (*.csv *.txt)"
+			"すべての対応形式 (*.png *.csv *.txt);;画像ファイル (*.png);;テキストデータ (*.csv *.txt)"
 		)
 		return file_path
 
@@ -59,7 +59,6 @@ class FileLoader(FileController):
 			".csv": TextReader(),
 			".txt": TextReader(),
 			".png": ImageReader(),
-			".bmp": ImageReader()
 		}
 
 	def start(self) -> None:
@@ -101,3 +100,4 @@ class FileLoader(FileController):
 		# ※ ここはModelの仕様に合わせて「Image形式（PIL.Image）」で取得します
 
 		# 新しい MainWindowView にデータを流し込んで画面を出力させる
+		

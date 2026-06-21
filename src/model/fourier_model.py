@@ -186,7 +186,7 @@ class FourierModel(object):
             elif getattr(data, "ndim", 0) == 1:
                 # 1次元データは画像ではなく波形として折れ線描画する。
                 image_map[pane_type] = self.renderer.imageFrom1dData(data)
-            elif pane_type in (PaneType.SOURCE_DATA, PaneType.INVERSE_DATA):
+            elif pane_type in [PaneType.SOURCE_DATA, PaneType.INVERSE_DATA]:
                 # 元画像と逆変換画像は、画素値としてそのまま見える画像へ変換する。
                 image_map[pane_type] = self.renderer.imageFromImageData(data)
             else:
@@ -195,3 +195,17 @@ class FourierModel(object):
         return image_map
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.getImage ˄
+
+    # GENERATED CODE AREA: method.getSpectrumComponent ˅
+    def getSpectrumComponent(self):
+        """
+        現在のModelに対応する編集用スペクトルコンポーネントを取得する。
+        """
+
+        # SAFE CODE AREA ˅
+        # Fourier1dModel / Fourier2dModel がそれぞれ対応するComponentを返すため、
+        # 親クラスでは実装せず子クラスへ処理を委譲する。
+        raise NotImplementedError
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.getSpectrumComponent ˄    
+
