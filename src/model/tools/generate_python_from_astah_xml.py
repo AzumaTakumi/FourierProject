@@ -4,6 +4,8 @@ Generate Python skeleton code directly from astah XMI/XML class model.
 
 Typical usage:
   python generate_python_from_astah_xmi.py FourierSignalModel.xml generated --write
+  python generate_python_from_astah_xmi.py FourierSignalModel.xml generated --target-class FourierTransform --show-diff
+  python generate_python_from_astah_xmi.py FourierSignalModel.xml generated --target-file Model/fourier_transform.py --write
 
 Without --write, this runs in dry-run mode and only reports planned files.
 """
@@ -149,6 +151,16 @@ class ClassSpec:
 @dataclass(frozen=True)
 class XmiModel:
     package_to_classes: dict[str, tuple[ClassSpec, ...]]
+
+
+@dataclass(frozen=True)
+class OutputFileSpec:
+    path: Path
+    text: str
+    package_name: str
+    class_name: str | None
+    original_class_name: str | None
+    module_name: str | None
 
 
 @dataclass(frozen=True)
@@ -1150,19 +1162,157 @@ def render_package_init(classes: tuple[ClassSpec, ...]) -> str:
     return "".join(lines)
 
 
-def build_output_files(model: XmiModel, output_root: Path) -> dict[Path, str]:
+def build_output_file_specs(model: XmiModel, output_root: Path) -> tuple[OutputFileSpec, ...]:
     class_index = build_class_index(model)
-    files: dict[Path, str] = {}
+    specs: list[OutputFileSpec] = []
 
     for package_name, classes in model.package_to_classes.items():
         if package_name == "generated":
             continue
         package_dir = output_root / package_name
-        files[package_dir / "__init__.py"] = render_package_init(classes)
+        specs.append(
+            OutputFileSpec(
+                path=package_dir / "__init__.py",
+                text=render_package_init(classes),
+                package_name=package_name,
+                class_name=None,
+                original_class_name=None,
+                module_name="__init__",
+            )
+        )
         for cls in classes:
             module = to_safe_module_name(cls.name)
-            files[package_dir / f"{module}.py"] = render_class_file(cls, class_index)
-    return files
+            specs.append(
+                OutputFileSpec(
+                    path=package_dir / f"{module}.py",
+                    text=render_class_file(cls, class_index),
+                    package_name=package_name,
+                    class_name=cls.name,
+                    original_class_name=cls.original_name,
+                    module_name=module,
+                )
+            )
+    return tuple(specs)
+
+
+def build_output_files(model: XmiModel, output_root: Path) -> dict[Path, str]:
+    return {spec.path: spec.text for spec in build_output_file_specs(model, output_root)}
+
+
+def split_target_values(values: list[str]) -> tuple[str, ...]:
+    targets: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        for item in value.split(","):
+            target = item.strip()
+            if not target or target in seen:
+                continue
+            seen.add(target)
+            targets.append(target)
+    return tuple(targets)
+
+
+def normalize_target_path(value: str) -> str:
+    return value.strip().replace("\\", "/")
+
+
+def output_path_candidates(path: Path, output_root: Path) -> set[str]:
+    candidates = {path.as_posix(), path.name, path.stem}
+    try:
+        candidates.add(path.relative_to(output_root).as_posix())
+    except ValueError:
+        pass
+
+    resolved_path = path.resolve()
+    resolved_output = output_root.resolve()
+    candidates.add(resolved_path.as_posix())
+    try:
+        candidates.add(resolved_path.relative_to(resolved_output).as_posix())
+    except ValueError:
+        pass
+    try:
+        candidates.add(resolved_path.relative_to(Path.cwd().resolve()).as_posix())
+    except ValueError:
+        pass
+    return candidates
+
+
+def output_file_matches_target(spec: OutputFileSpec, output_root: Path, target: str) -> bool:
+    normalized = normalize_target_path(target)
+    candidates = output_path_candidates(spec.path, output_root)
+    if normalized in candidates:
+        return True
+    if "/" in normalized or normalized.endswith(".py"):
+        return any(candidate.endswith(f"/{normalized}") for candidate in candidates)
+    return normalized in {spec.path.stem, spec.module_name}
+
+
+def output_class_matches_target(spec: OutputFileSpec, target: str) -> bool:
+    if spec.class_name is None:
+        return False
+
+    normalized = target.strip()
+    short_name = normalized.rsplit(".", 1)[-1]
+    safe_short_name = to_safe_identifier(short_name, fallback="GeneratedClass")
+    candidates = {
+        spec.class_name,
+        spec.original_class_name or "",
+        spec.module_name or "",
+        f"{spec.package_name}.{spec.class_name}",
+        f"{spec.package_name}.{spec.original_class_name}" if spec.original_class_name else "",
+    }
+    return normalized in candidates or short_name in candidates or safe_short_name == spec.class_name
+
+
+def format_available_targets(specs: tuple[OutputFileSpec, ...], output_root: Path) -> str:
+    files = sorted(spec.path.relative_to(output_root).as_posix() for spec in specs)
+    classes = sorted(
+        f"{spec.package_name}.{spec.class_name}"
+        for spec in specs
+        if spec.class_name is not None
+    )
+    file_text = "\n  ".join(files)
+    class_text = "\n  ".join(classes)
+    return f"Available files:\n  {file_text}\nAvailable classes:\n  {class_text}"
+
+
+def filter_output_file_specs(
+    specs: tuple[OutputFileSpec, ...],
+    output_root: Path,
+    target_files: tuple[str, ...],
+    target_classes: tuple[str, ...],
+) -> tuple[OutputFileSpec, ...]:
+    if not target_files and not target_classes:
+        return specs
+
+    selected: list[OutputFileSpec] = []
+    matched_files: set[str] = set()
+    matched_classes: set[str] = set()
+    for spec in specs:
+        include = False
+        for target_file in target_files:
+            if output_file_matches_target(spec, output_root, target_file):
+                include = True
+                matched_files.add(target_file)
+        for target_class in target_classes:
+            if output_class_matches_target(spec, target_class):
+                include = True
+                matched_classes.add(target_class)
+        if include:
+            selected.append(spec)
+
+    missing_files = [target for target in target_files if target not in matched_files]
+    missing_classes = [target for target in target_classes if target not in matched_classes]
+    if missing_files or missing_classes:
+        messages: list[str] = []
+        if missing_files:
+            messages.append(f"unknown target file(s): {', '.join(missing_files)}")
+        if missing_classes:
+            messages.append(f"unknown target class(es): {', '.join(missing_classes)}")
+        messages.append(format_available_targets(specs, output_root))
+        raise ValueError("\n".join(messages))
+
+    return tuple(selected)
 
 
 def main() -> int:
@@ -1171,11 +1321,30 @@ def main() -> int:
     parser.add_argument("output", type=Path, help="output directory root")
     parser.add_argument("--write", action="store_true", help="actually create/update files")
     parser.add_argument("--show-diff", action="store_true", help="print unified diffs")
+    parser.add_argument(
+        "--target-file",
+        action="append",
+        default=[],
+        help="only process matching generated Python file; repeat or use commas for multiple targets",
+    )
+    parser.add_argument(
+        "--target-class",
+        action="append",
+        default=[],
+        help="only process the generated module for matching class; repeat or use commas for multiple targets",
+    )
     args = parser.parse_args()
 
     xml_inputs = discover_input_xmls(args.xml)
     model = merge_models([parse_xmi(path) for path in xml_inputs])
-    files = build_output_files(model, args.output)
+    target_files = split_target_values(args.target_file)
+    target_classes = split_target_values(args.target_class)
+    output_specs = build_output_file_specs(model, args.output)
+    try:
+        output_specs = filter_output_file_specs(output_specs, args.output, target_files, target_classes)
+    except ValueError as exc:
+        parser.error(str(exc))
+    files = {spec.path: spec.text for spec in output_specs}
 
     changed_count = 0
     notes: list[str] = []
@@ -1242,6 +1411,13 @@ def main() -> int:
     print(f"=== Summary ===")
     print(f"Mode: {mode}")
     print(f"Changed files: {changed_count}")
+    if target_files or target_classes:
+        target_summary: list[str] = []
+        if target_files:
+            target_summary.append(f"files: {', '.join(target_files)}")
+        if target_classes:
+            target_summary.append(f"classes: {', '.join(target_classes)}")
+        print(f"Targets: {'; '.join(target_summary)}")
     if not args.write:
         print("Next: run again with --write to apply these changes.")
     return 0
