@@ -3,6 +3,7 @@ from __future__ import annotations
 # GENERATED CODE AREA: module.imports ˅
 import numpy as np
 from .fourier_model import FourierModel
+from src.view.interactive_spectrum_component import Interactive2dSpectrumComponent
 
 # GENERATED CODE AREA: module.imports ˄
 
@@ -376,3 +377,15 @@ class Fourier2dModel(FourierModel):
         self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreInteractiveSpectrumAtRect ˄
+
+    # GENERATED CODE AREA: method.getSpectrumComponent ˅
+    def getSpectrumComponent(self):
+        """
+        2次元スペクトル編集用コンポーネントを取得する。
+        """
+
+        # SAFE CODE AREA ˅
+        # 2次元Modelなので、2次元編集用Componentを返す。
+        return Interactive2dSpectrumComponent()
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.getSpectrumComponent ˄

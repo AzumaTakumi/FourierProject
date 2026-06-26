@@ -22,8 +22,6 @@ ENV/
 *.log
 
 # === ルート直下のローカル実験用アプリ ===
-Controller/
-View/
 src/gui_app.py
 
 # === model内のローカルテスト・生成物 ===
