@@ -14,6 +14,17 @@ class SpectrumEditCommand(object):
 
     # GENERATED CODE AREA: class.header ˄
 
+    # GENERATED CODE AREA: method.__init__ ˅
+    def __init__(self) -> None:
+        # 該当コマンド実行による影響範囲を示す
+        self.spectrumChangeKind: str = ''
+
+        # SAFE CODE AREA ˅
+        pass
+        # SAFE CODE AREA ˄
+
+    # GENERATED CODE AREA: method.__init__ ˄
+
     # GENERATED CODE AREA: method.execute ˅
     def execute(self) -> None:
         """
@@ -51,3 +62,4 @@ class SpectrumEditCommand(object):
         pass
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
+

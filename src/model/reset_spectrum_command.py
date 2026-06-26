@@ -33,6 +33,9 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         # スペクトルリセット前のModel状態を保持する。
         self.oldSnapshot: Snapshot = None
 
+        # 該当コマンド実行による影響範囲を示す
+        self.spectrumChangeKind: str = ''
+
         # SAFE CODE AREA ˅
         # View通知ではスペクトル全体更新として扱う。
         self.spectrumChangeKind: str = "full"
@@ -83,3 +86,4 @@ class ResetSpectrumCommand(SpectrumEditCommand):
         return "Reset Spectrum"
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.description ˄
+
