@@ -20,12 +20,12 @@ class EditDialogView(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Interactive Spectrum")
+        self.setWindowTitle("編集画面")
         self.resize(1200, 750)
 
         ####################################################
         # CSS
-        ####################################################  
+        ####################################################
         self.setStyleSheet("""
         QWidget{
             background:#F5F5F5;
@@ -51,10 +51,10 @@ class EditDialogView(QWidget):
             min-width:36px;
             min-height:30px;
         }
-        
-        QSpinBox {
-            min-height: 26px;
-            min-width: 50px;
+
+        QSpinBox{
+            min-height:26px;
+            min-width:50px;
         }
         """)
 
@@ -78,7 +78,7 @@ class EditDialogView(QWidget):
         spectrum_layout.setContentsMargins(16, 20, 16, 16)
         spectrum_layout.setSpacing(12)
 
-        # ダミー(実際はインタラクティブスペクトルコンポーネント)
+        # canvasはダミー。実際はInteractiveSpectrumComponentが入る予定
         canvas = QFrame()
         canvas.setMinimumSize(650, 480)
         canvas.setStyleSheet("""
@@ -92,31 +92,23 @@ class EditDialogView(QWidget):
         spectrum_layout.addWidget(canvas)
 
         ####################################################
-        # 下部
+        # Undo / Redo
         ####################################################
 
         bottom = QHBoxLayout()
 
         bottom.addStretch()
 
-        ####################################################
-        # Undo / Redo
-        ####################################################
-
-        self.undo_layout = QHBoxLayout()
-        self.undo_layout.setSpacing(8)
-
         self.undo_button = QPushButton("←")
         self.redo_button = QPushButton("→")
 
-        self.undo_layout.addWidget(self.undo_button)
-        self.undo_layout.addWidget(self.redo_button)
+        bottom.addWidget(self.undo_button)
+        bottom.addWidget(self.redo_button)
 
-        bottom.addLayout(self.undo_layout)
+        bottom.addStretch()
 
-        bottom.addStretch() 
         spectrum_layout.addLayout(bottom)
-        
+
         ####################################################
         # ペイントパネル
         ####################################################
@@ -128,72 +120,61 @@ class EditDialogView(QWidget):
         paint_layout.setSpacing(20)
 
         ####################################################
-        # 太さスライダー
+        # 太さ
         ####################################################
 
-        # コンテナ
-        self.thickness_layout = QHBoxLayout()
-        self.thickness_layout.setSpacing(12)
+        thickness_layout = QHBoxLayout()
+        thickness_layout.setSpacing(12)
 
-        # ラベル
         thickness_label = QLabel("太さ")
         thickness_label.setFixedWidth(40)
 
-        # スライダ
         self.thickness_slider = QSlider(Qt.Orientation.Horizontal)
         # self.thickness_slider.setRange(1, 50)
         # self.thickness_slider.setValue(5)
 
-        # スピンボックス
         self.thickness_spin = QSpinBox()
         # self.thickness_spin.setRange(1, 50)
         # self.thickness_spin.setValue(5)
 
-        # スライダーとスピンボックスの値を連動
         self.thickness_slider.valueChanged.connect(self.thickness_spin.setValue)
         self.thickness_spin.valueChanged.connect(self.thickness_slider.setValue)
 
-
-        self.thickness_layout.addWidget(thickness_label)
-        self.thickness_layout.addWidget(self.thickness_slider)
-        self.thickness_layout.addWidget(self.thickness_spin) 
+        thickness_layout.addWidget(thickness_label)
+        thickness_layout.addWidget(self.thickness_slider)
+        thickness_layout.addWidget(self.thickness_spin)
 
         ####################################################
-        # 数値スライダー
+        # 数値
         ####################################################
 
-        # コンテナ
-        self.value_layout = QHBoxLayout()
-        self.value_layout.setSpacing(12)
+        value_layout = QHBoxLayout()
+        value_layout.setSpacing(12)
 
-        # ラベル
         value_label = QLabel("数値")
         value_label.setFixedWidth(40)
 
-        # スライダ
         self.value_slider = QSlider(Qt.Orientation.Horizontal)
         # self.value_slider.setRange(0, 100)
         # self.value_slider.setValue(50)
 
-        # スピンボックス
         self.value_spin = QSpinBox()
         # self.value_spin.setRange(0, 100)
         # self.value_spin.setValue(50)
 
-        # スライダーとスピンボックスの値を連動
         self.value_slider.valueChanged.connect(self.value_spin.setValue)
         self.value_spin.valueChanged.connect(self.value_slider.setValue)
 
-        self.value_layout.addWidget(value_label)
-        self.value_layout.addWidget(self.value_slider)
-        self.value_layout.addWidget(self.value_spin)
+        value_layout.addWidget(value_label)
+        value_layout.addWidget(self.value_slider)
+        value_layout.addWidget(self.value_spin)
 
         ####################################################
-        # レイアウトへ追加
+        # レイアウト追加
         ####################################################
 
-        paint_layout.addLayout(self.thickness_layout)
-        paint_layout.addLayout(self.value_layout)
+        paint_layout.addLayout(thickness_layout)
+        paint_layout.addLayout(value_layout)
         paint_layout.addStretch()
 
         paint_group.setFixedWidth(300)
@@ -215,7 +196,6 @@ class EditDialogView(QWidget):
         ####################################################
 
         footer = QHBoxLayout()
-        footer.setSpacing(12)
 
         self.reset_button = QPushButton("リセット")
         self.close_button = QPushButton("閉じる")
@@ -225,11 +205,48 @@ class EditDialogView(QWidget):
         footer.addWidget(self.close_button)
 
         root.addLayout(footer)
-        
+
+        ####################################################
+        # シグナル
+        ####################################################
+
+        # ボタン
+        self.undo_button.clicked.connect(self.on_undo_clicked)
+        self.redo_button.clicked.connect(self.on_redo_clicked)
+        self.reset_button.clicked.connect(self.on_reset_clicked)
+        self.close_button.clicked.connect(self.on_close_clicked)
+
+        # スライダー
+        self.thickness_slider.valueChanged.connect(self.on_thickness_changed)
+        self.value_slider.valueChanged.connect(self.on_value_changed)
+
+    ####################################################
+    # スロット
+    ####################################################
+
+    def on_undo_clicked(self):
+        print("Undo")
+
+    def on_redo_clicked(self):
+        print("Redo")
+
+    def on_reset_clicked(self):
+        print("Reset")
+
+    def on_close_clicked(self):
+        print("Close")
+
+    def on_thickness_changed(self, value: int):
+        print(f"Thickness: {value}")
+
+    def on_value_changed(self, value: int):
+        print(f"Value: {value}")
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    window = EditDialogView();
+    window = EditDialogView()
     window.show()
 
     sys.exit(app.exec())
