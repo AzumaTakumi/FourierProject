@@ -10,6 +10,7 @@ from src.view.interactive_spectrum_component import (
     InteractiveSpectrumComponent
 )
 from src.model.pane_type import PaneType
+from src.controller.context_menu_controller import ContextMenuController
 
 class MainWindowView(QMainWindow):
     """
@@ -22,6 +23,7 @@ class MainWindowView(QMainWindow):
         self._originalSpectrum = None
         self._restoredDataImage = None
         self._spectrumComponent = None
+        self._contextMenuController = ContextMenuController(self)
 
         self._originalDataLabel = QLabel()
         self._originalSpectrumLabel = QLabel()
@@ -118,6 +120,21 @@ class MainWindowView(QMainWindow):
         super().resizeEvent(event)
         # マウスでウィンドウをびよーんと伸ばした瞬間に、この関数がリアルタイムに実行されるよ
         self._refreshImages()
+
+
+    def setContextMenuController(self, controller) -> None:
+        """
+        MainWindowViewで使用する右クリックメニューControllerを設定する
+        """
+        self._contextMenuController = controller
+
+    def contextMenuEvent(self, event) -> None:
+        """
+        メインウィンドウで右クリックされたときにControllerへ処理を渡す
+        """
+        if self._contextMenuController is not None:
+            self._contextMenuController.showContextMenu(event.globalPos())
+
 
     def getSpectrumComponent(self) -> InteractiveSpectrumComponent:
         """
