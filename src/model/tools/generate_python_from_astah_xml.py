@@ -13,6 +13,7 @@ Without --write, this runs in dry-run mode and only reports planned files.
 from __future__ import annotations
 
 import argparse
+import ast
 import difflib
 import keyword
 import re
@@ -107,6 +108,7 @@ GENERATED_CODE_AREA_PATTERN = re.compile(
     r"(?P<end>^(?P=indent)# (?P=state) CODE AREA: (?P=label) ˄\n?)",
     re.M | re.S,
 )
+IMPORT_LINE_PATTERN = re.compile(r"^\s*(?:from\s+\S+\s+import\s+.+|import\s+.+?)\s*(?:#.*)?$")
 
 
 @dataclass(frozen=True)
@@ -800,6 +802,98 @@ def merge_safe_areas(new_text: str, old_text: str) -> str:
     return "".join(merged_parts)
 
 
+def imported_names_from_line(line: str) -> set[str]:
+    if not IMPORT_LINE_PATTERN.match(line):
+        return set()
+    try:
+        module = ast.parse(line)
+    except SyntaxError:
+        return set()
+
+    names: set[str] = set()
+    for node in module.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                names.add(alias.asname or alias.name.split(".", 1)[0])
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                names.add(alias.asname or alias.name)
+    return names
+
+
+def extract_module_import_lines(text: str) -> list[str]:
+    area = extract_generated_code_areas(text).get("module.imports")
+    if area is None:
+        return []
+    import_lines: list[str] = []
+    seen: set[str] = set()
+    for line in area.body.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped in seen:
+            continue
+        if imported_names_from_line(stripped):
+            import_lines.append(stripped)
+            seen.add(stripped)
+    return import_lines
+
+
+def remove_generated_area(text: str, label: str) -> str:
+    parts: list[str] = []
+    cursor = 0
+    for match in GENERATED_CODE_AREA_PATTERN.finditer(text):
+        if match.group("label") == label:
+            parts.append(text[cursor : match.start()])
+            cursor = match.end()
+    parts.append(text[cursor:])
+    return "".join(parts)
+
+
+def text_references_imported_name(text: str, names: set[str]) -> bool:
+    return any(re.search(rf"\b{re.escape(name)}\b", text) for name in names)
+
+
+def append_module_import_lines(text: str, import_lines: list[str]) -> str:
+    if not import_lines:
+        return text
+
+    def _replace(match: re.Match[str]) -> str:
+        if match.group("label") != "module.imports":
+            return match.group(0)
+
+        body_lines = match.group("body").splitlines(keepends=True)
+        while body_lines and not body_lines[-1].strip():
+            body_lines.pop()
+
+        existing = {line.strip() for line in body_lines if line.strip()}
+        for import_line in import_lines:
+            if import_line not in existing:
+                body_lines.append(f"{import_line}\n")
+                existing.add(import_line)
+        if body_lines:
+            body_lines.append("\n")
+        return f"{match.group('start')}{''.join(body_lines)}{match.group('end')}"
+
+    return GENERATED_CODE_AREA_PATTERN.sub(_replace, text)
+
+
+def preserve_referenced_module_imports(new_text: str, old_text: str) -> str:
+    old_imports = extract_module_import_lines(old_text)
+    if not old_imports:
+        return new_text
+
+    current_imports = set(extract_module_import_lines(new_text))
+    reference_text = remove_generated_area(new_text, "module.imports")
+    imports_to_preserve: list[str] = []
+    for import_line in old_imports:
+        if import_line in current_imports:
+            continue
+        if text_references_imported_name(reference_text, imported_names_from_line(import_line)):
+            imports_to_preserve.append(import_line)
+    return append_module_import_lines(new_text, imports_to_preserve)
+
+
 def extract_changed_generated_area_labels(old_text: str, new_text: str) -> list[str]:
     old_areas = extract_generated_code_areas(old_text)
     new_areas = extract_generated_code_areas(new_text)
@@ -885,6 +979,13 @@ def is_single_blank_line_addition(old_text: str, new_text: str) -> bool:
             if blank_added > 1:
                 return False
     return blank_added == 1
+
+
+def is_whitespace_only_change(old_text: str, new_text: str) -> bool:
+    return (
+        old_text != new_text
+        and re.sub(r"\s+", "", old_text) == re.sub(r"\s+", "", new_text)
+    )
 
 
 def format_parameter(param: ParameterSpec) -> str:
@@ -1357,9 +1458,12 @@ def main() -> int:
         if old_text:
             new_text, blocked_fixed_labels = merge_generated_code_areas(new_text, old_text)
             new_text = merge_safe_areas(new_text, old_text)
+            new_text = preserve_referenced_module_imports(new_text, old_text)
         if blocked_fixed_labels:
             labels = ", ".join(blocked_fixed_labels)
             notes.append(f"[NOTE] {path}: FIXED CODE AREA prevented updates: {labels}")
+        if is_whitespace_only_change(old_text, new_text):
+            continue
         if is_single_blank_line_addition(old_text, new_text):
             continue
         if old_text == new_text:
