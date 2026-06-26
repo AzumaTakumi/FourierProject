@@ -301,6 +301,19 @@ class FourierModelContext(object):
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.getImage ˄
 
+    # GENERATED CODE AREA: method.getSpectrumComponent ˅
+    def getSpectrumComponent(self):
+        """
+        現在使用しているModelに対応する編集用スペクトルコンポーネントを取得する。
+        """
+
+        # SAFE CODE AREA ˅
+        # Contextは現在のModelへ処理を委譲するため、
+        # Componentの生成もcurrentModelへ任せる。
+        return self.currentModel.getSpectrumComponent()
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.getSpectrumComponent ˄
+
 
     # GENERATED CODE AREA: method.getModelName ˅
     def getModelName(self) -> str:

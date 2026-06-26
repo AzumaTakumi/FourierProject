@@ -175,8 +175,21 @@ class FourierModel(object):
         # getDataで取得した数値配列を、PaneTypeごとに適切な描画方法へ振り分ける。
         data_map = self.getData()
         return {
-            pane_type: self.imageRenderers[pane_type](data)
+            pane_type: None if data is None else self.imageRenderers[pane_type](data)
             for pane_type, data in data_map.items()
         }
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.getImage ˄
+
+    # GENERATED CODE AREA: method.getSpectrumComponent ˅
+    def getSpectrumComponent(self):
+        """
+        現在のModelに対応する編集用スペクトルコンポーネントを取得する。
+        """
+
+        # SAFE CODE AREA ˅
+        # Fourier1dModel / Fourier2dModel がそれぞれ対応するComponentを返すため、
+        # 親クラスでは実装せず子クラスへ処理を委譲する。
+        raise NotImplementedError
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.getSpectrumComponent ˄
