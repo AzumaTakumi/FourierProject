@@ -3,6 +3,8 @@ from __future__ import annotations
 # GENERATED CODE AREA: module.imports ˅
 import numpy as np
 from .fourier_model import FourierModel
+from .pane_type import PaneType
+from src.view.interactive_spectrum_component import Interactive1dSpectrumComponent
 
 # GENERATED CODE AREA: module.imports ˄
 
@@ -26,9 +28,9 @@ class Fourier1dModel(FourierModel):
     # GENERATED CODE AREA: class.header ˄
 
     # FIXED CODE AREA: method.__init__ ˅
-    def __init__(self, sourceData: np.ndarray = np.array([])) -> None:
+    def __init__(self, sourceData: np.ndarray) -> None:
         """
-        Fourier1dModelを初期化する。必要に応じてsourceDataを受け取り、内部状態（スペクトル/表示用データ）を初期化する。
+        Fourier1dModelを初期化する。sourceDataを受け取り、内部状態（スペクトル/表示用データ）を初期化する。
         """
 
         # FourierModelの初期化を行う。
@@ -47,21 +49,27 @@ class Fourier1dModel(FourierModel):
         self.powerSpectrum: np.ndarray | None = None
 
         # インタラクティブ操作を反映した1次元スペクトル実部。編集後の状態を保持する。
-        self.interactiveRealPart: np.ndarray | None = None
+        self.interactiveRealPart: np.ndarray = np.array([])
 
         # インタラクティブ操作を反映した1次元スペクトル虚部。編集後の状態を保持する。
-        self.interactiveImaginaryPart: np.ndarray | None = None
+        self.interactiveImaginaryPart: np.ndarray = np.array([])
 
         # インタラクティブ操作を反映した1次元パワースペクトル。編集後スペクトルの可視化および逆変換入力に利用する。
-        self.interactivePowerSpectrum: np.ndarray | None = None
+        self.interactivePowerSpectrum: np.ndarray = np.array([])
 
         # 編集用スペクトルを逆フーリエ変換して得られた1次元データ。左下の復元波形表示に利用され、スペクトル編集が行われるたびに更新される。
         self.inverseData: np.ndarray | None = None
 
         # SAFE CODE AREA ˅
-        # 初期データが渡された場合は、通常のデータ設定経路を通してFFTと逆変換まで初期化する。
-        if sourceData is not None and np.asarray(sourceData).size > 0:
-            self.setSourceData(sourceData)
+        # 1Dモデルの全表示領域は折れ線波形として描画する。
+        self.imageRenderers = {
+            PaneType.SOURCE_DATA: self.renderer.imageFrom1dData,
+            PaneType.POWER_SPECTRUM: self.renderer.imageFrom1dData,
+            PaneType.INTERACTIVE_POWER_SPECTRUM: self.renderer.imageFrom1dData,
+            PaneType.INVERSE_DATA: self.renderer.imageFrom1dData,
+        }
+        # 通常のデータ設定経路を通してFFTと逆変換まで初期化する。
+        self.setSourceData(sourceData)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -75,11 +83,6 @@ class Fourier1dModel(FourierModel):
         # SAFE CODE AREA ˅
         # FFT対象として扱えるよう、入力をfloatの1次元配列へ正規化する。
         data = np.asarray(sourceData, dtype=float)
-        if data.ndim != 1:
-            raise ValueError("Fourier1dModel sourceData must be a 1-dimensional array.")
-        if data.size == 0:
-            raise ValueError("Fourier1dModel sourceData must not be empty.")
-
         # 呼び出し元の配列変更がModel内部へ影響しないようコピーして保持する。
         self.sourceData = data.copy()
         # 元データの変更に合わせてFFT結果を作り直し、編集用スペクトルを初期状態へ戻す。
@@ -157,12 +160,10 @@ class Fourier1dModel(FourierModel):
         """
 
         # SAFE CODE AREA ˅
-        # FFTが未計算の場合は編集対象が存在しないため、編集操作を拒否する。
-        if self.interactiveRealPart is None or self.interactiveImaginaryPart is None:
-            raise ValueError("Fourier data has not been computed.")
         # Pythonの負数インデックスは許可しつつ、配列サイズ外のアクセスは明示的に例外にする。
-        if not -self.interactiveRealPart.size <= index < self.interactiveRealPart.size:
-            raise IndexError(f"Spectrum index out of range: {index}")
+        # if not -self.interactiveRealPart.size <= index < self.interactiveRealPart.size:
+        #     raise IndexError(f"Spectrum index out of range: {index}")
+        pass
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._validateIndex ˄
 
@@ -186,43 +187,20 @@ class Fourier1dModel(FourierModel):
     # GENERATED CODE AREA: method.editSpectrumValueAtIndex ˄
 
 
-    # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˅
-    def eraseSpectrumAtIndex(self, index: int) -> None:
-        """
-        指定されたインデックスの周波数成分を無効化する。interactiveRealPart、interactiveImaginaryPart、interactivePowerSpectrumを更新し、必要に応じて逆変換結果を再計算する。
-        """
-
+    # FIXED CODE AREA: method.editSpectrumValuesAtIndexes ˅
+    def editSpectrumValuesAtIndexes(self, indexes: list[int], realParts: np.ndarray, imaginaryParts: np.ndarray) -> None:
         # SAFE CODE AREA ˅
-        # 存在しない周波数インデックスへ編集しないよう先に検証する。
-        self._validateIndex(index)
-        # 指定成分の実部・虚部を0にし、その成分の強度表示も0にする。
-        self.interactiveRealPart[index] = 0
-        self.interactiveImaginaryPart[index] = 0
-        self.interactivePowerSpectrum[index] = 0
-        # 編集後スペクトルをすぐ逆変換し、Inverse表示を最新化する。
+        # 複数indexをまとめて書き換え、逆変換は最後に1回だけ行う。
+        index_array = np.asarray(indexes, dtype=int)
+        real_values = np.asarray(realParts, dtype=float)
+        imaginary_values = np.asarray(imaginaryParts, dtype=float)
+        self.interactiveRealPart[index_array] = real_values
+        self.interactiveImaginaryPart[index_array] = imaginary_values
+        self.interactivePowerSpectrum[index_array] = np.square(real_values) + np.square(imaginary_values)
         self.computeInverseData()
         # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.eraseSpectrumAtIndex ˄
-
-
-    # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˅
-    def restoreSpectrumAtIndex(self, index: int) -> None:
-        """
-        指定されたインデックスの周波数成分を、フーリエ変換直後の元スペクトル値に戻す。interactiveRealPart、interactiveImaginaryPart、interactivePowerSpectrumを更新し、必要に応じて逆変換結果を再計算する。
-        """
-
-        # SAFE CODE AREA ˅
-        # 指定成分が配列範囲内にあることを確認してから復元する。
-        self._validateIndex(index)
-        # 編集用スペクトルだけをFFT直後の元スペクトル値へ戻す。
-        self.interactiveRealPart[index] = self.realPart[index]
-        self.interactiveImaginaryPart[index] = self.imaginaryPart[index]
-        self.interactivePowerSpectrum[index] = self.powerSpectrum[index]
-        # 復元した周波数成分を反映した逆変換結果を再計算する。
-        self.computeInverseData()
-        # SAFE CODE AREA ˄
-    # GENERATED CODE AREA: method.restoreSpectrumAtIndex ˄
-
+    # FIXED CODE AREA: method.editSpectrumValuesAtIndexes ˄
+    
 
     # FIXED CODE AREA: method.getInteractiveSpectrumAtIndex ˅
     def getInteractiveSpectrumAtIndex(self, index: int) -> tuple[float, float]:
@@ -239,3 +217,15 @@ class Fourier1dModel(FourierModel):
         )
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.getInteractiveSpectrumAtIndex ˄
+
+    # GENERATED CODE AREA: method.getSpectrumComponent ˅
+    def getSpectrumComponent(self):
+        """
+        1次元スペクトル編集用コンポーネントを取得する。
+        """
+
+        # SAFE CODE AREA ˅
+        # 1次元Modelなので、1次元編集用Componentを返す。
+        return Interactive1dSpectrumComponent()
+        # SAFE CODE AREA ˄
+    # GENERATED CODE AREA: method.getSpectrumComponent ˄
