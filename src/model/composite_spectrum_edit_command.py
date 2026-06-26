@@ -25,8 +25,8 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         self.commands: list[SpectrumEditCommand] = []
 
         # SAFE CODE AREA ˅
-        # 固定領域でcommandsリストを初期化済みのため、追加初期化は不要。
-        pass
+        # 子Command追加時に、View通知用の変更種別を引き継ぐ。
+        self.spectrumChangeKind: str = "full"
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -40,6 +40,7 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         # SAFE CODE AREA ˅
         # ドラッグ中に発生した個別編集Commandを順序付きで保持する。
         self.commands.append(command)
+        self.spectrumChangeKind = command.spectrumChangeKind
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.add ˄
 
