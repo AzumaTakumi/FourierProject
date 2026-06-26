@@ -28,7 +28,6 @@ class ContextMenuController:
 
         inputAction = menu.addAction("ファイル入力")
         openEditViewAction = menu.addAction("編集画面を開く")
-        menu.addSeparator()
         outputAction = menu.addAction("左下のデータ・画像を出力")
 
         selectedAction = menu.exec(globalPos)
