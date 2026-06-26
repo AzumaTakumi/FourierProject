@@ -140,9 +140,9 @@ class EditDialogView(QWidget):
         self.thickness_slider.valueChanged.connect(self.thickness_spin.setValue)
         self.thickness_spin.valueChanged.connect(self.thickness_slider.setValue)
 
-        thickness_layout.addWidget(thickness_label)
-        thickness_layout.addWidget(self.thickness_slider)
-        thickness_layout.addWidget(self.thickness_spin)
+        self.thickness_layout.addWidget(thickness_label)
+        self.thickness_layout.addWidget(self.thickness_slider)
+        self.thickness_layout.addWidget(self.thickness_spin)
 
         ####################################################
         # 数値
@@ -177,14 +177,14 @@ class EditDialogView(QWidget):
         paint_layout.addLayout(value_layout)
         paint_layout.addStretch()
 
-        paint_group.setFixedWidth(300)
+        self.paint_group.setFixedWidth(300)
 
         ####################################################
         # Splitter
         ####################################################
 
         splitter.addWidget(spectrum_group)
-        splitter.addWidget(paint_group)
+        splitter.addWidget(self.paint_group)
 
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
