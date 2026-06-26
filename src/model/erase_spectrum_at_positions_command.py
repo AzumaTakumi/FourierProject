@@ -29,28 +29,28 @@ class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
         """
 
         # 操作対象となるFourier2dModelを保持する。
-        self.model: Fourier2dModel = None
+        self.model: Fourier2dModel = model
 
         # 編集対象範囲の半径を保持する。
         self.radius: int = 0
 
         # 編集前の範囲に対応する実部配列を保持する。
-        self.oldRealPart: np.ndarray = None
+        self.oldRealPart: np.ndarray = np.array([])
 
         # 編集前の範囲に対応する虚部配列を保持する。
-        self.oldImaginaryPart: np.ndarray = None
+        self.oldImaginaryPart: np.ndarray = np.array([])
 
         self.positions: list[tuple[int, int]] = []
 
-        self.rect: tuple[int, int, int, int] | None = None
+        self.rect: tuple[int, int, int, int] = (0, 0, 0, 0)
 
         # SAFE CODE AREA ˅
+        # View通知では2Dスペクトルの矩形部分更新として扱う。
+        self.spectrumChangeKind: str = "2d"
         # 自動生成の初期値を実際の引数で上書きし、操作対象Modelを保持する。
-        self.model = model
         # 呼び出し元のリスト変更がCommand内部へ影響しないよう、座標を整数tupleとしてコピーする。
         self.positions = [(int(row), int(col)) for row, col in positions]
         self.radius = max(0, int(radius))
-        self.rect = None
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.__init__ ˄
 
@@ -64,16 +64,7 @@ class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
         # SAFE CODE AREA ˅
         # 複数ブラシをすべて含む矩形だけを保存し、Undo用データ量を必要範囲に絞る。
         self.rect = self.model.getSpectrumRectForPositions(self.positions, self.radius)
-        if self.rect is None:
-            self.oldRealPart = None
-            self.oldImaginaryPart = None
-            return
-
         self.oldRealPart, self.oldImaginaryPart = self.model.getInteractiveSpectrumAtRect(*self.rect)
-        if self.oldRealPart.size == 0 or self.oldImaginaryPart.size == 0:
-            self.oldRealPart = None
-            self.oldImaginaryPart = None
-            return
 
         # Modelの一括消去を呼ぶため、線分上の点数に関係なく逆FFTは1回だけ実行される。
         self.model.eraseSpectrumAtPositions(self.positions, self.radius)
@@ -88,9 +79,6 @@ class EraseSpectrumAtPositionsCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        # executeで有効な保存値が作られていない場合は取り消し対象がない。
-        if self.rect is None or self.oldRealPart is None or self.oldImaginaryPart is None:
-            return
         # 保存矩形を1回で戻すため、Undo時の逆FFTも1回だけで済む。
         self.model.restoreInteractiveSpectrumAtRect(*self.rect, self.oldRealPart, self.oldImaginaryPart)
         # SAFE CODE AREA ˄

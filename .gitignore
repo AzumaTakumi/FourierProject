@@ -16,14 +16,13 @@ ENV/
 
 # === VS Codeなどのエディタ設定（チームで共有しない場合） ===
 .vscode/
+.vscode/settings.json
 .idea/
 
 # === グラフプロットやテストで出力された一時データ ===
 *.log
 
 # === ルート直下のローカル実験用アプリ ===
-Controller/
-View/
 src/gui_app.py
 
 # === model内のローカルテスト・生成物 ===
@@ -34,3 +33,4 @@ src/model/tools/FourierSignalModelUndoRedo.xml
 src/model/tools/FourierSignalModelUndoRedo.xml.bak
 src/model/tools/FourierSignalModelUndoRedo.asta
 src/model/tools/FourierSignalModelUndoRedo.asta.lock
+src/model/tools/fourier-model.xml

@@ -4,6 +4,8 @@ Generate Python skeleton code directly from astah XMI/XML class model.
 
 Typical usage:
   python generate_python_from_astah_xmi.py FourierSignalModel.xml generated --write
+  python generate_python_from_astah_xmi.py FourierSignalModel.xml generated --target-class FourierTransform --show-diff
+  python generate_python_from_astah_xmi.py FourierSignalModel.xml generated --target-file Model/fourier_transform.py --write
 
 Without --write, this runs in dry-run mode and only reports planned files.
 """
@@ -11,6 +13,7 @@ Without --write, this runs in dry-run mode and only reports planned files.
 from __future__ import annotations
 
 import argparse
+import ast
 import difflib
 import keyword
 import re
@@ -105,6 +108,7 @@ GENERATED_CODE_AREA_PATTERN = re.compile(
     r"(?P<end>^(?P=indent)# (?P=state) CODE AREA: (?P=label) ˄\n?)",
     re.M | re.S,
 )
+IMPORT_LINE_PATTERN = re.compile(r"^\s*(?:from\s+\S+\s+import\s+.+|import\s+.+?)\s*(?:#.*)?$")
 
 
 @dataclass(frozen=True)
@@ -149,6 +153,16 @@ class ClassSpec:
 @dataclass(frozen=True)
 class XmiModel:
     package_to_classes: dict[str, tuple[ClassSpec, ...]]
+
+
+@dataclass(frozen=True)
+class OutputFileSpec:
+    path: Path
+    text: str
+    package_name: str
+    class_name: str | None
+    original_class_name: str | None
+    module_name: str | None
 
 
 @dataclass(frozen=True)
@@ -788,6 +802,98 @@ def merge_safe_areas(new_text: str, old_text: str) -> str:
     return "".join(merged_parts)
 
 
+def imported_names_from_line(line: str) -> set[str]:
+    if not IMPORT_LINE_PATTERN.match(line):
+        return set()
+    try:
+        module = ast.parse(line)
+    except SyntaxError:
+        return set()
+
+    names: set[str] = set()
+    for node in module.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                names.add(alias.asname or alias.name.split(".", 1)[0])
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                names.add(alias.asname or alias.name)
+    return names
+
+
+def extract_module_import_lines(text: str) -> list[str]:
+    area = extract_generated_code_areas(text).get("module.imports")
+    if area is None:
+        return []
+    import_lines: list[str] = []
+    seen: set[str] = set()
+    for line in area.body.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped in seen:
+            continue
+        if imported_names_from_line(stripped):
+            import_lines.append(stripped)
+            seen.add(stripped)
+    return import_lines
+
+
+def remove_generated_area(text: str, label: str) -> str:
+    parts: list[str] = []
+    cursor = 0
+    for match in GENERATED_CODE_AREA_PATTERN.finditer(text):
+        if match.group("label") == label:
+            parts.append(text[cursor : match.start()])
+            cursor = match.end()
+    parts.append(text[cursor:])
+    return "".join(parts)
+
+
+def text_references_imported_name(text: str, names: set[str]) -> bool:
+    return any(re.search(rf"\b{re.escape(name)}\b", text) for name in names)
+
+
+def append_module_import_lines(text: str, import_lines: list[str]) -> str:
+    if not import_lines:
+        return text
+
+    def _replace(match: re.Match[str]) -> str:
+        if match.group("label") != "module.imports":
+            return match.group(0)
+
+        body_lines = match.group("body").splitlines(keepends=True)
+        while body_lines and not body_lines[-1].strip():
+            body_lines.pop()
+
+        existing = {line.strip() for line in body_lines if line.strip()}
+        for import_line in import_lines:
+            if import_line not in existing:
+                body_lines.append(f"{import_line}\n")
+                existing.add(import_line)
+        if body_lines:
+            body_lines.append("\n")
+        return f"{match.group('start')}{''.join(body_lines)}{match.group('end')}"
+
+    return GENERATED_CODE_AREA_PATTERN.sub(_replace, text)
+
+
+def preserve_referenced_module_imports(new_text: str, old_text: str) -> str:
+    old_imports = extract_module_import_lines(old_text)
+    if not old_imports:
+        return new_text
+
+    current_imports = set(extract_module_import_lines(new_text))
+    reference_text = remove_generated_area(new_text, "module.imports")
+    imports_to_preserve: list[str] = []
+    for import_line in old_imports:
+        if import_line in current_imports:
+            continue
+        if text_references_imported_name(reference_text, imported_names_from_line(import_line)):
+            imports_to_preserve.append(import_line)
+    return append_module_import_lines(new_text, imports_to_preserve)
+
+
 def extract_changed_generated_area_labels(old_text: str, new_text: str) -> list[str]:
     old_areas = extract_generated_code_areas(old_text)
     new_areas = extract_generated_code_areas(new_text)
@@ -873,6 +979,13 @@ def is_single_blank_line_addition(old_text: str, new_text: str) -> bool:
             if blank_added > 1:
                 return False
     return blank_added == 1
+
+
+def is_whitespace_only_change(old_text: str, new_text: str) -> bool:
+    return (
+        old_text != new_text
+        and re.sub(r"\s+", "", old_text) == re.sub(r"\s+", "", new_text)
+    )
 
 
 def format_parameter(param: ParameterSpec) -> str:
@@ -1150,19 +1263,157 @@ def render_package_init(classes: tuple[ClassSpec, ...]) -> str:
     return "".join(lines)
 
 
-def build_output_files(model: XmiModel, output_root: Path) -> dict[Path, str]:
+def build_output_file_specs(model: XmiModel, output_root: Path) -> tuple[OutputFileSpec, ...]:
     class_index = build_class_index(model)
-    files: dict[Path, str] = {}
+    specs: list[OutputFileSpec] = []
 
     for package_name, classes in model.package_to_classes.items():
         if package_name == "generated":
             continue
         package_dir = output_root / package_name
-        files[package_dir / "__init__.py"] = render_package_init(classes)
+        specs.append(
+            OutputFileSpec(
+                path=package_dir / "__init__.py",
+                text=render_package_init(classes),
+                package_name=package_name,
+                class_name=None,
+                original_class_name=None,
+                module_name="__init__",
+            )
+        )
         for cls in classes:
             module = to_safe_module_name(cls.name)
-            files[package_dir / f"{module}.py"] = render_class_file(cls, class_index)
-    return files
+            specs.append(
+                OutputFileSpec(
+                    path=package_dir / f"{module}.py",
+                    text=render_class_file(cls, class_index),
+                    package_name=package_name,
+                    class_name=cls.name,
+                    original_class_name=cls.original_name,
+                    module_name=module,
+                )
+            )
+    return tuple(specs)
+
+
+def build_output_files(model: XmiModel, output_root: Path) -> dict[Path, str]:
+    return {spec.path: spec.text for spec in build_output_file_specs(model, output_root)}
+
+
+def split_target_values(values: list[str]) -> tuple[str, ...]:
+    targets: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        for item in value.split(","):
+            target = item.strip()
+            if not target or target in seen:
+                continue
+            seen.add(target)
+            targets.append(target)
+    return tuple(targets)
+
+
+def normalize_target_path(value: str) -> str:
+    return value.strip().replace("\\", "/")
+
+
+def output_path_candidates(path: Path, output_root: Path) -> set[str]:
+    candidates = {path.as_posix(), path.name, path.stem}
+    try:
+        candidates.add(path.relative_to(output_root).as_posix())
+    except ValueError:
+        pass
+
+    resolved_path = path.resolve()
+    resolved_output = output_root.resolve()
+    candidates.add(resolved_path.as_posix())
+    try:
+        candidates.add(resolved_path.relative_to(resolved_output).as_posix())
+    except ValueError:
+        pass
+    try:
+        candidates.add(resolved_path.relative_to(Path.cwd().resolve()).as_posix())
+    except ValueError:
+        pass
+    return candidates
+
+
+def output_file_matches_target(spec: OutputFileSpec, output_root: Path, target: str) -> bool:
+    normalized = normalize_target_path(target)
+    candidates = output_path_candidates(spec.path, output_root)
+    if normalized in candidates:
+        return True
+    if "/" in normalized or normalized.endswith(".py"):
+        return any(candidate.endswith(f"/{normalized}") for candidate in candidates)
+    return normalized in {spec.path.stem, spec.module_name}
+
+
+def output_class_matches_target(spec: OutputFileSpec, target: str) -> bool:
+    if spec.class_name is None:
+        return False
+
+    normalized = target.strip()
+    short_name = normalized.rsplit(".", 1)[-1]
+    safe_short_name = to_safe_identifier(short_name, fallback="GeneratedClass")
+    candidates = {
+        spec.class_name,
+        spec.original_class_name or "",
+        spec.module_name or "",
+        f"{spec.package_name}.{spec.class_name}",
+        f"{spec.package_name}.{spec.original_class_name}" if spec.original_class_name else "",
+    }
+    return normalized in candidates or short_name in candidates or safe_short_name == spec.class_name
+
+
+def format_available_targets(specs: tuple[OutputFileSpec, ...], output_root: Path) -> str:
+    files = sorted(spec.path.relative_to(output_root).as_posix() for spec in specs)
+    classes = sorted(
+        f"{spec.package_name}.{spec.class_name}"
+        for spec in specs
+        if spec.class_name is not None
+    )
+    file_text = "\n  ".join(files)
+    class_text = "\n  ".join(classes)
+    return f"Available files:\n  {file_text}\nAvailable classes:\n  {class_text}"
+
+
+def filter_output_file_specs(
+    specs: tuple[OutputFileSpec, ...],
+    output_root: Path,
+    target_files: tuple[str, ...],
+    target_classes: tuple[str, ...],
+) -> tuple[OutputFileSpec, ...]:
+    if not target_files and not target_classes:
+        return specs
+
+    selected: list[OutputFileSpec] = []
+    matched_files: set[str] = set()
+    matched_classes: set[str] = set()
+    for spec in specs:
+        include = False
+        for target_file in target_files:
+            if output_file_matches_target(spec, output_root, target_file):
+                include = True
+                matched_files.add(target_file)
+        for target_class in target_classes:
+            if output_class_matches_target(spec, target_class):
+                include = True
+                matched_classes.add(target_class)
+        if include:
+            selected.append(spec)
+
+    missing_files = [target for target in target_files if target not in matched_files]
+    missing_classes = [target for target in target_classes if target not in matched_classes]
+    if missing_files or missing_classes:
+        messages: list[str] = []
+        if missing_files:
+            messages.append(f"unknown target file(s): {', '.join(missing_files)}")
+        if missing_classes:
+            messages.append(f"unknown target class(es): {', '.join(missing_classes)}")
+        messages.append(format_available_targets(specs, output_root))
+        raise ValueError("\n".join(messages))
+
+    return tuple(selected)
 
 
 def main() -> int:
@@ -1171,11 +1422,30 @@ def main() -> int:
     parser.add_argument("output", type=Path, help="output directory root")
     parser.add_argument("--write", action="store_true", help="actually create/update files")
     parser.add_argument("--show-diff", action="store_true", help="print unified diffs")
+    parser.add_argument(
+        "--target-file",
+        action="append",
+        default=[],
+        help="only process matching generated Python file; repeat or use commas for multiple targets",
+    )
+    parser.add_argument(
+        "--target-class",
+        action="append",
+        default=[],
+        help="only process the generated module for matching class; repeat or use commas for multiple targets",
+    )
     args = parser.parse_args()
 
     xml_inputs = discover_input_xmls(args.xml)
     model = merge_models([parse_xmi(path) for path in xml_inputs])
-    files = build_output_files(model, args.output)
+    target_files = split_target_values(args.target_file)
+    target_classes = split_target_values(args.target_class)
+    output_specs = build_output_file_specs(model, args.output)
+    try:
+        output_specs = filter_output_file_specs(output_specs, args.output, target_files, target_classes)
+    except ValueError as exc:
+        parser.error(str(exc))
+    files = {spec.path: spec.text for spec in output_specs}
 
     changed_count = 0
     notes: list[str] = []
@@ -1188,9 +1458,12 @@ def main() -> int:
         if old_text:
             new_text, blocked_fixed_labels = merge_generated_code_areas(new_text, old_text)
             new_text = merge_safe_areas(new_text, old_text)
+            new_text = preserve_referenced_module_imports(new_text, old_text)
         if blocked_fixed_labels:
             labels = ", ".join(blocked_fixed_labels)
             notes.append(f"[NOTE] {path}: FIXED CODE AREA prevented updates: {labels}")
+        if is_whitespace_only_change(old_text, new_text):
+            continue
         if is_single_blank_line_addition(old_text, new_text):
             continue
         if old_text == new_text:
@@ -1242,6 +1515,13 @@ def main() -> int:
     print(f"=== Summary ===")
     print(f"Mode: {mode}")
     print(f"Changed files: {changed_count}")
+    if target_files or target_classes:
+        target_summary: list[str] = []
+        if target_files:
+            target_summary.append(f"files: {', '.join(target_files)}")
+        if target_classes:
+            target_summary.append(f"classes: {', '.join(target_classes)}")
+        print(f"Targets: {'; '.join(target_summary)}")
     if not args.write:
         print("Next: run again with --write to apply these changes.")
     return 0

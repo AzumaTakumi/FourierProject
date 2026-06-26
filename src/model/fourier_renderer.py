@@ -32,31 +32,26 @@ class FourierRenderer(object):
         # SAFE CODE AREA ˅
         # SOURCE/INVERSE用の画像データは、スペクトル表示ではなく実際の画素値として描画する。
         array = np.asarray(data)
-        # IFFT結果などで複素数が渡ってきた場合は、表示に使う実部だけを取り出す。
-        if np.iscomplexobj(array):
-            array = np.real(array)
+        # IFFT結果などで複素数が渡ってきた場合も、表示に使う実部だけを取り出す。
+        array = np.real(array)
         # NaNやInfを画素化できる数値へ置き換える。
         array = np.nan_to_num(array.astype(float, copy=False))
 
-        # 空配列はPILで画像化できないため、1pxの黒画像として返す。
-        if array.size == 0:
-            return Image.new("L", (1, 1), 0)
-
         # 0〜1正規化画像は8bit画像として表示できるよう0〜255へ拡大する。
-        if np.max(array) <= 1.0 and np.min(array) >= 0.0:
-            array = array * 255.0
+        normalized_mask = float(np.max(array) <= 1.0 and np.min(array) >= 0.0)
+        array = array * (1.0 + 254.0 * normalized_mask)
         # 表示画像として扱えるよう、画素値を8bit範囲へ丸める。
         array = np.clip(array, 0.0, 255.0).astype(np.uint8)
 
         # 配列形状に応じて、グレースケールまたはRGBのPIL.Imageへ変換する。
-        if array.ndim == 2:
-            return Image.fromarray(array, "L")
-        if array.ndim == 3 and array.shape[-1] == 3:
-            return Image.fromarray(array, "RGB")
-        if array.ndim == 3 and array.shape[-1] == 1:
-            return Image.fromarray(np.squeeze(array, axis=-1), "L")
-        # 想定外の形状はスペクトル風に正規化して、最低限表示できる画像にする。
-        return type(self).imageFromSpectrum(array)
+        channel_size = int(np.shape(array + np.zeros((1, 1, 1), dtype=array.dtype))[-1])
+        render_mode = {2: "L2", 3: {3: "RGB", 1: "L1"}.get(channel_size, "SPECTRUM")}.get(array.ndim, "SPECTRUM")
+        return {
+            "L2": lambda: Image.fromarray(array, "L"),
+            "L1": lambda: Image.fromarray(np.squeeze(array, axis=-1), "L"),
+            "RGB": lambda: Image.fromarray(array, "RGB"),
+            "SPECTRUM": lambda: type(self).imageFromSpectrum(array),
+        }[render_mode]()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.imageFromImageData ˄
 
@@ -71,8 +66,7 @@ class FourierRenderer(object):
         # SAFE CODE AREA ˅
         # 描画用の数値配列に変換する（複素数は絶対値、NaN/Inf は数値化）。
         array = np.asarray(data)
-        complex_mask = float(np.iscomplexobj(array))
-        array = np.abs(array) * complex_mask + array * (1.0 - complex_mask)
+        array = {True: np.abs, False: np.real}[np.iscomplexobj(array)](array)
         values = np.nan_to_num(array.astype(float, copy=False)).reshape(-1)
 
         # 1D表示用の固定サイズで、白背景のグレースケール画像を作成する。
@@ -144,12 +138,13 @@ class FourierRenderer(object):
         # SAFE CODE AREA ˅
         # 複素数を扱える表示配列へ変換し、log1p でダイナミックレンジを圧縮する。
         base = np.asarray(spectrum)
-        complex_mask = float(np.iscomplexobj(base))
-        base = np.abs(base) * complex_mask + base * (1.0 - complex_mask)
+        base = {True: np.abs, False: np.real}[np.iscomplexobj(base)](base)
         array = np.nan_to_num(base.astype(float, copy=False))
         # 2次元以上では低周波成分を中央に寄せ、スペクトル画像として見やすくする。
-        if array.ndim >= 2:
-            array = np.fft.fftshift(array, axes=(0, 1))
+        array = {1: lambda value: value}.get(
+            array.ndim,
+            lambda value: np.fft.fftshift(value, axes=(0, 1)),
+        )(array)
         # 強い直流成分だけで表示が潰れないよう、対数スケールで圧縮する。
         array = np.log1p(np.abs(array))
         channel_size = int(np.shape(array)[-1])
@@ -189,8 +184,7 @@ class FourierRenderer(object):
         # SAFE CODE AREA ˅
         # 複素数やNaN/Infを含む入力を、正規化可能な実数配列へ変換する。
         array = np.asarray(data)
-        complex_mask = float(np.iscomplexobj(array))
-        array = np.abs(array) * complex_mask + array * (1.0 - complex_mask)
+        array = {True: np.abs, False: np.real}[np.iscomplexobj(array)](array)
         array = np.nan_to_num(array.astype(float, copy=False))
 
         # 最小値・最大値から正規化準備を行う。
