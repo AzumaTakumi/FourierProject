@@ -234,7 +234,7 @@ class EditDialogView(QWidget):
         print("Reset")
 
     def on_close_clicked(self):
-        print("Close")
+        self.close()
 
     def on_thickness_changed(self, value: int):
         print(f"Thickness: {value}")
