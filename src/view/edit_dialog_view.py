@@ -28,7 +28,7 @@ class EditDialogView(QWidget):
         ####################################################
         self.setStyleSheet("""
         QWidget{
-            background:#F5F5F5;
+            color:#222222;
             font-size:14px;
         }
 
@@ -38,6 +38,7 @@ class EditDialogView(QWidget):
             border-radius:8px;
             margin-top:10px;
             background:white;
+            color:#222222;
         }
 
         QGroupBox::title{
@@ -45,18 +46,44 @@ class EditDialogView(QWidget):
             left:14px;
             padding:0px 6px;
             background:#F5F5F5;
+            color:#222222;
+        }
+
+        QLabel{
+            background:transparent;
+            color:#222222;
         }
 
         QPushButton{
             min-width:36px;
             min-height:30px;
+            background:#FFFFFF;
+            color:#222222;
         }
 
         QSpinBox{
             min-height:26px;
             min-width:50px;
+            background-color:#FFFFFF;
+            color:#222222;
+        }
+
+        QSpinBox::up-button,
+        QSpinBox::down-button{
+            background-color:#F0F0F0;
+        }
+
+        QSpinBox QLineEdit{
+            background-color:#FFFFFF;
+            color:#222222;
+        }
+
+        QSlider{
+            background:transparent;
         }
         """)
+
+        self.setAutoFillBackground(True)
 
         ####################################################
         # メインレイアウト
@@ -79,9 +106,10 @@ class EditDialogView(QWidget):
         spectrum_layout.setSpacing(12)
 
         # canvasはダミー。実際はInteractiveSpectrumComponentが入る予定
-        canvas = QFrame()
-        canvas.setMinimumSize(650, 480)
-        canvas.setStyleSheet("""
+        # 変更後
+        self.canvas = QFrame()
+        self.canvas.setMinimumSize(650, 480)
+        self.canvas.setStyleSheet("""
         QFrame{
             background:white;
             border:1px solid #BBBBBB;
@@ -89,7 +117,7 @@ class EditDialogView(QWidget):
         }
         """)
 
-        spectrum_layout.addWidget(canvas)
+        spectrum_layout.addWidget(self.canvas)
 
         ####################################################
         # Undo / Redo
@@ -113,9 +141,10 @@ class EditDialogView(QWidget):
         # ペイントパネル
         ####################################################
 
-        paint_group = QGroupBox("ペイント")
+        # 変更後
+        self.paint_group = QGroupBox("ペイント")
 
-        paint_layout = QVBoxLayout(paint_group)
+        paint_layout = QVBoxLayout(self.paint_group)
         paint_layout.setContentsMargins(16, 20, 16, 16)
         paint_layout.setSpacing(20)
 
@@ -123,7 +152,10 @@ class EditDialogView(QWidget):
         # 太さ
         ####################################################
 
-        thickness_layout = QHBoxLayout()
+        # 変更後
+        self.thickness_widget = QWidget()
+        thickness_layout = QHBoxLayout(self.thickness_widget)
+        thickness_layout.setContentsMargins(0, 0, 0, 0)
         thickness_layout.setSpacing(12)
 
         thickness_label = QLabel("太さ")
@@ -173,18 +205,20 @@ class EditDialogView(QWidget):
         # レイアウト追加
         ####################################################
 
-        paint_layout.addLayout(thickness_layout)
+        # 変更後
+        paint_layout.addWidget(self.thickness_widget)
         paint_layout.addLayout(value_layout)
         paint_layout.addStretch()
 
-        paint_group.setFixedWidth(300)
+        self.paint_group.setFixedWidth(300)
 
         ####################################################
         # Splitter
         ####################################################
 
         splitter.addWidget(spectrum_group)
-        splitter.addWidget(paint_group)
+        # 変更後
+        splitter.addWidget(self.paint_group)
 
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
