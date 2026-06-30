@@ -3,6 +3,24 @@ from PyQt6.QtWidgets import QWidget
 from edit_dialog_view import EditDialogView
 from interactive_spectrum_component import Interactive1dSpectrumComponent
 
+import sys
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QApplication,
+    QWidget,
+    QGroupBox,
+    QFrame,
+    QPushButton,
+    QLabel,
+    QSlider,
+    QSpinBox,
+    QVBoxLayout,
+    QHBoxLayout,
+    QSplitter,
+)
+
+
 
 class EditDialogView1d(EditDialogView):
     def __init__(self):
