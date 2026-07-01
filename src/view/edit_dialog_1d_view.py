@@ -40,14 +40,14 @@ class EditDialogView1d(EditDialogView):
         self.thickness_slider.hide()
         self.thickness_spin.hide()
 
-        self.value_slider.setRange(0, 1)
-        self.value_spin.setRange(0, 1)
+        self.value_slider.setRange(0, 100)
+        self.value_spin.setRange(0, 100)
 
         self.value_slider.setValue(50)
         self.value_spin.setValue(50)
 
     def on_value_changed(self, value: int):
-        pass
+        edit_value = value / 100
 
     def on_thickness_changed(self, value: int):
         edit_value = value / 100
