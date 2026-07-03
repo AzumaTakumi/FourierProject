@@ -56,4 +56,6 @@ def test_unsupported_extension_uses_null_reader(tmp_path, capsys):
     captured = capsys.readouterr()
     assert "未対応のファイル形式" in captured.out
     assert isinstance(loader.model.currentModel, Fourier2dModel)
-    assert loader.model.currentModel.sourceData.shape == (1, 1)
+    # Fourier2dModel は内部でグレースケールをRGB(3チャンネル)に拡張するため
+    # shape は (高さ, 幅, チャンネル) となる
+    assert loader.model.currentModel.sourceData.shape == (1, 1, 3)
