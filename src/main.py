@@ -5,6 +5,7 @@ from src.view.main_window_view import MainWindowView
 from src.controller.file_controller import FileLoader
 from src.controller.context_menu_controller import ContextMenuController
 from src.controller.file_saver import FileSaver
+from src.view.edit_dialog_1d_view import EditDialogView1d
 from src.view.edit_dialog_view_2d import EditDialogView2d
 from src.model.pane_type import PaneType
 import numpy as np
@@ -22,14 +23,11 @@ def main() -> int:
 
     file_saver = FileSaver(view)
 
+    edit_dialog_1d = None
     edit_dialog_2d = None
 
-    def clear_edit_dialog_2d():
-        nonlocal edit_dialog_2d
-        edit_dialog_2d = None
-
-    def open_edit_dialog_2d():
-        nonlocal edit_dialog_2d
+    def open_edit_dialog():
+        nonlocal edit_dialog_1d, edit_dialog_2d
 
         spectrum_component = file_loader.model.getSpectrumComponent()
         images = file_loader.model.getImage()
@@ -38,18 +36,27 @@ def main() -> int:
             np.array(images[PaneType.INTERACTIVE_POWER_SPECTRUM])
         )
 
-        edit_dialog_2d = EditDialogView2d(
-            modelContext=file_loader.model,
-            spectrumComponent=spectrum_component,
-        )
-        edit_dialog_2d.show()
+        if file_loader.model.is1dModel():
+            edit_dialog_1d = EditDialogView1d(
+                spectrum_component=spectrum_component,
+            )
+            edit_dialog_1d.show()
+            return
+
+        if file_loader.model.is2dModel():
+            edit_dialog_2d = EditDialogView2d(
+                modelContext=file_loader.model,
+                spectrumComponent=spectrum_component,
+            )
+            edit_dialog_2d.show()
+            return
 
 
     context_menu_controller = ContextMenuController(
         parent=view,
         fileLoader=file_loader,
         fileSaver=file_saver,
-        openEditViewCallback=open_edit_dialog_2d,
+        openEditViewCallback=open_edit_dialog,
         refreshViewCallback=lambda: view.display(file_loader.model),
     )
 
@@ -63,6 +70,9 @@ def main() -> int:
         if view.getSpectrumComponent() is not None:
             view.getSpectrumComponent().renderAll(spectrum)
             view._refreshImages()
+
+        if edit_dialog_1d is not None and edit_dialog_1d.spectrum_component is not None:
+            edit_dialog_1d.spectrum_component.renderAll(spectrum)
 
         if edit_dialog_2d is not None and edit_dialog_2d.spectrumComponent is not None:
             edit_dialog_2d.spectrumComponent.renderAll(spectrum)

@@ -77,14 +77,13 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.set1dSourceData ˅
     def set1dSourceData(self, sourceData: np.ndarray) -> None:
         """
-        1次元元データを設定する。入力データから新しいFourier1dModelを生成し、ChangeFourierModelCommandで現在のModelと差し替える。
+        1次元元データを設定する。
+        ファイル入力によるデータ切り替えはUndo対象にせず、履歴をクリアする。
         """
 
         # SAFE CODE AREA ˅
-        # 入力データを1Dモデル用のfloat配列へそろえる。
         data = np.asarray(sourceData, dtype=float)
-        # データ設定は常に新しいModelインスタンスへの差し替えとして扱う。
-        self._executeUndoableCommand(ChangeFourierModelCommand(self, Fourier1dModel(data)))
+        self._replaceCurrentModel(Fourier1dModel(data))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.set1dSourceData ˄
 
@@ -92,14 +91,13 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.set2dSourceData ˅
     def set2dSourceData(self, sourceData: np.ndarray) -> None:
         """
-        2次元元データを設定する。入力データから新しいFourier2dModelを生成し、ChangeFourierModelCommandで現在のModelと差し替える。
+        2次元元データを設定する。
+        ファイル入力によるデータ切り替えはUndo対象にせず、履歴をクリアする。
         """
 
         # SAFE CODE AREA ˅
-        # 入力データを2Dモデル用のfloat配列へそろえる。
         data = np.asarray(sourceData, dtype=float)
-        # データ設定は常に新しいModelインスタンスへの差し替えとして扱う。
-        self._executeUndoableCommand(ChangeFourierModelCommand(self, Fourier2dModel(data)))
+        self._replaceCurrentModel(Fourier2dModel(data))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.set2dSourceData ˄
 
@@ -115,6 +113,20 @@ class FourierModelContext(object):
         self._executeUndoableCommand(ResetSpectrumCommand(self.currentModel))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.resetSpectrum ˄
+
+    def _replaceCurrentModel(self, newModel: FourierModel) -> None:
+        """
+        ファイル入力などで現在のModelを差し替える。
+        データ切り替えはUndo対象にせず、過去のUndo/Redo履歴を破棄する。
+        """
+
+        # SAFE CODE AREA ˅
+        self.currentModel = newModel
+        self.undoStack.clear()
+        self.redoStack.clear()
+        self.currentCompositeCommand = None
+        self._notifySpectrumChanged(self._createFullSpectrumChangeForCommand(None))
+        # SAFE CODE AREA ˄
 
 
     # GENERATED CODE AREA: method.beginSpectrumEdit ˅

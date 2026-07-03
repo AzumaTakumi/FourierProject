@@ -2,7 +2,7 @@ import numpy as np
 from PIL import Image
 from PIL.ImageQt import ImageQt
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QVBoxLayout, QSizePolicy
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt, QTimer
 
@@ -38,6 +38,24 @@ class MainWindowView(QMainWindow):
         self._originalSpectrumLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._restoredDataImageLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+
+        self._originalDataLabel.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Ignored
+        )
+        self._originalSpectrumLabel.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Ignored
+        )
+        self._restoredDataImageLabel.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Ignored
+        )
+
+        self._originalDataLabel.setMinimumSize(0, 0)
+        self._originalSpectrumLabel.setMinimumSize(0, 0)
+        self._restoredDataImageLabel.setMinimumSize(0, 0)
+
         self.setWindowTitle("Result")
 
         widget = QWidget()
@@ -58,6 +76,22 @@ class MainWindowView(QMainWindow):
         widget.setLayout(self._layout)
         self.setCentralWidget(widget)
 
+
+    def _removeSpectrumComponent(self) -> None:
+        """
+        右下に表示している編集用スペクトルコンポーネントを取り除く。
+        ファイル再入力時に古い1D/2Dコンポーネントが重ならないようにする。
+        """
+        if self._spectrumComponent is None:
+            return
+
+        self._layout.removeWidget(self._spectrumComponent)
+        self._spectrumComponent.clear()
+        self._spectrumComponent.setParent(None)
+        self._spectrumComponent.deleteLater()
+        self._spectrumComponent = None
+    
+
     def display(self, model) -> None:
         """
         元データ、元データのパワースペクトル、復元したデータ、
@@ -69,11 +103,21 @@ class MainWindowView(QMainWindow):
         self._originalSpectrum = images[PaneType.POWER_SPECTRUM]
         self._restoredDataImage = images[PaneType.INVERSE_DATA]
 
+        self._removeSpectrumComponent()
+
         self._spectrumComponent = model.getSpectrumComponent()
+        self._spectrumComponent.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Ignored
+        )
+        self._spectrumComponent.setMinimumSize(0, 0)
+        self._spectrumComponent.setScaledContents(False)
+
         self._layout.addWidget(self._spectrumComponent, 1, 1)
 
-        self._spectrumComponent.renderAll(np.array(images[PaneType.INTERACTIVE_POWER_SPECTRUM]))
-
+        self._spectrumComponent.renderAll(
+            np.array(images[PaneType.INTERACTIVE_POWER_SPECTRUM])
+        )
         self.setMinimumSize(900, 650)
         self.resize(1000, 750)
         self.show()
@@ -152,4 +196,4 @@ class MainWindowView(QMainWindow):
         復元したデータの画像を更新する
         """
         self._restoredDataImage = restoredDataImage
-        self._restoredDataImageLabel.setPixmap(QPixmap.fromImage(ImageQt(restoredDataImage)))
+        self._refreshImages()

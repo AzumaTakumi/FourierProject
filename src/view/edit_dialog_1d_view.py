@@ -1,7 +1,7 @@
 import sys
 
-from edit_dialog_view import EditDialogView
-from interactive_spectrum_component import Interactive1dSpectrumComponent
+from src.view.edit_dialog_view import EditDialogView
+from src.view.interactive_spectrum_component import Interactive1dSpectrumComponent
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
