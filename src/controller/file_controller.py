@@ -39,7 +39,7 @@ class FileController:
 			self.view,
 			"ファイルを開く",
 			current_directory,
-			"すべての対応形式 (*.jpg *.png *.csv *.txt);;画像ファイル (*.jpg *.png);;テキストデータ (*.csv *.txt)"
+			"すべての対応形式 (*.jpg *.jpeg *.png *.csv *.txt);;画像データ(2次元データ) (*.jpg *.jpeg *.png);;テキストデータ(1次元データ) (*.csv *.txt)"
 		)
 		return file_path
 
@@ -61,6 +61,7 @@ class FileLoader(FileController):
 			".csv": TextReader(),
 			".txt": TextReader(),
 			".jpg": ImageReader(),
+			".jpeg": ImageReader(),
 			".png": ImageReader(),
 		}
 
@@ -74,33 +75,20 @@ class FileLoader(FileController):
 		"""
 		メッセージの送信（ポリモーフィズム）だけで全ての分岐を処理する。
 		"""
-		# 拡張子を切り出す
+		
 		_, file_extension = os.path.splitext(aPath)
 		
-		# 辞書からReaderを取得。もし登録のない拡張子なら、エラー用Reader（default_reader）を返す。
 		reader = self.readers.get(file_extension.lower(), self.default_reader)
 		
-		# 信頼してメッセージを送る。相手の正体が何であれ、if文なしで1行で完結。
 		reader.read(aPath, self)
 
 	def process1DModel(self, aData: np.ndarray) -> None:
 		"""1次元データをModelへ送信し、計算結果をViewに反映する"""
 		self.model.set1dSourceData(aData)
 		print("-> 1次元データをModelへ送信しました。")
-		
-		# 【重要】Modelから計算完了後の各種データを引き出す
-		# ※ Model側の実際のメソッド名（getOriginalData等）に合わせて適宜修正してください
 
-		# 新しい MainWindowView にデータを流し込んで画面を出力させる
-
-        
 	def process2DModel(self, aData: np.ndarray) -> None:
 		"""2次元データをModelへ送信し、計算結果をViewに反映する"""
 		self.model.set2dSourceData(aData)
 		print("-> 2次元データをModelへ送信しました。")
-		
-		# 【重要】Modelから計算完了後の各種データを引き出す
-		# ※ ここはModelの仕様に合わせて「Image形式（PIL.Image）」で取得します
-
-		# 新しい MainWindowView にデータを流し込んで画面を出力させる
 		

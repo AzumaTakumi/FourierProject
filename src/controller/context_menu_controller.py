@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QMenu, QMessageBox
-
+from src.controller.file_saver import FileSaver
 
 class ContextMenuController:
     """
@@ -71,5 +71,10 @@ class ContextMenuController:
             self.outputRestoredDataCallback()
             return
 
-        QMessageBox.information(self.parent, "出力", "出力機能はまだ未接続です。")
+        print(f"file saver is {self.fileSaver}")
+        if self.fileSaver is None:
+            QMessageBox.warning(self.parent, "エラー", "FileSaverが設定されていません。")
+            return
+
+        self.fileSaver.exportRestoredImage(self.parent)
         

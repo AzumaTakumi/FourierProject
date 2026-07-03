@@ -11,6 +11,7 @@ from src.view.interactive_spectrum_component import (
 )
 from src.model.pane_type import PaneType
 from src.controller.context_menu_controller import ContextMenuController
+from src.controller.file_saver import FileSaver
 
 class MainWindowView(QMainWindow):
     """
@@ -23,7 +24,11 @@ class MainWindowView(QMainWindow):
         self._originalSpectrum = None
         self._restoredDataImage = None
         self._spectrumComponent = None
-        self._contextMenuController = ContextMenuController(self)
+        self.file_saver_instance = FileSaver(self)
+        self._contextMenuController = ContextMenuController(
+            parent=self, 
+            fileSaver=self.file_saver_instance
+        )
 
         self._originalDataLabel = QLabel()
         self._originalSpectrumLabel = QLabel()

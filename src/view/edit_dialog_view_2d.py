@@ -30,8 +30,8 @@ class EditDialogView2d(EditDialogView):
         self.thickness_slider.setValue(self.brushSize)
         self.thickness_spin.setValue(self.brushSize)
 
-        self.value_slider.setRange(0, 255)
-        self.value_spin.setRange(0, 255)
+        self.value_slider.setRange(-1, 1)
+        self.value_spin.setRange(-1, 1)
         self.value_slider.setValue(self.editValue)
         self.value_spin.setValue(self.editValue)
 
