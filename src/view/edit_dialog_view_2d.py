@@ -1,5 +1,5 @@
 from src.view.edit_dialog_view import EditDialogView
-from PyQt6.QtWidgets import QSizePolicy
+from PyQt6.QtWidgets import QSizePolicy, QDoubleSpinBox
 
 
 class EditDialogView2d(EditDialogView):
@@ -30,10 +30,30 @@ class EditDialogView2d(EditDialogView):
         self.thickness_slider.setValue(self.brushSize)
         self.thickness_spin.setValue(self.brushSize)
 
-        self.value_slider.setRange(-1, 1)
-        self.value_spin.setRange(-1, 1)
-        self.value_slider.setValue(self.editValue)
+        # value_slider は整数しか扱えないので、-10〜10 として扱う
+        # 実際の編集値は value / 10 にして -1.0〜1.0 にする
+        self.value_slider.setRange(-10, 10)
+        self.value_slider.setValue(int(self.editValue * 10))
+
+        # 親クラスで作られた QSpinBox を、2D用の QDoubleSpinBox に差し替える
+        old_value_spin = self.value_spin
+        self.value_spin = QDoubleSpinBox()
+        self.value_spin.setRange(-1.0, 1.0)
+        self.value_spin.setDecimals(1)
+        self.value_spin.setSingleStep(0.1)
         self.value_spin.setValue(self.editValue)
+
+        value_layout = old_value_spin.parentWidget().layout()
+        value_layout.replaceWidget(old_value_spin, self.value_spin)
+        old_value_spin.deleteLater()
+
+        # slider と double spin を同期する
+        self.value_slider.valueChanged.connect(
+            lambda value: self.value_spin.setValue(value / 10)
+        )
+        self.value_spin.valueChanged.connect(
+            lambda value: self.value_slider.setValue(int(round(value * 10)))
+        )
 
         if self.spectrumComponent is not None:
             parent_layout = self.canvas.parentWidget().layout()
