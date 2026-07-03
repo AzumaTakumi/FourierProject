@@ -16,7 +16,7 @@ run:
 
 # 2. 自動テストの実行（pytestによる回帰テスト要件）
 test:
-	$(PYTHON) -m pytest tests
+	$(PYTHON) -m pytest tests --html=report.html
 
 # 3. 静的解析の実行（コーディング規約遵守の検証環境）
 lint: clean
