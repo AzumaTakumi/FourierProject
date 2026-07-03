@@ -123,7 +123,7 @@ class MainWindowView(QMainWindow):
     def resizeEvent(self, event) -> None:
         """ ウィンドウ全体のサイズが変更されたら、自動的に画像をリサイズする """
         super().resizeEvent(event)
-        # マウスでウィンドウをびよーんと伸ばした瞬間に、この関数がリアルタイムに実行されるよ
+        # マウスでウィンドウを伸ばした瞬間に、この関数がリアルタイムに実行されるよ
         self._refreshImages()
 
 

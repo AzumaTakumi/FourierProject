@@ -106,7 +106,7 @@ class EditDialogView(QWidget):
         spectrum_layout.setSpacing(12)
 
         # canvasはダミー。実際はInteractiveSpectrumComponentが入る予定
-        # 変更後
+
         self.canvas = QFrame()
         self.canvas.setMinimumSize(650, 480)
         self.canvas.setStyleSheet("""
@@ -141,7 +141,6 @@ class EditDialogView(QWidget):
         # ペイントパネル
         ####################################################
 
-        # 変更後
         self.paint_group = QGroupBox("ペイント")
 
         paint_layout = QVBoxLayout(self.paint_group)
@@ -152,11 +151,11 @@ class EditDialogView(QWidget):
         # 太さ
         ####################################################
 
-        # 変更後
         self.thickness_widget = QWidget()
-        thickness_layout = QHBoxLayout(self.thickness_widget)
-        thickness_layout.setContentsMargins(0, 0, 0, 0)
-        thickness_layout.setSpacing(12)
+        self.thickness_layout = QHBoxLayout(self.thickness_widget)
+        self.thickness_layout.setContentsMargins(0, 0, 0, 0)
+        self.thickness_layout.setSpacing(12)
+
 
         thickness_label = QLabel("太さ")
         thickness_label.setFixedWidth(40)
@@ -172,9 +171,9 @@ class EditDialogView(QWidget):
         self.thickness_slider.valueChanged.connect(self.thickness_spin.setValue)
         self.thickness_spin.valueChanged.connect(self.thickness_slider.setValue)
 
-        thickness_layout.addWidget(thickness_label)
-        thickness_layout.addWidget(self.thickness_slider)
-        thickness_layout.addWidget(self.thickness_spin)
+        self.thickness_layout.addWidget(thickness_label)
+        self.thickness_layout.addWidget(self.thickness_slider)
+        self.thickness_layout.addWidget(self.thickness_spin)
 
         ####################################################
         # 数値
@@ -200,12 +199,7 @@ class EditDialogView(QWidget):
         value_layout.addWidget(value_label)
         value_layout.addWidget(self.value_slider)
         value_layout.addWidget(self.value_spin)
-
-        ####################################################
-        # レイアウト追加
-        ####################################################
-
-        # 変更後
+        
         paint_layout.addWidget(self.thickness_widget)
         paint_layout.addLayout(value_layout)
         paint_layout.addStretch()
@@ -217,7 +211,7 @@ class EditDialogView(QWidget):
         ####################################################
 
         splitter.addWidget(spectrum_group)
-        # 変更後
+
         splitter.addWidget(self.paint_group)
 
         splitter.setStretchFactor(0, 1)
