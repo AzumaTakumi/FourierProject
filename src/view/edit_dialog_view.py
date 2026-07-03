@@ -28,7 +28,7 @@ class EditDialogView(QWidget):
         ####################################################
         self.setStyleSheet("""
         QWidget{
-            background:#F5F5F5;
+            color:#222222;
             font-size:14px;
         }
 
@@ -38,6 +38,7 @@ class EditDialogView(QWidget):
             border-radius:8px;
             margin-top:10px;
             background:white;
+            color:#222222;
         }
 
         QGroupBox::title{
@@ -45,18 +46,44 @@ class EditDialogView(QWidget):
             left:14px;
             padding:0px 6px;
             background:#F5F5F5;
+            color:#222222;
+        }
+
+        QLabel{
+            background:transparent;
+            color:#222222;
         }
 
         QPushButton{
             min-width:36px;
             min-height:30px;
+            background:#FFFFFF;
+            color:#222222;
         }
 
         QSpinBox{
             min-height:26px;
             min-width:50px;
+            background-color:#FFFFFF;
+            color:#222222;
+        }
+
+        QSpinBox::up-button,
+        QSpinBox::down-button{
+            background-color:#F0F0F0;
+        }
+
+        QSpinBox QLineEdit{
+            background-color:#FFFFFF;
+            color:#222222;
+        }
+
+        QSlider{
+            background:transparent;
         }
         """)
+
+        self.setAutoFillBackground(True)
 
         ####################################################
         # メインレイアウト
@@ -79,6 +106,7 @@ class EditDialogView(QWidget):
         spectrum_layout.setSpacing(12)
 
         # canvasはダミー。実際はInteractiveSpectrumComponentが入る予定
+
         self.canvas = QFrame()
         self.canvas.setMinimumSize(650, 480)
         self.canvas.setStyleSheet("""
@@ -123,8 +151,11 @@ class EditDialogView(QWidget):
         # 太さ
         ####################################################
 
-        self.thickness_layout = QHBoxLayout()
+        self.thickness_widget = QWidget()
+        self.thickness_layout = QHBoxLayout(self.thickness_widget)
+        self.thickness_layout.setContentsMargins(0, 0, 0, 0)
         self.thickness_layout.setSpacing(12)
+
 
         thickness_label = QLabel("太さ")
         thickness_label.setFixedWidth(40)
@@ -168,12 +199,8 @@ class EditDialogView(QWidget):
         value_layout.addWidget(value_label)
         value_layout.addWidget(self.value_slider)
         value_layout.addWidget(self.value_spin)
-
-        ####################################################
-        # レイアウト追加
-        ####################################################
-
-        paint_layout.addLayout(self.thickness_layout)
+        
+        paint_layout.addWidget(self.thickness_widget)
         paint_layout.addLayout(value_layout)
         paint_layout.addStretch()
 
@@ -184,6 +211,7 @@ class EditDialogView(QWidget):
         ####################################################
 
         splitter.addWidget(spectrum_group)
+
         splitter.addWidget(self.paint_group)
 
         splitter.setStretchFactor(0, 1)
