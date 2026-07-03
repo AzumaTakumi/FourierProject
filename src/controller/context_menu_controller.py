@@ -47,9 +47,9 @@ class ContextMenuController:
             QMessageBox.warning(self.parent, "エラー", "FileLoaderが設定されていません。")
             return
 
-        self.fileLoader.start()
+        loaded = self.fileLoader.start()
 
-        if callable(self.refreshViewCallback):
+        if loaded and callable(self.refreshViewCallback):
             self.refreshViewCallback()
 
     def openEditView(self) -> None:

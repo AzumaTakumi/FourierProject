@@ -28,6 +28,7 @@ class EditDialogView(QWidget):
         ####################################################
         self.setStyleSheet("""
         QWidget{
+            background-color:#FFFFFF;
             color:#222222;
             font-size:14px;
         }
@@ -37,7 +38,7 @@ class EditDialogView(QWidget):
             border:1px solid #888;
             border-radius:8px;
             margin-top:10px;
-            background:white;
+            background-color:#FFFFFF;
             color:#222222;
         }
 
@@ -45,41 +46,56 @@ class EditDialogView(QWidget):
             subcontrol-origin: margin;
             left:14px;
             padding:0px 6px;
-            background:#F5F5F5;
+            background-color:#FFFFFF;
             color:#222222;
         }
 
         QLabel{
-            background:transparent;
+            background-color:transparent;
             color:#222222;
         }
 
         QPushButton{
             min-width:36px;
             min-height:30px;
-            background:#FFFFFF;
+            background-color:#FFFFFF;
             color:#222222;
+            border:1px solid #999999;
+            border-radius:4px;
         }
 
-        QSpinBox{
+        QPushButton:hover{
+            background-color:#F0F0F0;
+        }
+
+        QSpinBox,
+        QDoubleSpinBox{
             min-height:26px;
             min-width:50px;
             background-color:#FFFFFF;
             color:#222222;
+            border:1px solid #999999;
         }
 
         QSpinBox::up-button,
-        QSpinBox::down-button{
+        QSpinBox::down-button,
+        QDoubleSpinBox::up-button,
+        QDoubleSpinBox::down-button{
             background-color:#F0F0F0;
         }
 
-        QSpinBox QLineEdit{
+        QSpinBox QLineEdit,
+        QDoubleSpinBox QLineEdit{
             background-color:#FFFFFF;
             color:#222222;
         }
 
         QSlider{
-            background:transparent;
+            background-color:#FFFFFF;
+        }
+
+        QFrame{
+            background-color:#FFFFFF;
         }
         """)
 
@@ -111,7 +127,7 @@ class EditDialogView(QWidget):
         self.canvas.setMinimumSize(650, 480)
         self.canvas.setStyleSheet("""
         QFrame{
-            background:white;
+            background-color:#FFFFFF;
             border:1px solid #BBBBBB;
             border-radius:4px;
         }

@@ -17,7 +17,8 @@ def main() -> int:
     view = MainWindowView()
     file_loader = FileLoader(view)
 
-    file_loader.start()
+    if not file_loader.start():
+            return 0
 
     view.display(file_loader.model)
 

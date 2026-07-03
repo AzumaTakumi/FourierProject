@@ -65,11 +65,16 @@ class FileLoader(FileController):
 			".png": ImageReader(),
 		}
 
-	def start(self) -> None:
-		"""ファイル選択プロセスを開始する。"""
+	def start(self) -> bool:
+		"""ファイル選択プロセスを開始する。読み込みできた場合はTrue、キャンセル時はFalseを返す。"""
 		selected_path = self.openFileChooser()
-		if selected_path: # キャンセルされていない場合のみ続行
-			self.loadSignalData(selected_path)
+
+		if not selected_path:
+			print("[情報] ファイル選択がキャンセルされました。")
+			return False
+
+		self.loadSignalData(selected_path)
+		return True
 
 	def loadSignalData(self, aPath: str) -> None:
 		"""

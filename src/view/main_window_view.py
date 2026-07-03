@@ -58,6 +58,23 @@ class MainWindowView(QMainWindow):
 
         self.setWindowTitle("Result")
 
+        self.setStyleSheet("""
+        QMainWindow{
+            background-color:#FFFFFF;
+            color:#222222;
+        }
+
+        QWidget{
+            background-color:#FFFFFF;
+            color:#222222;
+        }
+
+        QLabel{
+            background-color:#FFFFFF;
+            color:#222222;
+        }
+        """)
+
         widget = QWidget()
         self._layout = QGridLayout()
 

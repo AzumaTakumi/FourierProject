@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QSplitter,
+    QSizePolicy,
 )
 
 class EditDialogView1d(EditDialogView):
@@ -34,6 +35,12 @@ class EditDialogView1d(EditDialogView):
         self.canvas.deleteLater()
 
         self.spectrum_component.setMinimumSize(650, 480)
+
+        self.spectrum_component.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Ignored
+        )
+        self.spectrum_component.setScaledContents(True)
 
         self.paint_group.setTitle("値の編集")
 
