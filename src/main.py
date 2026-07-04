@@ -31,14 +31,15 @@ def main() -> int:
         nonlocal edit_dialog_1d, edit_dialog_2d
 
         spectrum_component = file_loader.model.getSpectrumComponent()
-        images = file_loader.model.getImage()
+        data = file_loader.model.getData()
 
         spectrum_component.renderAll(
-            np.array(images[PaneType.INTERACTIVE_POWER_SPECTRUM])
+            np.array(data[PaneType.INTERACTIVE_POWER_SPECTRUM])
         )
 
         if file_loader.model.is1dModel():
             edit_dialog_1d = EditDialogView1d(
+                modelContext=file_loader.model,
                 spectrum_component=spectrum_component,
             )
             edit_dialog_1d.show()
@@ -66,17 +67,16 @@ def main() -> int:
 
     def on_spectrum_changed(change):
         images = file_loader.model.getImage()
-        spectrum = np.array(images[PaneType.INTERACTIVE_POWER_SPECTRUM])
 
         if view.getSpectrumComponent() is not None:
-            view.getSpectrumComponent().renderAll(spectrum)
-            view._refreshImages()
+            view.getSpectrumComponent().renderDirtyRegion(change)
+            view.updateRestoredDataImage(images[PaneType.INVERSE_DATA])
 
         if edit_dialog_1d is not None and edit_dialog_1d.spectrum_component is not None:
-            edit_dialog_1d.spectrum_component.renderAll(spectrum)
+            edit_dialog_1d.spectrum_component.renderDirtyRegion(change)
 
         if edit_dialog_2d is not None and edit_dialog_2d.spectrumComponent is not None:
-            edit_dialog_2d.spectrumComponent.renderAll(spectrum)
+            edit_dialog_2d.spectrumComponent.renderDirtyRegion(change)
 
     file_loader.model.spectrumChangedListener = on_spectrum_changed
 

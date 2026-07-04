@@ -115,6 +115,7 @@ class MainWindowView(QMainWindow):
         編集可能なパワースペクトルを2x2で表示する
         """
         images = model.getImage()
+        data = model.getData()
 
         self._originalData = images[PaneType.SOURCE_DATA]
         self._originalSpectrum = images[PaneType.POWER_SPECTRUM]
@@ -133,7 +134,7 @@ class MainWindowView(QMainWindow):
         self._layout.addWidget(self._spectrumComponent, 1, 1)
 
         self._spectrumComponent.renderAll(
-            np.array(images[PaneType.INTERACTIVE_POWER_SPECTRUM])
+            np.array(data[PaneType.INTERACTIVE_POWER_SPECTRUM])
         )
         self.setMinimumSize(900, 650)
         self.resize(1000, 750)
@@ -168,16 +169,13 @@ class MainWindowView(QMainWindow):
         )
         
         # 4. 右下：編集用スペクトラム（ここが今回の主役！）
-        if self._spectrumComponent and hasattr(self._spectrumComponent, "_powerSpectrum") and self._spectrumComponent._powerSpectrum is not None:
+        if self._spectrumComponent and getattr(self._spectrumComponent, "_displayImage", None) is not None:
             # 右下のセルの幅と高さをそのまま取得する
             w4, h4 = self._spectrumComponent.width(), self._spectrumComponent.height()
             
-            # 部分編集用の配列から画像を生成
-            img = Image.fromarray(self._spectrumComponent._powerSpectrum.astype(np.uint8))
-            
             # 【ここがポイント！】右下自身に .scaled() をさせて突っ張らせるのではなく、
             # View側がセルのサイズに合わせて「比率を維持（KeepAspectRatio）」して綺麗にはめ込みます！
-            pix = QPixmap.fromImage(ImageQt(img)).scaled(w4, h4, Qt.AspectRatioMode.KeepAspectRatio)
+            pix = QPixmap.fromImage(ImageQt(self._spectrumComponent._displayImage)).scaled(w4, h4, Qt.AspectRatioMode.KeepAspectRatio)
             self._spectrumComponent.setPixmap(pix)
         
 

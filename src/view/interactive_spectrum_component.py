@@ -6,6 +6,11 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QWidget, QGridLay
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
+
+def _fourier_renderer():
+    from src.model.fourier_renderer import FourierRenderer
+    return FourierRenderer
+
 class InteractiveSpectrumComponent(QLabel):
     """
     編集可能なパワースペクトルコンポーネントのインタフェース
@@ -52,9 +57,16 @@ class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
         self._mouseReleaseListeners = []
 
         self._powerSpectrum = None
+        self._displayImage = None
 
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setText("1D Spectrum")
+
+    def _setDisplayImage(self, image: Image.Image) -> None:
+        self._displayImage = image
+        pixmap = QPixmap.fromImage(ImageQt(image))
+        self.setPixmap(pixmap)
+        self.setMinimumSize(0, 0)
 
     def _emitMouseMoveEvent(self, event) -> None:
         """
@@ -105,14 +117,8 @@ class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
         """
         パワースペクトルを全て描画する
         """
-        self._powerSpectrum = data.copy()
-
-        image = Image.fromarray(self._powerSpectrum.astype(np.uint8))
-        pixmap = QPixmap.fromImage(ImageQt(image))
-
-        self.setPixmap(pixmap)
-
-        self.setMinimumSize(0, 0)
+        self._powerSpectrum = np.asarray(data).copy()
+        self._setDisplayImage(_fourier_renderer().imageFrom1dData(self._powerSpectrum))
 
     def renderDirtyRegion(self, spectrumChange) -> None:
         """
@@ -121,15 +127,12 @@ class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
         index = spectrumChange.index
         changedPowerSpectrum = spectrumChange.changedPowerSpectrum
 
-        self._powerSpectrum[
-            index:index + len(changedPowerSpectrum)
-        ] = changedPowerSpectrum
+        if self._powerSpectrum is None:
+            self.renderAll(changedPowerSpectrum)
+            return
 
-        image = Image.fromarray(self._powerSpectrum.astype(np.uint8))
-        pixmap = QPixmap.fromImage(ImageQt(image))
-        self.setPixmap(pixmap)
-
-        self.setMinimumSize(0, 0)
+        self._powerSpectrum[index:index + len(changedPowerSpectrum)] = changedPowerSpectrum
+        self._setDisplayImage(_fourier_renderer().imageFrom1dData(self._powerSpectrum))
 
     def addMouseMoveEventListener(self, callback) -> None:
         """
@@ -162,9 +165,27 @@ class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
         self._mouseReleaseListeners = []
 
         self._powerSpectrum = None
+        self._displayImage = None
+        self._displayValueRange = None
+        self._displayRangeShape = None
 
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setText("2D Spectrum")
+
+    def _displayShapeFromSpectrum(self, data: np.ndarray) -> tuple[int, ...]:
+        return tuple(_fourier_renderer().spectrumDisplayArray(data).shape)
+
+    def _setDisplayImage(self, image: Image.Image) -> None:
+        self._displayImage = image
+        pixmap = QPixmap.fromImage(ImageQt(image))
+        self.setPixmap(pixmap)
+        self.setMinimumSize(0, 0)
+
+    def _renderSpectrumImage(self) -> Image.Image:
+        return _fourier_renderer().imageFromSpectrum(
+            self._powerSpectrum,
+            self._displayValueRange
+        )
 
     def _emitMouseMoveEvent(self, event) -> None:
         """
@@ -216,14 +237,15 @@ class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
         """
         パワースペクトルを全て描画する
         """
-        self._powerSpectrum = data.copy()
+        self._powerSpectrum = np.asarray(data).copy()
+        display_shape = self._displayShapeFromSpectrum(self._powerSpectrum)
+        if self._displayValueRange is None or display_shape != self._displayRangeShape:
+            self._displayValueRange = _fourier_renderer().displayRangeFromSpectrum(
+                self._powerSpectrum
+            )
+            self._displayRangeShape = display_shape
 
-        image = Image.fromarray(self._powerSpectrum.astype(np.uint8))
-        pixmap = QPixmap.fromImage(ImageQt(image))
-
-        self.setPixmap(pixmap)
-
-        self.setMinimumSize(0, 0)
+        self._setDisplayImage(self._renderSpectrumImage())
 
     def renderDirtyRegion(self, spectrumChange) -> None:
         """
@@ -234,16 +256,12 @@ class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
         width = spectrumChange.width
         height = spectrumChange.height
 
-        self._powerSpectrum[
-            y:y + height,
-            x:x + width
-        ] = spectrumChange.changedPowerSpectrum
+        if self._powerSpectrum is None:
+            self.renderAll(spectrumChange.changedPowerSpectrum)
+            return
 
-        image = Image.fromarray(self._powerSpectrum.astype(np.uint8))
-        pixmap = QPixmap.fromImage(ImageQt(image))
-        self.setPixmap(pixmap)
-
-        self.setMinimumSize(0, 0)
+        self._powerSpectrum[y:y + height, x:x + width] = spectrumChange.changedPowerSpectrum
+        self._setDisplayImage(self._renderSpectrumImage())
 
     def addMouseMoveEventListener(self, callback) -> None:
         """
