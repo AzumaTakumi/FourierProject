@@ -130,13 +130,27 @@ class FourierRenderer(object):
 
     # FIXED CODE AREA: method.imageFromSpectrum ˅
     @classmethod
-    def imageFromSpectrum(cls, spectrum: np.ndarray) -> Image.Image:
+    def imageFromSpectrum(cls, spectrum: np.ndarray, valueRange: tuple[float, float] | None = None) -> Image.Image:
         """
         スペクトル行列を可視化用に正規化/スケーリングし、Imageとして返す。パワースペクトル表示などに用いる。
         """
 
         # SAFE CODE AREA ˅
-        # 複素数を扱える表示配列へ変換し、log1p でダイナミックレンジを圧縮する。
+        array = cls.spectrumDisplayArray(spectrum)
+        # 1Dは折れ線描画、2D/3Dは画像化の経路に振り分ける。
+        render_mode = {1: "line"}.get(array.ndim, "image")
+        line_renderer = lambda: cls.imageFrom1dData(array)
+        image_renderer = lambda: Image.fromarray(cls.normalize(np.squeeze(array), valueRange), "L")
+        return {"line": line_renderer, "image": image_renderer}[render_mode]()
+        # SAFE CODE AREA ˄
+    # FIXED CODE AREA: method.imageFromSpectrum ˄
+
+    @classmethod
+    def spectrumDisplayArray(cls, spectrum: np.ndarray) -> np.ndarray:
+        """
+        スペクトルを表示用の対数強度配列へ変換する。
+        """
+
         base = np.asarray(spectrum)
         base = {True: np.abs, False: np.real}[np.iscomplexobj(base)](base)
         array = np.nan_to_num(base.astype(float, copy=False))
@@ -147,17 +161,20 @@ class FourierRenderer(object):
         )(array)
         # 強い直流成分だけで表示が潰れないよう、対数スケールで圧縮する。
         array = np.log1p(np.abs(array))
-        channel_size = int(np.shape(array)[-1])
-        # 1Dは折れ線描画、2D/3Dは画像化の経路に振り分ける。
-        render_mode = {1: "line", 2: "image", 3: "image"}[array.ndim]
-        line_renderer = lambda: cls.imageFrom1dData(array)
-        image_renderer = lambda: Image.fromarray(
-            {"RGB": cls.normalize(array), "L": np.squeeze(cls.normalize(array))}[{3: "RGB"}.get(channel_size, "L")],
-            {3: "RGB"}.get(channel_size, "L")
-        )
-        return {"line": line_renderer, "image": image_renderer}[render_mode]()
-        # SAFE CODE AREA ˄
-    # FIXED CODE AREA: method.imageFromSpectrum ˄
+        # RGB画像由来のスペクトルは3チャンネル配列だが、表示では色ではなく強度として扱う。
+        return {3: lambda value: np.mean(value, axis=2)}.get(
+            array.ndim,
+            lambda value: value,
+        )(array)
+
+    @classmethod
+    def displayRangeFromSpectrum(cls, spectrum: np.ndarray) -> tuple[float, float]:
+        """
+        現在のスペクトル表示に使う固定レンジを返す。
+        """
+
+        array = np.asarray(cls.spectrumDisplayArray(spectrum))
+        return float(np.min(array)), float(np.max(array))
 
 
     # FIXED CODE AREA: method.imageFromParts ˅
@@ -176,7 +193,7 @@ class FourierRenderer(object):
 
     # FIXED CODE AREA: method.normalize ˅
     @classmethod
-    def normalize(cls, data: np.ndarray) -> np.ndarray:
+    def normalize(cls, data: np.ndarray, valueRange: tuple[float, float] | None = None) -> np.ndarray:
         """
         可視化のためにデータを所定レンジへ正規化したndarrayを返す（例: min-max、logスケール等）。
         """
@@ -188,8 +205,10 @@ class FourierRenderer(object):
         array = np.nan_to_num(array.astype(float, copy=False))
 
         # 最小値・最大値から正規化準備を行う。
-        min_value = float(np.min(array))
-        max_value = float(np.max(array))
+        min_value, max_value = {
+            True: lambda: valueRange,
+            False: lambda: (float(np.min(array)), float(np.max(array))),
+        }[valueRange is not None]()
 
         # 値域が極小の場合も安全に扱い、0〜255の uint8 にスケーリングする。
         span = max_value - min_value

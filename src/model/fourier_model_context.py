@@ -252,6 +252,23 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.paintRgbSpectrumLineAtPosition ˄
 
 
+    def eraseSpectrumAtPositions(self, positions: list[tuple[int, int]], radius: int) -> None:
+        """
+        2次元スペクトル上の補間済み座標列を、指定半径で消去する。
+        """
+        self._executeCommandInOpenEdit(
+            EraseSpectrumAtPositionsCommand(self.currentModel, positions, radius)
+        )
+
+    def paintRgbSpectrumAtPositions(self, positions: list[tuple[int, int]], radius: int, rgbColor: list) -> None:
+        """
+        2次元スペクトル上の補間済み座標列を、指定半径とRGB色でペイント編集する。
+        """
+        self._executeCommandInOpenEdit(
+            PaintRgbSpectrumAtPositionsCommand(self.currentModel, positions, radius, rgbColor)
+        )
+
+
     # GENERATED CODE AREA: method.undo ˅
     def undo(self) -> bool:
         """
@@ -651,4 +668,3 @@ class FourierModelContext(object):
         self.spectrumChangedListener(change)
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._notifySpectrumChanged ˄
-
