@@ -7,6 +7,7 @@ from src.model.fourier_transform import FourierTransform
 from src.model.fourier_1_d_model import Fourier1dModel
 from src.model.fourier_2_d_model import Fourier2dModel
 from src.model.fourier_renderer import FourierRenderer
+from src.model.pane_type import PaneType
 from src.controller.file_saver import FileSaver
 
 
@@ -50,6 +51,21 @@ def test_1d_inverse_renderer_keeps_negative_values():
 
     assert np.allclose(np.real(model.inverseData), data)
     assert np.array_equal(inverse_image, source_image)
+
+
+def test_1d_spectrum_renderer_uses_stem_plot():
+    """1Dスペクトルは折れ線ではなく、離散成分を表す縦棒として描画する"""
+    data = np.sin(2.0 * np.pi * np.arange(32) / 32.0)
+    model = Fourier1dModel(data)
+
+    spectrum_image = np.array(model.getImage()[PaneType.POWER_SPECTRUM])
+    line_image = np.array(FourierRenderer.imageFrom1dData(model.powerSpectrum))
+
+    assert np.array_equal(
+        spectrum_image,
+        np.array(FourierRenderer.imageFromSpectrum(model.powerSpectrum)),
+    )
+    assert not np.array_equal(spectrum_image, line_image)
 
 
 def test_2d_paint_and_erase_change_inverse():

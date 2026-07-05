@@ -118,7 +118,7 @@ class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
         パワースペクトルを全て描画する
         """
         self._powerSpectrum = np.asarray(data).copy()
-        self._setDisplayImage(_fourier_renderer().imageFrom1dData(self._powerSpectrum))
+        self._setDisplayImage(_fourier_renderer().imageFromSpectrum(self._powerSpectrum))
 
     def renderDirtyRegion(self, spectrumChange) -> None:
         """
@@ -132,7 +132,7 @@ class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
             return
 
         self._powerSpectrum[index:index + len(changedPowerSpectrum)] = changedPowerSpectrum
-        self._setDisplayImage(_fourier_renderer().imageFrom1dData(self._powerSpectrum))
+        self._setDisplayImage(_fourier_renderer().imageFromSpectrum(self._powerSpectrum))
 
     def addMouseMoveEventListener(self, callback) -> None:
         """
