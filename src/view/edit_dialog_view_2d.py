@@ -36,15 +36,15 @@ class EditDialogView2d(EditDialogView):
         self.thickness_slider.setValue(self.brushSize)
         self.thickness_spin.setValue(self.brushSize)
 
-        # value_slider は整数しか扱えないので、-10〜10 として扱う
-        # 実際の編集値は value / 10 にして -1.0〜1.0 にする
-        self.value_slider.setRange(-10, 10)
+        # value_slider は整数しか扱えないので、0〜10 として扱う。
+        # 実際の編集値は value / 10 にして、表示上の明るさ 0.0〜1.0 に対応させる。
+        self.value_slider.setRange(0, 10)
         self.value_slider.setValue(int(self.editValue * 10))
 
         # 親クラスで作られた QSpinBox を、2D用の QDoubleSpinBox に差し替える
         old_value_spin = self.value_spin
         self.value_spin = QDoubleSpinBox()
-        self.value_spin.setRange(-1.0, 1.0)
+        self.value_spin.setRange(0.0, 1.0)
         self.value_spin.setDecimals(1)
         self.value_spin.setSingleStep(0.1)
         self.value_spin.setValue(self.editValue)
@@ -117,6 +117,25 @@ class EditDialogView2d(EditDialogView):
             int((col + ((width + 1) // 2)) % width),
         )
 
+    def _paint_color_from_edit_value(self) -> list[float]:
+        """
+        UIの0.0〜1.0を、現在のスペクトル表示レンジ上の明るさとしてFFT実部値へ変換する。
+        """
+        display_value = float(np.clip(self.editValue, 0.0, 1.0))
+        value_range = getattr(self.spectrumComponent, "_displayValueRange", None)
+
+        if value_range is None and getattr(self.spectrumComponent, "_powerSpectrum", None) is not None:
+            display_array = np.log1p(np.abs(np.asarray(self.spectrumComponent._powerSpectrum, dtype=float)))
+            if display_array.ndim == 3:
+                display_array = np.mean(display_array, axis=2)
+            value_range = (float(np.min(display_array)), float(np.max(display_array)))
+
+        min_value, max_value = value_range if value_range is not None else (0.0, 1.0)
+        target_display_value = min_value + display_value * (max_value - min_value)
+        channel_power = max(0.0, float(np.expm1(target_display_value)))
+        channel_real_value = float(np.sqrt(channel_power))
+        return [channel_real_value] * 3
+
     def _edit_display_line(
         self,
         startPoint: tuple[int, int],
@@ -129,12 +148,15 @@ class EditDialogView2d(EditDialogView):
             for point in display_points
         ]
         radius = max(0, int(self.brushSize))
-        if button == Qt.MouseButton.RightButton or float(self.editValue) == 0.0:
+        if button == Qt.MouseButton.RightButton:
             self.modelContext.eraseSpectrumAtPositions(spectrum_points, radius)
             return
 
-        color = [float(self.editValue)] * 3
-        self.modelContext.paintRgbSpectrumAtPositions(spectrum_points, radius, color)
+        self.modelContext.paintRgbSpectrumAtPositions(
+            spectrum_points,
+            radius,
+            self._paint_color_from_edit_value()
+        )
 
     def _on_spectrum_pressed(self, event) -> None:
         if self.modelContext is None or self.spectrumComponent is None:
