@@ -6,6 +6,7 @@ from PIL import Image
 from src.model.fourier_transform import FourierTransform
 from src.model.fourier_1_d_model import Fourier1dModel
 from src.model.fourier_2_d_model import Fourier2dModel
+from src.model.fourier_renderer import FourierRenderer
 from src.controller.file_saver import FileSaver
 
 
@@ -37,6 +38,18 @@ def test_1d_edit_single_index_updates_inverse_and_undo():
     # Snapshotから復元して元に戻る
     model.restoreSnapshot(snap)
     assert np.allclose(model.inverseData, before)
+
+
+def test_1d_inverse_renderer_keeps_negative_values():
+    """複素型の逆変換結果を1D波形として描いても、負値が絶対値表示に変わらないことを確認する"""
+    data = np.array([0.0, 1.5, 3.0, 1.5, 0.0, -1.5, -3.0, -1.5])
+    model = Fourier1dModel(data)
+
+    source_image = np.array(FourierRenderer.imageFrom1dData(data))
+    inverse_image = np.array(FourierRenderer.imageFrom1dData(model.inverseData))
+
+    assert np.allclose(np.real(model.inverseData), data)
+    assert np.array_equal(inverse_image, source_image)
 
 
 def test_2d_paint_and_erase_change_inverse():

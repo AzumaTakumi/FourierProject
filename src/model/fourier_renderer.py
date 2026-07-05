@@ -64,10 +64,9 @@ class FourierRenderer(object):
         """
 
         # SAFE CODE AREA ˅
-        # 描画用の数値配列に変換する（複素数は絶対値、NaN/Inf は数値化）。
+        # 1D波形表示ではIFFT結果の符号を保つため、複素数は実部として描画する。
         array = np.asarray(data)
-        array = {True: np.abs, False: np.real}[np.iscomplexobj(array)](array)
-        values = np.nan_to_num(array.astype(float, copy=False)).reshape(-1)
+        values = np.nan_to_num(np.real(array).astype(float, copy=False)).reshape(-1)
 
         # 1D表示用の固定サイズで、白背景のグレースケール画像を作成する。
         width = 512
