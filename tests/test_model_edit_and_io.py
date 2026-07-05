@@ -6,6 +6,8 @@ from PIL import Image
 from src.model.fourier_transform import FourierTransform
 from src.model.fourier_1_d_model import Fourier1dModel
 from src.model.fourier_2_d_model import Fourier2dModel
+from src.model.fourier_renderer import FourierRenderer
+from src.model.pane_type import PaneType
 from src.controller.file_saver import FileSaver
 
 
@@ -37,6 +39,33 @@ def test_1d_edit_single_index_updates_inverse_and_undo():
     # Snapshotから復元して元に戻る
     model.restoreSnapshot(snap)
     assert np.allclose(model.inverseData, before)
+
+
+def test_1d_inverse_renderer_keeps_negative_values():
+    """複素型の逆変換結果を1D波形として描いても、負値が絶対値表示に変わらないことを確認する"""
+    data = np.array([0.0, 1.5, 3.0, 1.5, 0.0, -1.5, -3.0, -1.5])
+    model = Fourier1dModel(data)
+
+    source_image = np.array(FourierRenderer.imageFrom1dData(data))
+    inverse_image = np.array(FourierRenderer.imageFrom1dData(model.inverseData))
+
+    assert np.allclose(np.real(model.inverseData), data)
+    assert np.array_equal(inverse_image, source_image)
+
+
+def test_1d_spectrum_renderer_uses_stem_plot():
+    """1Dスペクトルは折れ線ではなく、離散成分を表す縦棒として描画する"""
+    data = np.sin(2.0 * np.pi * np.arange(32) / 32.0)
+    model = Fourier1dModel(data)
+
+    spectrum_image = np.array(model.getImage()[PaneType.POWER_SPECTRUM])
+    line_image = np.array(FourierRenderer.imageFrom1dData(model.powerSpectrum))
+
+    assert np.array_equal(
+        spectrum_image,
+        np.array(FourierRenderer.imageFromSpectrum(model.powerSpectrum)),
+    )
+    assert not np.array_equal(spectrum_image, line_image)
 
 
 def test_2d_paint_and_erase_change_inverse():

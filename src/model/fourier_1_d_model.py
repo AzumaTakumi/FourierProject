@@ -61,11 +61,11 @@ class Fourier1dModel(FourierModel):
         self.inverseData: np.ndarray | None = None
 
         # SAFE CODE AREA ˅
-        # 1Dモデルの全表示領域は折れ線波形として描画する。
+        # 元信号と逆変換は折れ線、スペクトルは離散成分が分かる縦棒として描画する。
         self.imageRenderers = {
             PaneType.SOURCE_DATA: self.renderer.imageFrom1dData,
-            PaneType.POWER_SPECTRUM: self.renderer.imageFrom1dData,
-            PaneType.INTERACTIVE_POWER_SPECTRUM: self.renderer.imageFrom1dData,
+            PaneType.POWER_SPECTRUM: self.renderer.imageFromSpectrum,
+            PaneType.INTERACTIVE_POWER_SPECTRUM: self.renderer.imageFromSpectrum,
             PaneType.INVERSE_DATA: self.renderer.imageFrom1dData,
         }
         # 通常のデータ設定経路を通してFFTと逆変換まで初期化する。

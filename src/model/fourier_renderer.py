@@ -64,10 +64,9 @@ class FourierRenderer(object):
         """
 
         # SAFE CODE AREA ˅
-        # 描画用の数値配列に変換する（複素数は絶対値、NaN/Inf は数値化）。
+        # 1D波形表示ではIFFT結果の符号を保つため、複素数は実部として描画する。
         array = np.asarray(data)
-        array = {True: np.abs, False: np.real}[np.iscomplexobj(array)](array)
-        values = np.nan_to_num(array.astype(float, copy=False)).reshape(-1)
+        values = np.nan_to_num(np.real(array).astype(float, copy=False)).reshape(-1)
 
         # 1D表示用の固定サイズで、白背景のグレースケール画像を作成する。
         width = 512
@@ -127,6 +126,68 @@ class FourierRenderer(object):
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.imageFrom1dData ˄
 
+    @classmethod
+    def imageFrom1dStemData(cls, data: np.ndarray) -> Image.Image:
+        """
+        1次元スペクトルを離散成分として縦棒表示する。
+        """
+
+        array = np.asarray(data)
+        values = np.nan_to_num(np.real(array).astype(float, copy=False)).reshape(-1)
+
+        width = 512
+        height = 256
+        image = Image.new("L", (width, height), 255)
+        draw = ImageDraw.Draw(image)
+
+        margin_left = 48
+        margin_right = 12
+        margin_top = 12
+        margin_bottom = 26
+        plot_left = margin_left
+        plot_top = margin_top
+        plot_right = max(plot_left + 1, width - margin_right - 1)
+        plot_bottom = max(plot_top + 1, height - margin_bottom - 1)
+        plot_width = plot_right - plot_left + 1
+        plot_height = plot_bottom - plot_top + 1
+
+        min_value = min(0.0, float(np.min(values)))
+        max_value = max(0.0, float(np.max(values)))
+        span = max_value - min_value
+        flat_mask = float(abs(span) <= 1.0e-12)
+        safe_span = span + flat_mask
+
+        normalized = (values - min_value) / safe_span
+        y_values = (1.0 - normalized) * (plot_height - 1) + plot_top
+        baseline_normalized = (0.0 - min_value) / safe_span
+        baseline = int(round((1.0 - baseline_normalized) * (plot_height - 1) + plot_top))
+
+        draw.rectangle((plot_left, plot_top, plot_right, plot_bottom), outline=180, width=1)
+        x_ticks = 5
+        y_ticks = 4
+        for i in range(x_ticks + 1):
+            tick_ratio = i / x_ticks
+            x = int(round(plot_left + tick_ratio * (plot_width - 1)))
+            draw.line((x, plot_bottom, x, plot_bottom + 4), fill=120, width=1)
+            sample_index = int(round(tick_ratio * (values.size - 1)))
+            draw.text((x - 10, plot_bottom + 6), str(sample_index), fill=120)
+
+        for i in range(y_ticks + 1):
+            tick_ratio = i / y_ticks
+            y = int(round(plot_top + tick_ratio * (plot_height - 1)))
+            draw.line((plot_left - 4, y, plot_left, y), fill=120, width=1)
+            label_value = max_value - (span * tick_ratio)
+            draw.text((4, y - 6), f"{label_value:.2g}", fill=120)
+
+        x_values = np.linspace(plot_left, plot_right, num=values.size)
+        for x, y in zip(x_values, y_values):
+            px = int(round(x))
+            py = int(round(y))
+            draw.line((px, baseline, px, py), fill=0, width=2)
+            draw.ellipse((px - 2, py - 2, px + 2, py + 2), fill=0)
+
+        return image
+
 
     # FIXED CODE AREA: method.imageFromSpectrum ˅
     @classmethod
@@ -137,11 +198,11 @@ class FourierRenderer(object):
 
         # SAFE CODE AREA ˅
         array = cls.spectrumDisplayArray(spectrum)
-        # 1Dは折れ線描画、2D/3Dは画像化の経路に振り分ける。
-        render_mode = {1: "line"}.get(array.ndim, "image")
-        line_renderer = lambda: cls.imageFrom1dData(array)
+        # 1Dスペクトルは離散成分として縦棒描画、2D/3Dは画像化の経路に振り分ける。
+        render_mode = {1: "stem"}.get(array.ndim, "image")
+        stem_renderer = lambda: cls.imageFrom1dStemData(array)
         image_renderer = lambda: Image.fromarray(cls.normalize(np.squeeze(array), valueRange), "L")
-        return {"line": line_renderer, "image": image_renderer}[render_mode]()
+        return {"stem": stem_renderer, "image": image_renderer}[render_mode]()
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.imageFromSpectrum ˄
 

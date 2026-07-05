@@ -220,6 +220,20 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method.restoreSpectrumBetweenIndexes ˄
 
 
+    def scaleSpectrumBetweenIndexes(self, startIndex: int, endIndex: int, scale: float) -> None:
+        """
+        1次元スペクトルの開始インデックスから終了インデックスまでを、元スペクトル値に指定倍率を掛けた値へ変更する。
+        """
+        indices = self._indexLine(startIndex, endIndex)
+        value_scale = float(scale)
+        self._executeCommandInOpenEdit(EditSpectrumValuesAtIndexesCommand(
+            self.currentModel,
+            indices,
+            self.currentModel.realPart[indices] * value_scale,
+            self.currentModel.imaginaryPart[indices] * value_scale,
+        ))
+
+
     # GENERATED CODE AREA: method.eraseSpectrumLineAtPosition ˅
     def eraseSpectrumLineAtPosition(self, startRow: int, startCol: int, endRow: int, endCol: int, radius: int) -> None:
         """
