@@ -27,6 +27,21 @@ def main() -> int:
     edit_dialog_1d = None
     edit_dialog_2d = None
 
+    def close_edit_dialogs():
+        nonlocal edit_dialog_1d, edit_dialog_2d
+
+        for dialog in (edit_dialog_1d, edit_dialog_2d):
+            if dialog is not None:
+                dialog.close()
+                dialog.deleteLater()
+
+        edit_dialog_1d = None
+        edit_dialog_2d = None
+
+    def refresh_after_file_input():
+        close_edit_dialogs()
+        view.display(file_loader.model)
+
     def open_edit_dialog():
         nonlocal edit_dialog_1d, edit_dialog_2d
 
@@ -59,7 +74,7 @@ def main() -> int:
         fileLoader=file_loader,
         fileSaver=file_saver,
         openEditViewCallback=open_edit_dialog,
-        refreshViewCallback=lambda: view.display(file_loader.model),
+        refreshViewCallback=refresh_after_file_input,
     )
 
     view.setContextMenuController(context_menu_controller)
