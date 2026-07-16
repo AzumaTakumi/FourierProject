@@ -125,7 +125,8 @@ class FourierModelContext(object):
         self.undoStack.clear()
         self.redoStack.clear()
         self.currentCompositeCommand = None
-        self._notifySpectrumChanged(self._createFullSpectrumChangeForCommand(None))
+        # Model差し替えではView側の1D/2Dコンポーネントも作り直す必要があるため、
+        # dirty region通知ではなくファイル入力後の全体再表示に任せる。
         # SAFE CODE AREA ˄
 
 
