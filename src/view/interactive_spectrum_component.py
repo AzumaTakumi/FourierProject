@@ -260,8 +260,69 @@ class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
             self.renderAll(spectrumChange.changedPowerSpectrum)
             return
 
+        # 変更された矩形領域を内部のパワースペクトル配列へ反映する。
         self._powerSpectrum[y:y + height, x:x + width] = spectrumChange.changedPowerSpectrum
-        self._setDisplayImage(self._renderSpectrumImage())
+        spectrum_height, spectrum_width = self._powerSpectrum.shape[:2]
+        row_shift = spectrum_height // 2
+        col_shift = spectrum_width // 2
+        row_pivot = spectrum_height - row_shift
+        col_pivot = spectrum_width - col_shift
+
+        # 表示画像はfftshift後の座標になるため、折り返し位置をまたぐ更新領域は分割する。
+        row_points = [y]
+        col_points = [x]
+        if y < row_pivot < y + height:
+            row_points.append(row_pivot)
+        if x < col_pivot < x + width:
+            col_points.append(col_pivot)
+        row_points.append(y + height)
+        col_points.append(x + width)
+
+        for source_row_start, source_row_stop in zip(row_points, row_points[1:]):
+            for source_col_start, source_col_stop in zip(col_points, col_points[1:]):
+                local_y = source_row_start - y
+                local_x = source_col_start - x
+                region_spectrum = spectrumChange.changedPowerSpectrum[
+                    local_y:local_y + source_row_stop - source_row_start,
+                    local_x:local_x + source_col_stop - source_col_start
+                ]
+
+                # 分割した領域だけを表示用の濃淡画像へ変換する。
+                region_array = np.asarray(region_spectrum)
+                region_array = {True: np.abs, False: np.real}[np.iscomplexobj(region_array)](region_array)
+                region_array = np.nan_to_num(region_array.astype(float, copy=False))
+                region_array = np.log1p(np.abs(region_array))
+                display_array = {3: lambda value: np.mean(value, axis=2)}.get(
+                    region_array.ndim,
+                    lambda value: value,
+                )(region_array)
+                region_image = Image.fromarray(
+                    _fourier_renderer().normalize(display_array, self._displayValueRange),
+                    "L"
+                )
+
+                # 元スペクトル上の座標を、fftshift後の表示画像上の貼り付け位置へ変換する。
+                display_x = (source_col_start + col_shift) % spectrum_width
+                display_y = (source_row_start + row_shift) % spectrum_height
+                self._displayImage.paste(region_image, (display_x, display_y))
+
+                # 既存pixmapが使える場合は変更部分だけ描画し、使えない場合は全体を作り直す。
+                pixmap = self.pixmap()
+                if (
+                    pixmap is None
+                    or pixmap.isNull()
+                    or pixmap.width() != self._displayImage.width
+                    or pixmap.height() != self._displayImage.height
+                ):
+                    pixmap = QPixmap.fromImage(ImageQt(self._displayImage))
+                else:
+                    from PyQt6.QtGui import QPainter
+                    pixmap = QPixmap(pixmap)
+                    painter = QPainter(pixmap)
+                    painter.drawImage(display_x, display_y, ImageQt(region_image))
+                    painter.end()
+                self.setPixmap(pixmap)
+                self.update(display_x, display_y, region_image.width, region_image.height)
 
     def addMouseMoveEventListener(self, callback) -> None:
         """
