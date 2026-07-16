@@ -6,6 +6,7 @@ from .spectrum_edit_command import SpectrumEditCommand
 # GENERATED CODE AREA: module.imports ˄
 
 # SAFE CODE AREA ˅
+import numpy as np
 # SAFE CODE AREA ˄
 
 class CompositeSpectrumEditCommand(SpectrumEditCommand):
@@ -66,11 +67,109 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        # Undo時は最後に行った編集から逆順に戻し、ドラッグ前の状態へ戻す。
-        for command in reversed(self.commands):
-            command.undo()
+        {
+            True: lambda: None,
+            False: self._undoCommandsOneByOne,
+        }[self._undo2dCommandsAsSingleRestore()]()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
+
+    def _undoCommandsOneByOne(self) -> None:
+        """
+        子Commandを実行時と逆順に取り消す。
+        """
+
+        for command in reversed(self.commands):
+            command.undo()
+
+    def _undo2dCommandsAsSingleRestore(self) -> bool:
+        """
+        2D編集Command群を1つの矩形復元としてUndoする。
+        """
+
+        return {
+            True: self._restore2dCommandsAsSingleRect,
+            False: lambda: False,
+        }[self._canUndo2dCommandsAsSingleRestore()]()
+
+    def _restore2dCommandsAsSingleRect(self) -> bool:
+        """
+        2D編集Command群のUndoデータを1つの矩形へ統合して復元する。
+        """
+
+        commands = self.commands
+        model = commands[0].model
+        row_start = min(command.rect[0] for command in commands)
+        row_stop = max(command.rect[1] for command in commands)
+        col_start = min(command.rect[2] for command in commands)
+        col_stop = max(command.rect[3] for command in commands)
+
+        old_real, old_imaginary = model.getInteractiveSpectrumAtRect(
+            row_start,
+            row_stop,
+            col_start,
+            col_stop,
+        )
+        filled = np.zeros(old_real.shape[:2], dtype=bool)
+
+        for command in commands:
+            r0, r1, c0, c1 = command.rect
+            relative_rows = slice(r0 - row_start, r1 - row_start)
+            relative_cols = slice(c0 - col_start, c1 - col_start)
+            filled_region = filled[relative_rows, relative_cols]
+            missing = ~filled_region
+
+            real_region = old_real[relative_rows, relative_cols]
+            imaginary_region = old_imaginary[relative_rows, relative_cols]
+            real_region[missing] = np.asarray(command.oldRealPart)[missing]
+            imaginary_region[missing] = np.asarray(command.oldImaginaryPart)[missing]
+            filled_region[missing] = True
+
+        model.restoreInteractiveSpectrumAtRect(
+            row_start,
+            row_stop,
+            col_start,
+            col_stop,
+            old_real,
+            old_imaginary,
+        )
+        return True
+
+    def _canUndo2dCommandsAsSingleRestore(self) -> bool:
+        """
+        現在の子Command群が2D矩形復元に統合できるかを判定する。
+        """
+
+        return bool(self.commands) and self._commandsShare2dRestoreModel()
+
+    def _commandsShare2dRestoreModel(self) -> bool:
+        """
+        子Command群が同じ2D Modelの矩形復元Commandであるかを判定する。
+        """
+
+        model = getattr(self.commands[0], "model", None)
+        return (
+            model is not None
+            and hasattr(model, "restoreInteractiveSpectrumAtRect")
+            and all(
+                self._is2dRectRestoreCommand(command, model)
+                for command in self.commands
+            )
+        )
+
+    def _is2dRectRestoreCommand(self, command: SpectrumEditCommand, model) -> bool:
+        """
+        子Commandが矩形復元へ統合できる2D編集Commandであるかを判定する。
+        """
+
+        rect = getattr(command, "rect", None)
+        return (
+            getattr(command, "model", None) is model
+            and rect is not None
+            and len(rect) == 4
+            and np.asarray(getattr(command, "oldRealPart", [])).size > 0
+            and np.asarray(getattr(command, "oldImaginaryPart", [])).size > 0
+        )
 
 
     # GENERATED CODE AREA: method.description ˅
