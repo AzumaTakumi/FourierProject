@@ -67,22 +67,35 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         """
 
         # SAFE CODE AREA ˅
-        if self._undo2dCommandsAsSingleRestore():
-            return
-
-        # Undo時は最後に行った編集から逆順に戻し、ドラッグ前の状態へ戻す。
-        for command in reversed(self.commands):
-            command.undo()
+        {
+            True: lambda: None,
+            False: self._undoCommandsOneByOne,
+        }[self._undo2dCommandsAsSingleRestore()]()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.undo ˄
+
+    def _undoCommandsOneByOne(self) -> None:
+        """
+        子Commandを実行時と逆順に取り消す。
+        """
+
+        for command in reversed(self.commands):
+            command.undo()
 
     def _undo2dCommandsAsSingleRestore(self) -> bool:
         """
         2D編集Command群を1つの矩形復元としてUndoする。
         """
 
-        if not self._canUndo2dCommandsAsSingleRestore():
-            return False
+        return {
+            True: self._restore2dCommandsAsSingleRect,
+            False: lambda: False,
+        }[self._canUndo2dCommandsAsSingleRestore()]()
+
+    def _restore2dCommandsAsSingleRect(self) -> bool:
+        """
+        2D編集Command群のUndoデータを1つの矩形へ統合して復元する。
+        """
 
         commands = self.commands
         model = commands[0].model
@@ -127,33 +140,36 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
         現在の子Command群が2D矩形復元に統合できるかを判定する。
         """
 
-        if len(self.commands) == 0:
-            return False
+        return bool(self.commands) and self._commandsShare2dRestoreModel()
+
+    def _commandsShare2dRestoreModel(self) -> bool:
+        """
+        子Command群が同じ2D Modelの矩形復元Commandであるかを判定する。
+        """
 
         model = getattr(self.commands[0], "model", None)
-        if model is None or not hasattr(model, "restoreInteractiveSpectrumAtRect"):
-            return False
-
-        required_attributes = (
-            "model",
-            "rect",
-            "oldRealPart",
-            "oldImaginaryPart",
+        return (
+            model is not None
+            and hasattr(model, "restoreInteractiveSpectrumAtRect")
+            and all(
+                self._is2dRectRestoreCommand(command, model)
+                for command in self.commands
+            )
         )
-        for command in self.commands:
-            if getattr(command, "model", None) is not model:
-                return False
-            if not all(hasattr(command, attribute) for attribute in required_attributes):
-                return False
-            rect = getattr(command, "rect", None)
-            if rect is None or len(rect) != 4:
-                return False
-            if np.asarray(command.oldRealPart).size == 0:
-                return False
-            if np.asarray(command.oldImaginaryPart).size == 0:
-                return False
 
-        return True
+    def _is2dRectRestoreCommand(self, command: SpectrumEditCommand, model) -> bool:
+        """
+        子Commandが矩形復元へ統合できる2D編集Commandであるかを判定する。
+        """
+
+        rect = getattr(command, "rect", None)
+        return (
+            getattr(command, "model", None) is model
+            and rect is not None
+            and len(rect) == 4
+            and np.asarray(getattr(command, "oldRealPart", [])).size > 0
+            and np.asarray(getattr(command, "oldImaginaryPart", [])).size > 0
+        )
 
 
     # GENERATED CODE AREA: method.description ˅
