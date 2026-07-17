@@ -15,9 +15,9 @@ class Fourier1dModel(FourierModel):
     # GENERATED CODE AREA: class.header ˅
     """
     1次元信号データを扱うモデルである。
-    
+
     波形やサンプル信号などの1次元配列を sourceData として保持し、フーリエ変換結果の実部・虚部・スペクトル、編集用スペクトル、逆変換結果を管理する。
-    
+
     元データが設定されると、FourierTransform によってフーリエ変換を行い、右上のパワースペクトル表示と右下の編集用スペクトル表示を生成する。ユーザーが周波数軸上の成分をクリックして有効・無効を切り替えると、編集用スペクトルを更新し、そのたびに逆フーリエ変換を行って左下の復元波形を更新する。
     """
 
@@ -191,16 +191,16 @@ class Fourier1dModel(FourierModel):
     def editSpectrumValuesAtIndexes(self, indexes: list[int], realParts: np.ndarray, imaginaryParts: np.ndarray) -> None:
         # SAFE CODE AREA ˅
         # 複数indexをまとめて書き換え、逆変換は最後に1回だけ行う。
-        index_array = np.asarray(indexes, dtype=int)
-        real_values = np.asarray(realParts, dtype=float)
-        imaginary_values = np.asarray(imaginaryParts, dtype=float)
-        self.interactiveRealPart[index_array] = real_values
-        self.interactiveImaginaryPart[index_array] = imaginary_values
-        self.interactivePowerSpectrum[index_array] = np.square(real_values) + np.square(imaginary_values)
+        indexArray = np.asarray(indexes, dtype=int)
+        realValues = np.asarray(realParts, dtype=float)
+        imaginaryValues = np.asarray(imaginaryParts, dtype=float)
+        self.interactiveRealPart[indexArray] = realValues
+        self.interactiveImaginaryPart[indexArray] = imaginaryValues
+        self.interactivePowerSpectrum[indexArray] = np.square(realValues) + np.square(imaginaryValues)
         self.computeInverseData()
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.editSpectrumValuesAtIndexes ˄
-    
+
 
     # FIXED CODE AREA: method.getInteractiveSpectrumAtIndex ˅
     def getInteractiveSpectrumAtIndex(self, index: int) -> tuple[float, float]:

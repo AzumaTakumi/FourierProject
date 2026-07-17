@@ -12,11 +12,11 @@ class FourierTransform(object):
     # GENERATED CODE AREA: class.header ˅
     """
     フーリエ変換および逆フーリエ変換の計算処理を担当するクラスである。
-    
+
     FFT用の入力信号 fftInputSignal、FFT結果 fftResultSpectrum、逆変換用の入力スペクトル ifftInputSpectrum、逆変換結果 ifftResultSignal を保持する。transform により入力信号からスペクトルを計算し、inverseTransform によりスペクトルから信号または画像を復元する。
-    
+
     また、実部・虚部・振幅スペクトル・パワースペクトル・正規化スペクトルなど、フーリエ変換結果から派生するデータを取得する操作も持つ。周波数スペクトルを中心に移動する中心シフト処理もこのクラスが担当する。
-    
+
     このクラスはアプリ全体の表示状態を管理するのではなく、直近の計算対象と計算結果を保持する計算エンジンとして扱う。
     """
 
@@ -78,7 +78,7 @@ class FourierTransform(object):
     # GENERATED CODE AREA: method.transform ˅
     def transform(self) -> np.ndarray:
         """
-        内部の fft_input_signal にFFTを適用し、結果を fft_result_spectrum として保持して返す。
+        内部の fftInputSignal にFFTを適用し、結果を fftResultSpectrum として保持して返す。
         1次元データ (shape: (N,) または (N, C)) と
         2次元データ (shape: (H, W) または (H, W, C)) に対応。
         """
@@ -87,7 +87,7 @@ class FourierTransform(object):
         if self.fftInputSignal is None:
             raise ValueError("FFT input signal has not been set.")
 
-        axes = self._get_spatial_axes(self.fftInputSignal)
+        axes = self._getSpatialAxes(self.fftInputSignal)
         self.fftResultSpectrum = np.fft.fftn(self.fftInputSignal, axes=axes)
         return self.fftResultSpectrum
         # SAFE CODE AREA ˄
@@ -97,7 +97,7 @@ class FourierTransform(object):
     # GENERATED CODE AREA: method.realPart ˅
     def realPart(self) -> np.ndarray:
         """
-        内部の fft_result_spectrum から実部配列を取り出して返す。
+        内部の fftResultSpectrum から実部配列を取り出して返す。
         """
 
         # SAFE CODE AREA ˅
@@ -111,7 +111,7 @@ class FourierTransform(object):
     # GENERATED CODE AREA: method.imaginaryPart ˅
     def imaginaryPart(self) -> np.ndarray:
         """
-        内部の fft_result_spectrum から虚部配列を取り出して返す。
+        内部の fftResultSpectrum から虚部配列を取り出して返す。
         """
 
         # SAFE CODE AREA ˅
@@ -125,7 +125,7 @@ class FourierTransform(object):
     # GENERATED CODE AREA: method.amplitudeSpectrum ˅
     def amplitudeSpectrum(self) -> np.ndarray:
         """
-        内部の fft_result_spectrum から振幅スペクトル（√(実部^2＋虚部^2)）を計算して返す。
+        内部の fftResultSpectrum から振幅スペクトル（√(実部^2＋虚部^2)）を計算して返す。
         """
 
         # SAFE CODE AREA ˅
@@ -144,10 +144,10 @@ class FourierTransform(object):
 
         # SAFE CODE AREA ˅
         spectrum = self.amplitudeSpectrum()
-        max_value = float(np.max(spectrum))
-        if max_value <= 0.0:
+        maxValue = float(np.max(spectrum))
+        if maxValue <= 0.0:
             return np.zeros_like(spectrum, dtype=float)
-        return spectrum.astype(float) / max_value
+        return spectrum.astype(float) / maxValue
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.normalizedSpectrum ˄
 
@@ -160,10 +160,10 @@ class FourierTransform(object):
 
         # SAFE CODE AREA ˅
         spectrum = np.log1p(self.amplitudeSpectrum())
-        max_value = float(np.max(spectrum))
-        if max_value <= 0.0:
+        maxValue = float(np.max(spectrum))
+        if maxValue <= 0.0:
             return np.zeros_like(spectrum, dtype=float)
-        return spectrum.astype(float) / max_value
+        return spectrum.astype(float) / maxValue
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.normalizedLogSpectrum ˄
 
@@ -171,7 +171,7 @@ class FourierTransform(object):
     # GENERATED CODE AREA: method.powerSpectrum ˅
     def powerSpectrum(self) -> np.ndarray:
         """
-        内部の fft_result_spectrum からパワースペクトル（実部^2＋虚部^2）を計算して返す。
+        内部の fftResultSpectrum からパワースペクトル（実部^2＋虚部^2）を計算して返す。
         """
 
         # SAFE CODE AREA ˅
@@ -190,10 +190,10 @@ class FourierTransform(object):
 
         # SAFE CODE AREA ˅
         spectrum = self.powerSpectrum()
-        max_value = float(np.max(spectrum))
-        if max_value <= 0.0:
+        maxValue = float(np.max(spectrum))
+        if maxValue <= 0.0:
             return np.zeros_like(spectrum, dtype=float)
-        return spectrum.astype(float) / max_value
+        return spectrum.astype(float) / maxValue
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.normalizedPowerSpectrum ˄
 
@@ -206,10 +206,10 @@ class FourierTransform(object):
 
         # SAFE CODE AREA ˅
         spectrum = np.log1p(self.powerSpectrum())
-        max_value = float(np.max(spectrum))
-        if max_value <= 0.0:
+        maxValue = float(np.max(spectrum))
+        if maxValue <= 0.0:
             return np.zeros_like(spectrum, dtype=float)
-        return spectrum.astype(float) / max_value
+        return spectrum.astype(float) / maxValue
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.normalizedLogPowerSpectrum ˄
 
@@ -217,7 +217,7 @@ class FourierTransform(object):
     # GENERATED CODE AREA: method.shiftSpectrum ˅
     def shiftSpectrum(self) -> np.ndarray:
         """
-        内部の fft_result_spectrum のゼロ周波数成分を配列の中央に移動させて返す。
+        内部の fftResultSpectrum のゼロ周波数成分を配列の中央に移動させて返す。
         """
 
         # SAFE CODE AREA ˅
@@ -231,7 +231,7 @@ class FourierTransform(object):
     # GENERATED CODE AREA: method.inverseTransform ˅
     def inverseTransform(self) -> np.ndarray:
         """
-        内部の ifft_input_spectrum にFFTを適用し、結果を ifft_result_signal として保持して返す。
+        内部の ifftInputSpectrum にFFTを適用し、結果を ifftResultSignal として保持して返す。
         1次元データ (shape: (N,) または (N, C)) と
         2次元データ (shape: (H, W) または (H, W, C)) に対応。
         """
@@ -239,7 +239,7 @@ class FourierTransform(object):
         # SAFE CODE AREA ˅
         if self.ifftInputSpectrum is None:
             raise ValueError("IFFT input spectrum has not been set.")
-        axes = self._get_spatial_axes(self.ifftInputSpectrum)
+        axes = self._getSpatialAxes(self.ifftInputSpectrum)
         result = np.fft.ifftn(self.ifftInputSpectrum, axes=axes)
         self.ifftResultSignal = result
         return self.ifftResultSignal
@@ -247,7 +247,7 @@ class FourierTransform(object):
     # GENERATED CODE AREA: method.inverseTransform ˄
 
     @staticmethod
-    def _get_spatial_axes(data: np.ndarray) -> tuple[int, ...]:
+    def _getSpatialAxes(data: np.ndarray) -> tuple[int, ...]:
         """
         データの次元数からFFTをかける空間軸を返す。
         チャンネル軸（最終軸）は除外する。

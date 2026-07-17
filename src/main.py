@@ -15,70 +15,85 @@ def main() -> int:
     app = QApplication(sys.argv)
 
     view = MainWindowView()
-    file_loader = FileLoader(view)
+    fileLoader = FileLoader(view)
 
-    if not file_loader.start():
+    if not fileLoader.start():
             return 0
 
-    view.display(file_loader.model)
+    view.display(fileLoader.model)
 
-    file_saver = FileSaver(view)
+    fileSaver = FileSaver(view)
 
-    edit_dialog_1d = None
-    edit_dialog_2d = None
+    editDialog1d = None
+    editDialog2d = None
 
-    def open_edit_dialog():
-        nonlocal edit_dialog_1d, edit_dialog_2d
+    def closeEditDialogs():
+        nonlocal editDialog1d, editDialog2d
 
-        spectrum_component = file_loader.model.getSpectrumComponent()
-        data = file_loader.model.getData()
+        for dialog in (editDialog1d, editDialog2d):
+            if dialog is not None:
+                dialog.close()
+                dialog.deleteLater()
 
-        spectrum_component.renderAll(
+        editDialog1d = None
+        editDialog2d = None
+
+    def refreshAfterFileInput():
+        closeEditDialogs()
+        view.display(fileLoader.model)
+
+    def openEditDialog():
+        nonlocal editDialog1d, editDialog2d
+
+        spectrumComponent = fileLoader.model.getSpectrumComponent()
+        data = fileLoader.model.getData()
+
+        spectrumComponent.renderAll(
             np.array(data[PaneType.INTERACTIVE_POWER_SPECTRUM])
         )
 
-        if file_loader.model.is1dModel():
-            edit_dialog_1d = EditDialogView1d(
-                modelContext=file_loader.model,
-                spectrum_component=spectrum_component,
+        if fileLoader.model.is1dModel():
+            editDialog1d = EditDialogView1d(
+                modelContext=fileLoader.model,
+                spectrumComponent=spectrumComponent,
             )
-            edit_dialog_1d.show()
+            editDialog1d.show()
             return
 
-        if file_loader.model.is2dModel():
-            edit_dialog_2d = EditDialogView2d(
-                modelContext=file_loader.model,
-                spectrumComponent=spectrum_component,
+        if fileLoader.model.is2dModel():
+            editDialog2d = EditDialogView2d(
+                modelContext=fileLoader.model,
+                spectrumComponent=spectrumComponent,
             )
-            edit_dialog_2d.show()
+            editDialog2d.show()
             return
 
 
-    context_menu_controller = ContextMenuController(
+    contextMenuController = ContextMenuController(
         parent=view,
-        fileLoader=file_loader,
-        fileSaver=file_saver,
-        openEditViewCallback=open_edit_dialog,
-        refreshViewCallback=lambda: view.display(file_loader.model),
+        fileLoader=fileLoader,
+        fileSaver=fileSaver,
+        openEditViewCallback=openEditDialog,
+        refreshViewCallback=refreshAfterFileInput,
     )
 
-    view.setContextMenuController(context_menu_controller)
+    view.setContextMenuController(contextMenuController)
 
 
-    def on_spectrum_changed(change):
-        images = file_loader.model.getImage()
+    def onSpectrumChanged(change):
+        images = fileLoader.model.getImage()
 
         if view.getSpectrumComponent() is not None:
             view.getSpectrumComponent().renderDirtyRegion(change)
             view.updateRestoredDataImage(images[PaneType.INVERSE_DATA])
 
-        if edit_dialog_1d is not None and edit_dialog_1d.spectrum_component is not None:
-            edit_dialog_1d.spectrum_component.renderDirtyRegion(change)
+        if editDialog1d is not None and editDialog1d.spectrumComponent is not None:
+            editDialog1d.spectrumComponent.renderDirtyRegion(change)
 
-        if edit_dialog_2d is not None and edit_dialog_2d.spectrumComponent is not None:
-            edit_dialog_2d.spectrumComponent.renderDirtyRegion(change)
+        if editDialog2d is not None and editDialog2d.spectrumComponent is not None:
+            editDialog2d.spectrumComponent.renderDirtyRegion(change)
 
-    file_loader.model.spectrumChangedListener = on_spectrum_changed
+    fileLoader.model.spectrumChangedListener = onSpectrumChanged
 
     return app.exec()
 

@@ -29,13 +29,13 @@ class FileSaver(FileController):
         ユーザーにファイル保存ダイアログを表示し、MainWindowViewから左下の復元画像を取得して保存する。
         """
         # 1. 保存対象の画像（左下の復元画像）をViewから取得
-        restored_image = view._restoredDataImage
-        if restored_image is None:
+        restoredImage = view._restoredDataImage
+        if restoredImage is None:
             QMessageBox.warning(view, "警告", "保存する復元画像がありません。")
             return
 
         # 2. ファイル保存用のダイアログを開く（PNGとJPGに対応）
-        file_path, _ = QFileDialog.getSaveFileName(
+        filePath, _ = QFileDialog.getSaveFileName(
             view,
             "復元画像を保存",
             "",
@@ -43,9 +43,9 @@ class FileSaver(FileController):
         )
 
         # 3. ユーザーがキャンセルしなかった場合、保存処理を実行
-        if file_path:
+        if filePath:
             try:
-                self.saveSignalData(file_path, restored_image)
+                self.saveSignalData(filePath, restoredImage)
                 QMessageBox.information(view, "完了", "画像を正常に保存しました")
             except Exception as e:
                 QMessageBox.critical(view, "エラー", f"画像の保存に失敗しました:\n{e}")

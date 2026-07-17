@@ -17,9 +17,9 @@ class FourierModel(object):
     # GENERATED CODE AREA: class.header ˅
     """
     1次元モデルと2次元モデルに共通する抽象的なフーリエモデルである。
-    
+
     Fourier1dModel と Fourier2dModel の親クラスとして、計算処理を担当する FourierTransform を保持し、表示用データの取得、画像データの取得、編集用スペクトルのリセットなど、1Dと2Dに共通する操作を定義する。
-    
+
     このクラス自体は具体的な元データの次元を持たず、1次元固有・2次元固有の処理は子クラスで実装する。
     """
 
@@ -69,8 +69,8 @@ class FourierModel(object):
 
         # SAFE CODE AREA ˅
         # FourierTransformに元データを渡し、直近のFFT結果を計算させる。
-        source_data = self.sourceData
-        self.engine.setFftInputSignal(source_data)
+        sourceData = self.sourceData
+        self.engine.setFftInputSignal(sourceData)
         self.engine.transform()
         # FFT結果の実部・虚部を分けて保持し、パワーは実部^2+虚部^2で計算する。
         self.realPart = self.engine.realPart()
@@ -92,13 +92,13 @@ class FourierModel(object):
 
         # SAFE CODE AREA ˅
         # 子クラスが持つFFT結果を共通処理で扱えるよう、属性名で取得する。
-        real_part = self.realPart
-        imaginary_part = self.imaginaryPart
-        power_spectrum = self.powerSpectrum
+        realPart = self.realPart
+        imaginaryPart = self.imaginaryPart
+        powerSpectrum = self.powerSpectrum
         # 編集用スペクトルを元スペクトルのコピーへ戻し、以降の編集が元スペクトルを変更しないようにする。
-        self.interactiveRealPart = np.copy(real_part)
-        self.interactiveImaginaryPart = np.copy(imaginary_part)
-        self.interactivePowerSpectrum = np.copy(power_spectrum)
+        self.interactiveRealPart = np.copy(realPart)
+        self.interactiveImaginaryPart = np.copy(imaginaryPart)
+        self.interactivePowerSpectrum = np.copy(powerSpectrum)
         # リセット後のスペクトルから復元データを作り直す。
         self.computeInverseData()
         # SAFE CODE AREA ˄
@@ -173,10 +173,10 @@ class FourierModel(object):
 
         # SAFE CODE AREA ˅
         # getDataで取得した数値配列を、PaneTypeごとに適切な描画方法へ振り分ける。
-        data_map = self.getData()
+        dataMap = self.getData()
         return {
-            pane_type: None if data is None else self.imageRenderers[pane_type](data)
-            for pane_type, data in data_map.items()
+            paneType: None if data is None else self.imageRenderers[paneType](data)
+            for paneType, data in dataMap.items()
         }
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.getImage ˄

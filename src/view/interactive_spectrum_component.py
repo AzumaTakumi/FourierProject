@@ -7,7 +7,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
 
-def _fourier_renderer():
+def _fourierRenderer():
     from src.model.fourier_renderer import FourierRenderer
     return FourierRenderer
 
@@ -75,7 +75,7 @@ class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
         """
         for listener in self._mouseMoveListeners:
             listener(event)
-            
+
     def _emitMousePressEvent(self, event) -> None:
         """
         PyQt6からマウスプレスイベント発火時に呼び出され、
@@ -118,7 +118,7 @@ class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
         パワースペクトルを全て描画する
         """
         self._powerSpectrum = np.asarray(data).copy()
-        self._setDisplayImage(_fourier_renderer().imageFromSpectrum(self._powerSpectrum))
+        self._setDisplayImage(_fourierRenderer().imageFromSpectrum(self._powerSpectrum))
 
     def renderDirtyRegion(self, spectrumChange) -> None:
         """
@@ -132,7 +132,7 @@ class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
             return
 
         self._powerSpectrum[index:index + len(changedPowerSpectrum)] = changedPowerSpectrum
-        self._setDisplayImage(_fourier_renderer().imageFromSpectrum(self._powerSpectrum))
+        self._setDisplayImage(_fourierRenderer().imageFromSpectrum(self._powerSpectrum))
 
     def addMouseMoveEventListener(self, callback) -> None:
         """
@@ -151,7 +151,7 @@ class Interactive1dSpectrumComponent(InteractiveSpectrumComponent):
         マウスリリースイベント発火時に呼び出される関数を登録する
         """
         self._mouseReleaseListeners.append(callback)
-        
+
 
 
 class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
@@ -173,7 +173,7 @@ class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
         self.setText("2D Spectrum")
 
     def _displayShapeFromSpectrum(self, data: np.ndarray) -> tuple[int, ...]:
-        return tuple(_fourier_renderer().spectrumDisplayArray(data).shape)
+        return tuple(_fourierRenderer().spectrumDisplayArray(data).shape)
 
     def _setDisplayImage(self, image: Image.Image) -> None:
         self._displayImage = image
@@ -182,7 +182,7 @@ class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
         self.setMinimumSize(0, 0)
 
     def _renderSpectrumImage(self) -> Image.Image:
-        return _fourier_renderer().imageFromSpectrum(
+        return _fourierRenderer().imageFromSpectrum(
             self._powerSpectrum,
             self._displayValueRange
         )
@@ -194,7 +194,7 @@ class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
         """
         for listener in self._mouseMoveListeners:
             listener(event)
-            
+
     def _emitMousePressEvent(self, event) -> None:
         """
         PyQt6からマウスプレスイベント発火時に呼び出され、
@@ -238,12 +238,12 @@ class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
         パワースペクトルを全て描画する
         """
         self._powerSpectrum = np.asarray(data).copy()
-        display_shape = self._displayShapeFromSpectrum(self._powerSpectrum)
-        if self._displayValueRange is None or display_shape != self._displayRangeShape:
-            self._displayValueRange = _fourier_renderer().displayRangeFromSpectrum(
+        displayShape = self._displayShapeFromSpectrum(self._powerSpectrum)
+        if self._displayValueRange is None or displayShape != self._displayRangeShape:
+            self._displayValueRange = _fourierRenderer().displayRangeFromSpectrum(
                 self._powerSpectrum
             )
-            self._displayRangeShape = display_shape
+            self._displayRangeShape = displayShape
 
         self._setDisplayImage(self._renderSpectrumImage())
 
@@ -260,8 +260,69 @@ class Interactive2dSpectrumComponent(InteractiveSpectrumComponent):
             self.renderAll(spectrumChange.changedPowerSpectrum)
             return
 
+        # 変更された矩形領域を内部のパワースペクトル配列へ反映する。
         self._powerSpectrum[y:y + height, x:x + width] = spectrumChange.changedPowerSpectrum
-        self._setDisplayImage(self._renderSpectrumImage())
+        spectrumHeight, spectrumWidth = self._powerSpectrum.shape[:2]
+        rowShift = spectrumHeight // 2
+        colShift = spectrumWidth // 2
+        rowPivot = spectrumHeight - rowShift
+        colPivot = spectrumWidth - colShift
+
+        # 表示画像はfftshift後の座標になるため、折り返し位置をまたぐ更新領域は分割する。
+        rowPoints = [y]
+        colPoints = [x]
+        if y < rowPivot < y + height:
+            rowPoints.append(rowPivot)
+        if x < colPivot < x + width:
+            colPoints.append(colPivot)
+        rowPoints.append(y + height)
+        colPoints.append(x + width)
+
+        for sourceRowStart, sourceRowStop in zip(rowPoints, rowPoints[1:]):
+            for sourceColStart, sourceColStop in zip(colPoints, colPoints[1:]):
+                localY = sourceRowStart - y
+                localX = sourceColStart - x
+                regionSpectrum = spectrumChange.changedPowerSpectrum[
+                    localY:localY + sourceRowStop - sourceRowStart,
+                    localX:localX + sourceColStop - sourceColStart
+                ]
+
+                # 分割した領域だけを表示用の濃淡画像へ変換する。
+                regionArray = np.asarray(regionSpectrum)
+                regionArray = {True: np.abs, False: np.real}[np.iscomplexobj(regionArray)](regionArray)
+                regionArray = np.nan_to_num(regionArray.astype(float, copy=False))
+                regionArray = np.log1p(np.abs(regionArray))
+                displayArray = {3: lambda value: np.mean(value, axis=2)}.get(
+                    regionArray.ndim,
+                    lambda value: value,
+                )(regionArray)
+                regionImage = Image.fromarray(
+                    _fourierRenderer().normalize(displayArray, self._displayValueRange),
+                    "L"
+                )
+
+                # 元スペクトル上の座標を、fftshift後の表示画像上の貼り付け位置へ変換する。
+                displayX = (sourceColStart + colShift) % spectrumWidth
+                displayY = (sourceRowStart + rowShift) % spectrumHeight
+                self._displayImage.paste(regionImage, (displayX, displayY))
+
+                # 既存pixmapが使える場合は変更部分だけ描画し、使えない場合は全体を作り直す。
+                pixmap = self.pixmap()
+                if (
+                    pixmap is None
+                    or pixmap.isNull()
+                    or pixmap.width() != self._displayImage.width
+                    or pixmap.height() != self._displayImage.height
+                ):
+                    pixmap = QPixmap.fromImage(ImageQt(self._displayImage))
+                else:
+                    from PyQt6.QtGui import QPainter
+                    pixmap = QPixmap(pixmap)
+                    painter = QPainter(pixmap)
+                    painter.drawImage(displayX, displayY, ImageQt(regionImage))
+                    painter.end()
+                self.setPixmap(pixmap)
+                self.update(displayX, displayY, regionImage.width, regionImage.height)
 
     def addMouseMoveEventListener(self, callback) -> None:
         """

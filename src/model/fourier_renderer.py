@@ -14,7 +14,7 @@ class FourierRenderer(object):
     # GENERATED CODE AREA: class.header ˅
     """
     数値データを表示用画像に変換するクラスである。
-    
+
     1次元データ、2次元画像データ、スペクトル、実部・虚部などを受け取り、表示や保存に利用できるPIL.Imageを生成する。
     """
 
@@ -38,20 +38,20 @@ class FourierRenderer(object):
         array = np.nan_to_num(array.astype(float, copy=False))
 
         # 0〜1正規化画像は8bit画像として表示できるよう0〜255へ拡大する。
-        normalized_mask = float(np.max(array) <= 1.0 and np.min(array) >= 0.0)
-        array = array * (1.0 + 254.0 * normalized_mask)
+        normalizedMask = float(np.max(array) <= 1.0 and np.min(array) >= 0.0)
+        array = array * (1.0 + 254.0 * normalizedMask)
         # 表示画像として扱えるよう、画素値を8bit範囲へ丸める。
         array = np.clip(array, 0.0, 255.0).astype(np.uint8)
 
         # 配列形状に応じて、グレースケールまたはRGBのPIL.Imageへ変換する。
-        channel_size = int(np.shape(array + np.zeros((1, 1, 1), dtype=array.dtype))[-1])
-        render_mode = {2: "L2", 3: {3: "RGB", 1: "L1"}.get(channel_size, "SPECTRUM")}.get(array.ndim, "SPECTRUM")
+        channelSize = int(np.shape(array + np.zeros((1, 1, 1), dtype=array.dtype))[-1])
+        renderMode = {2: "L2", 3: {3: "RGB", 1: "L1"}.get(channelSize, "SPECTRUM")}.get(array.ndim, "SPECTRUM")
         return {
             "L2": lambda: Image.fromarray(array, "L"),
             "L1": lambda: Image.fromarray(np.squeeze(array, axis=-1), "L"),
             "RGB": lambda: Image.fromarray(array, "RGB"),
             "SPECTRUM": lambda: type(self).imageFromSpectrum(array),
-        }[render_mode]()
+        }[renderMode]()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.imageFromImageData ˄
 
@@ -75,50 +75,50 @@ class FourierRenderer(object):
         draw = ImageDraw.Draw(image)
 
         # 目盛り表示用の描画領域（余白を含む）を決める。
-        margin_left = 48
-        margin_right = 12
-        margin_top = 12
-        margin_bottom = 26
-        plot_left = margin_left
-        plot_top = margin_top
-        plot_right = max(plot_left + 1, width - margin_right - 1)
-        plot_bottom = max(plot_top + 1, height - margin_bottom - 1)
-        plot_width = plot_right - plot_left + 1
-        plot_height = plot_bottom - plot_top + 1
+        marginLeft = 48
+        marginRight = 12
+        marginTop = 12
+        marginBottom = 26
+        plotLeft = marginLeft
+        plotTop = marginTop
+        plotRight = max(plotLeft + 1, width - marginRight - 1)
+        plotBottom = max(plotTop + 1, height - marginBottom - 1)
+        plotWidth = plotRight - plotLeft + 1
+        plotHeight = plotBottom - plotTop + 1
 
         # 値域を求め、一定値データでも 0 除算しないよう安全な分母を作る。
-        min_value = float(np.min(values))
-        max_value = float(np.max(values))
-        span = max_value - min_value
-        flat_mask = float(abs(span) <= 1.0e-12)
-        safe_span = span + flat_mask
-        normalized = (values - min_value) / safe_span
-        scaled = (1.0 - normalized) * (plot_height - 1) + plot_top
-        center = np.full(values.shape, plot_top + (plot_height // 2), dtype=float)
+        minValue = float(np.min(values))
+        maxValue = float(np.max(values))
+        span = maxValue - minValue
+        flatMask = float(abs(span) <= 1.0e-12)
+        safeSpan = span + flatMask
+        normalized = (values - minValue) / safeSpan
+        scaled = (1.0 - normalized) * (plotHeight - 1) + plotTop
+        center = np.full(values.shape, plotTop + (plotHeight // 2), dtype=float)
         # 一定値データは中央線、それ以外は正規化値に応じた波形位置を使う。
-        y_values = center * flat_mask + scaled * (1.0 - flat_mask)
+        yValues = center * flatMask + scaled * (1.0 - flatMask)
 
         # 軸枠と目盛りを描画する。
-        draw.rectangle((plot_left, plot_top, plot_right, plot_bottom), outline=180, width=1)
-        x_ticks = 5
-        y_ticks = 4
-        for i in range(x_ticks + 1):
-            tick_ratio = i / x_ticks
-            x = int(round(plot_left + tick_ratio * (plot_width - 1)))
-            draw.line((x, plot_bottom, x, plot_bottom + 4), fill=120, width=1)
-            sample_index = int(round(tick_ratio * (values.size - 1)))
-            draw.text((x - 10, plot_bottom + 6), str(sample_index), fill=120)
+        draw.rectangle((plotLeft, plotTop, plotRight, plotBottom), outline=180, width=1)
+        xTicks = 5
+        yTicks = 4
+        for i in range(xTicks + 1):
+            tickRatio = i / xTicks
+            x = int(round(plotLeft + tickRatio * (plotWidth - 1)))
+            draw.line((x, plotBottom, x, plotBottom + 4), fill=120, width=1)
+            sampleIndex = int(round(tickRatio * (values.size - 1)))
+            draw.text((x - 10, plotBottom + 6), str(sampleIndex), fill=120)
 
-        for i in range(y_ticks + 1):
-            tick_ratio = i / y_ticks
-            y = int(round(plot_top + tick_ratio * (plot_height - 1)))
-            draw.line((plot_left - 4, y, plot_left, y), fill=120, width=1)
-            label_value = max_value - (span * tick_ratio)
-            draw.text((4, y - 6), f"{label_value:.2g}", fill=120)
+        for i in range(yTicks + 1):
+            tickRatio = i / yTicks
+            y = int(round(plotTop + tickRatio * (plotHeight - 1)))
+            draw.line((plotLeft - 4, y, plotLeft, y), fill=120, width=1)
+            labelValue = maxValue - (span * tickRatio)
+            draw.text((4, y - 6), f"{labelValue:.2g}", fill=120)
 
         # サンプル点を横方向に等間隔配置し、点列として描画する。
-        x_values = np.linspace(plot_left, plot_right, num=values.size)
-        points = [(int(round(x)), int(round(y))) for x, y in zip(x_values, y_values)]
+        xValues = np.linspace(plotLeft, plotRight, num=values.size)
+        points = [(int(round(x)), int(round(y))) for x, y in zip(xValues, yValues)]
         {True: lambda: draw.point(points[0], fill=0), False: lambda: draw.line(points, fill=0, width=2)}[
             len(points) == 1
         ]()
@@ -140,47 +140,47 @@ class FourierRenderer(object):
         image = Image.new("L", (width, height), 255)
         draw = ImageDraw.Draw(image)
 
-        margin_left = 48
-        margin_right = 12
-        margin_top = 12
-        margin_bottom = 26
-        plot_left = margin_left
-        plot_top = margin_top
-        plot_right = max(plot_left + 1, width - margin_right - 1)
-        plot_bottom = max(plot_top + 1, height - margin_bottom - 1)
-        plot_width = plot_right - plot_left + 1
-        plot_height = plot_bottom - plot_top + 1
+        marginLeft = 48
+        marginRight = 12
+        marginTop = 12
+        marginBottom = 26
+        plotLeft = marginLeft
+        plotTop = marginTop
+        plotRight = max(plotLeft + 1, width - marginRight - 1)
+        plotBottom = max(plotTop + 1, height - marginBottom - 1)
+        plotWidth = plotRight - plotLeft + 1
+        plotHeight = plotBottom - plotTop + 1
 
-        min_value = min(0.0, float(np.min(values)))
-        max_value = max(0.0, float(np.max(values)))
-        span = max_value - min_value
-        flat_mask = float(abs(span) <= 1.0e-12)
-        safe_span = span + flat_mask
+        minValue = min(0.0, float(np.min(values)))
+        maxValue = max(0.0, float(np.max(values)))
+        span = maxValue - minValue
+        flatMask = float(abs(span) <= 1.0e-12)
+        safeSpan = span + flatMask
 
-        normalized = (values - min_value) / safe_span
-        y_values = (1.0 - normalized) * (plot_height - 1) + plot_top
-        baseline_normalized = (0.0 - min_value) / safe_span
-        baseline = int(round((1.0 - baseline_normalized) * (plot_height - 1) + plot_top))
+        normalized = (values - minValue) / safeSpan
+        yValues = (1.0 - normalized) * (plotHeight - 1) + plotTop
+        baselineNormalized = (0.0 - minValue) / safeSpan
+        baseline = int(round((1.0 - baselineNormalized) * (plotHeight - 1) + plotTop))
 
-        draw.rectangle((plot_left, plot_top, plot_right, plot_bottom), outline=180, width=1)
-        x_ticks = 5
-        y_ticks = 4
-        for i in range(x_ticks + 1):
-            tick_ratio = i / x_ticks
-            x = int(round(plot_left + tick_ratio * (plot_width - 1)))
-            draw.line((x, plot_bottom, x, plot_bottom + 4), fill=120, width=1)
-            sample_index = int(round(tick_ratio * (values.size - 1)))
-            draw.text((x - 10, plot_bottom + 6), str(sample_index), fill=120)
+        draw.rectangle((plotLeft, plotTop, plotRight, plotBottom), outline=180, width=1)
+        xTicks = 5
+        yTicks = 4
+        for i in range(xTicks + 1):
+            tickRatio = i / xTicks
+            x = int(round(plotLeft + tickRatio * (plotWidth - 1)))
+            draw.line((x, plotBottom, x, plotBottom + 4), fill=120, width=1)
+            sampleIndex = int(round(tickRatio * (values.size - 1)))
+            draw.text((x - 10, plotBottom + 6), str(sampleIndex), fill=120)
 
-        for i in range(y_ticks + 1):
-            tick_ratio = i / y_ticks
-            y = int(round(plot_top + tick_ratio * (plot_height - 1)))
-            draw.line((plot_left - 4, y, plot_left, y), fill=120, width=1)
-            label_value = max_value - (span * tick_ratio)
-            draw.text((4, y - 6), f"{label_value:.2g}", fill=120)
+        for i in range(yTicks + 1):
+            tickRatio = i / yTicks
+            y = int(round(plotTop + tickRatio * (plotHeight - 1)))
+            draw.line((plotLeft - 4, y, plotLeft, y), fill=120, width=1)
+            labelValue = maxValue - (span * tickRatio)
+            draw.text((4, y - 6), f"{labelValue:.2g}", fill=120)
 
-        x_values = np.linspace(plot_left, plot_right, num=values.size)
-        for x, y in zip(x_values, y_values):
+        xValues = np.linspace(plotLeft, plotRight, num=values.size)
+        for x, y in zip(xValues, yValues):
             px = int(round(x))
             py = int(round(y))
             draw.line((px, baseline, px, py), fill=0, width=2)
@@ -199,10 +199,10 @@ class FourierRenderer(object):
         # SAFE CODE AREA ˅
         array = cls.spectrumDisplayArray(spectrum)
         # 1Dスペクトルは離散成分として縦棒描画、2D/3Dは画像化の経路に振り分ける。
-        render_mode = {1: "stem"}.get(array.ndim, "image")
-        stem_renderer = lambda: cls.imageFrom1dStemData(array)
-        image_renderer = lambda: Image.fromarray(cls.normalize(np.squeeze(array), valueRange), "L")
-        return {"stem": stem_renderer, "image": image_renderer}[render_mode]()
+        renderMode = {1: "stem"}.get(array.ndim, "image")
+        stemRenderer = lambda: cls.imageFrom1dStemData(array)
+        imageRenderer = lambda: Image.fromarray(cls.normalize(np.squeeze(array), valueRange), "L")
+        return {"stem": stemRenderer, "image": imageRenderer}[renderMode]()
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.imageFromSpectrum ˄
 
@@ -266,17 +266,17 @@ class FourierRenderer(object):
         array = np.nan_to_num(array.astype(float, copy=False))
 
         # 最小値・最大値から正規化準備を行う。
-        min_value, max_value = {
+        minValue, maxValue = {
             True: lambda: valueRange,
             False: lambda: (float(np.min(array)), float(np.max(array))),
         }[valueRange is not None]()
 
         # 値域が極小の場合も安全に扱い、0〜255の uint8 にスケーリングする。
-        span = max_value - min_value
-        flat_mask = float(abs(span) <= 1.0e-12)
-        safe_span = span + flat_mask
-        normalized = (array - min_value) / safe_span
-        scaled = np.clip(normalized * 255.0, 0, 255) * (1.0 - flat_mask)
+        span = maxValue - minValue
+        flatMask = float(abs(span) <= 1.0e-12)
+        safeSpan = span + flatMask
+        normalized = (array - minValue) / safeSpan
+        scaled = np.clip(normalized * 255.0, 0, 255) * (1.0 - flatMask)
         return scaled.astype(np.uint8)
         # SAFE CODE AREA ˄
     # FIXED CODE AREA: method.normalize ˄

@@ -3,9 +3,10 @@ import numpy as np
 from src.model.fourier_model_context import FourierModelContext
 from src.model.fourier_1_d_model import Fourier1dModel
 from src.model.fourier_2_d_model import Fourier2dModel
+from src.model.spectrum_1_d_change import Spectrum1dChange
 
 
-def test_model_switching_clears_history_and_keeps_1d_and_2d_separate():
+def testModelSwitchingClearsHistoryAndKeeps1dAnd2dSeparate():
     """モデル切り替えで履歴がリセットされ、1D/2Dの状態が独立していることを確認する"""
     context = FourierModelContext(lambda _change: None)
 
@@ -31,3 +32,20 @@ def test_model_switching_clears_history_and_keeps_1d_and_2d_separate():
     assert context.is1dModel()
     assert isinstance(context.currentModel, Fourier1dModel)
     assert context.currentModel.interactiveRealPart.shape == (3,)
+
+
+def testModelSwitchDoesNotEmitDirtyRegionNotification():
+    """モデル差し替えでは部分更新通知を出さず、編集時だけ通知することを確認する"""
+    notifications = []
+    context = FourierModelContext(notifications.append)
+
+    context.set1dSourceData(np.array([0.0, 1.0, 0.0, -1.0], dtype=float))
+    assert notifications == []
+
+    context.editSpectrumValueAtIndex(1, 2.0, 0.0)
+    assert len(notifications) == 1
+    assert isinstance(notifications[0], Spectrum1dChange)
+
+    notifications.clear()
+    context.set2dSourceData(np.zeros((4, 4, 3), dtype=float))
+    assert notifications == []

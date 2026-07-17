@@ -15,9 +15,9 @@ class Fourier2dModel(FourierModel):
     # GENERATED CODE AREA: class.header ˅
     """
     2次元画像データを扱うモデルである。
-    
+
     画像の輝度行列またはRGB画像配列をsourceDataとして保持し、フーリエ変換結果の実部・虚部・パワースペクトル、編集用スペクトル、逆変換結果を管理する。
-    
+
     ユーザー操作によりスペクトルが編集されると、編集用スペクトルを更新し、逆フーリエ変換によって復元画像データを再計算する。
     """
 
@@ -82,8 +82,8 @@ class Fourier2dModel(FourierModel):
 
         # SAFE CODE AREA ˅
         # 画像処理で扱いやすいよう、入力をfloat配列へ変換し、グレースケールもR=G=BのRGB配列として扱う。
-        source_array = np.atleast_3d(np.asarray(sourceData, dtype=float))
-        data = np.repeat(source_array, 3 // source_array.shape[-1], axis=-1)
+        sourceArray = np.atleast_3d(np.asarray(sourceData, dtype=float))
+        data = np.repeat(sourceArray, 3 // sourceArray.shape[-1], axis=-1)
 
         self.sourceData = data.copy()
         # 元画像の変更に合わせてFFT結果を作り直し、編集用スペクトルを元状態に戻す。
@@ -269,13 +269,13 @@ class Fourier2dModel(FourierModel):
             c1 = min(width, col + radius + 1)
             mask = self._circleMask(row, col, radius, r0, r1, c0, c1)
 
-            real_view = self.interactiveRealPart[r0:r1, c0:c1]
-            imag_view = self.interactiveImaginaryPart[r0:r1, c0:c1]
-            power_view = self.interactivePowerSpectrum[r0:r1, c0:c1]
+            realView = self.interactiveRealPart[r0:r1, c0:c1]
+            imagView = self.interactiveImaginaryPart[r0:r1, c0:c1]
+            powerView = self.interactivePowerSpectrum[r0:r1, c0:c1]
 
-            real_view[mask] = 0
-            imag_view[mask] = 0
-            power_view[mask] = 0
+            realView[mask] = 0
+            imagView[mask] = 0
+            powerView[mask] = 0
 
         self.computeInverseData()
         # SAFE CODE AREA ˄
@@ -302,14 +302,14 @@ class Fourier2dModel(FourierModel):
             c1 = min(width, col + radius + 1)
             mask = self._circleMask(row, col, radius, r0, r1, c0, c1)
 
-            real_view = self.interactiveRealPart[r0:r1, c0:c1]
-            imag_view = self.interactiveImaginaryPart[r0:r1, c0:c1]
+            realView = self.interactiveRealPart[r0:r1, c0:c1]
+            imagView = self.interactiveImaginaryPart[r0:r1, c0:c1]
 
-            real_view[mask] = color[:3].astype(real_view.dtype, copy=False)
-            imag_view[mask] = 0
+            realView[mask] = color[:3].astype(realView.dtype, copy=False)
+            imagView[mask] = 0
 
-            power_view = self.interactivePowerSpectrum[r0:r1, c0:c1]
-            power_view[mask] = np.square(real_view[mask]) + np.square(imag_view[mask])
+            powerView = self.interactivePowerSpectrum[r0:r1, c0:c1]
+            powerView[mask] = np.square(realView[mask]) + np.square(imagView[mask])
 
         self.computeInverseData()
         # SAFE CODE AREA ˄
@@ -327,13 +327,13 @@ class Fourier2dModel(FourierModel):
         rect = self._normalizeRect(rowStart, rowStop, colStart, colStop)
         r0, r1, c0, c1 = rect
 
-        real_view = self.interactiveRealPart[r0:r1, c0:c1]
-        imag_view = self.interactiveImaginaryPart[r0:r1, c0:c1]
-        real_view[...] = np.asarray(realPart)
-        imag_view[...] = np.asarray(imaginaryPart)
+        realView = self.interactiveRealPart[r0:r1, c0:c1]
+        imagView = self.interactiveImaginaryPart[r0:r1, c0:c1]
+        realView[...] = np.asarray(realPart)
+        imagView[...] = np.asarray(imaginaryPart)
 
-        power_view = self.interactivePowerSpectrum[r0:r1, c0:c1]
-        power_view[...] = np.square(real_view) + np.square(imag_view)
+        powerView = self.interactivePowerSpectrum[r0:r1, c0:c1]
+        powerView[...] = np.square(realView) + np.square(imagView)
         self.computeInverseData()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.restoreInteractiveSpectrumAtRect ˄

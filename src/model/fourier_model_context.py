@@ -125,7 +125,8 @@ class FourierModelContext(object):
         self.undoStack.clear()
         self.redoStack.clear()
         self.currentCompositeCommand = None
-        self._notifySpectrumChanged(self._createFullSpectrumChangeForCommand(None))
+        # Model差し替えではView側の1D/2Dコンポーネントも作り直す必要があるため、
+        # dirty region通知ではなくファイル入力後の全体再表示に任せる。
         # SAFE CODE AREA ˄
 
 
@@ -225,12 +226,12 @@ class FourierModelContext(object):
         1次元スペクトルの開始インデックスから終了インデックスまでを、元スペクトル値に指定倍率を掛けた値へ変更する。
         """
         indices = self._indexLine(startIndex, endIndex)
-        value_scale = float(scale)
+        valueScale = float(scale)
         self._executeCommandInOpenEdit(EditSpectrumValuesAtIndexesCommand(
             self.currentModel,
             indices,
-            self.currentModel.realPart[indices] * value_scale,
-            self.currentModel.imaginaryPart[indices] * value_scale,
+            self.currentModel.realPart[indices] * valueScale,
+            self.currentModel.imaginaryPart[indices] * valueScale,
         ))
 
 
@@ -444,13 +445,13 @@ class FourierModelContext(object):
 
         # SAFE CODE AREA ˅
         # beginSpectrumEdit()で開いた編集単位の中でだけCommandを実行する。
-        open_command = self.currentCompositeCommand
-        if open_command is None:
+        openCommand = self.currentCompositeCommand
+        if openCommand is None:
             raise RuntimeError("beginSpectrumEdit() must be called before drag spectrum edits")
 
         # まずCommandを実行してModel本体の状態を変更する。
         command.execute()
-        open_command.add(command)
+        openCommand.add(command)
         # Model状態が変わったので、Viewへ変更範囲だけを通知する。
         self._notifySpectrumChanged(self._createSpectrumChange(command))
         # SAFE CODE AREA ˄
@@ -516,12 +517,12 @@ class FourierModelContext(object):
         # 複数indexをまとめて通知する場合は、startからstopまでの連続範囲を切り出す。
         spectrum = self.currentModel.interactivePowerSpectrum
         size = int(spectrum.shape[0])
-        raw_start = int(start)
-        raw_stop = int(stop)
-        normalized_start = raw_start + size if raw_start < 0 else raw_start
-        normalized_stop = raw_stop + size if raw_stop < 0 or (raw_start < 0 and raw_stop == 0) else raw_stop
-        start = int(np.clip(normalized_start, 0, size - 1))
-        stop = int(np.clip(normalized_stop, start + 1, size))
+        rawStart = int(start)
+        rawStop = int(stop)
+        normalizedStart = rawStart + size if rawStart < 0 else rawStart
+        normalizedStop = rawStop + size if rawStop < 0 or (rawStart < 0 and rawStop == 0) else rawStop
+        start = int(np.clip(normalizedStart, 0, size - 1))
+        stop = int(np.clip(normalizedStop, start + 1, size))
         return Spectrum1dChange(index=start, changedPowerSpectrum=np.copy(spectrum[start:stop]))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._create1dSpectrumChangeForRange ˄
@@ -530,19 +531,19 @@ class FourierModelContext(object):
     # GENERATED CODE AREA: method._create2dSpectrumChangeForRect ˅
     def _create2dSpectrumChangeForRect(self, rect: tuple) -> Spectrum2dChange:
         """
-        rectは(row_start, row_stop, col_start, col_stop)。通知ではx=col, y=rowとして渡す。
+        rectは(rowStart, rowStop, colStart, colStop)。通知ではx=col, y=rowとして渡す。
         """
 
         # SAFE CODE AREA ˅
-        # rectは(row_start, row_stop, col_start, col_stop)。通知ではx=col, y=rowとして渡す。
+        # rectは(rowStart, rowStop, colStart, colStop)。通知ではx=col, y=rowとして渡す。
         spectrum = self.currentModel.interactivePowerSpectrum
-        row_start, row_stop, col_start, col_stop = rect
-        changed = np.copy(spectrum[row_start:row_stop, col_start:col_stop])
+        rowStart, rowStop, colStart, colStop = rect
+        changed = np.copy(spectrum[rowStart:rowStop, colStart:colStop])
         return Spectrum2dChange(
-            x=col_start,
-            y=row_start,
-            width=col_stop - col_start,
-            height=row_stop - row_start,
+            x=colStart,
+            y=rowStart,
+            width=colStop - colStart,
+            height=rowStop - rowStart,
             changedPowerSpectrum=changed,
         )
         # SAFE CODE AREA ˄
@@ -606,11 +607,11 @@ class FourierModelContext(object):
             rect = self.currentModel.getSpectrumRectForPositions(child.positions, child.radius)
             rects.append(rect)
 
-        row_start = min(rect[0] for rect in rects)
-        row_stop = max(rect[1] for rect in rects)
-        col_start = min(rect[2] for rect in rects)
-        col_stop = max(rect[3] for rect in rects)
-        return self._create2dSpectrumChangeForRect((row_start, row_stop, col_start, col_stop))
+        rowStart = min(rect[0] for rect in rects)
+        rowStop = max(rect[1] for rect in rects)
+        colStart = min(rect[2] for rect in rects)
+        colStop = max(rect[3] for rect in rects)
+        return self._create2dSpectrumChangeForRect((rowStart, rowStop, colStart, colStop))
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method._create2dSpectrumChangeForCommand ˄
 
@@ -639,13 +640,13 @@ class FourierModelContext(object):
 
         # SAFE CODE AREA ˅
         # 前回座標と今回座標の間を線形補間し、イベントが飛んでも点ではなく線として編集する。
-        start_row = int(startRow)
-        start_col = int(startCol)
-        end_row = int(endRow)
-        end_col = int(endCol)
-        steps = max(abs(end_row - start_row), abs(end_col - start_col))
-        rows = np.rint(np.linspace(start_row, end_row, steps + 1)).astype(int)
-        cols = np.rint(np.linspace(start_col, end_col, steps + 1)).astype(int)
+        startRow = int(startRow)
+        startCol = int(startCol)
+        endRow = int(endRow)
+        endCol = int(endCol)
+        steps = max(abs(endRow - startRow), abs(endCol - startCol))
+        rows = np.rint(np.linspace(startRow, endRow, steps + 1)).astype(int)
+        cols = np.rint(np.linspace(startCol, endCol, steps + 1)).astype(int)
         points = []
         for row, col in zip(rows, cols):
             point = (int(row), int(col))

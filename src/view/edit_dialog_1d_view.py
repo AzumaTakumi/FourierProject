@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 class EditDialogView1d(EditDialogView):
-    def __init__(self, modelContext=None, spectrum_component=None):
+    def __init__(self, modelContext=None, spectrumComponent=None):
         self.modelContext = modelContext
         self.editValue = 0.5
         self._isDraggingSpectrum = False
@@ -33,64 +33,64 @@ class EditDialogView1d(EditDialogView):
 
         self.setWindowTitle("一次元スペクトル編集画面")
 
-        if spectrum_component is None:
-            spectrum_component = Interactive1dSpectrumComponent()
+        if spectrumComponent is None:
+            spectrumComponent = Interactive1dSpectrumComponent()
 
-        self.spectrum_component = spectrum_component
+        self.spectrumComponent = spectrumComponent
 
-        parent_layout = self.canvas.parentWidget().layout()
-        parent_layout.replaceWidget(self.canvas, self.spectrum_component)
+        parentLayout = self.canvas.parentWidget().layout()
+        parentLayout.replaceWidget(self.canvas, self.spectrumComponent)
         self.canvas.deleteLater()
 
-        self.spectrum_component.setMinimumSize(650, 480)
+        self.spectrumComponent.setMinimumSize(650, 480)
 
-        self.spectrum_component.setSizePolicy(
+        self.spectrumComponent.setSizePolicy(
             QSizePolicy.Policy.Ignored,
             QSizePolicy.Policy.Ignored
         )
-        self.spectrum_component.setScaledContents(True)
-        self.spectrum_component.addMousePressEventListener(self._on_spectrum_pressed)
-        self.spectrum_component.addMouseMoveEventListener(self._on_spectrum_moved)
-        self.spectrum_component.addMouseReleaseEventListener(self._on_spectrum_released)
+        self.spectrumComponent.setScaledContents(True)
+        self.spectrumComponent.addMousePressEventListener(self._onSpectrumPressed)
+        self.spectrumComponent.addMouseMoveEventListener(self._onSpectrumMoved)
+        self.spectrumComponent.addMouseReleaseEventListener(self._onSpectrumReleased)
 
-        self.paint_group.setTitle("値の編集")
+        self.paintGroup.setTitle("値の編集")
 
-        self.thickness_slider.hide()
-        self.thickness_spin.hide()
+        self.thicknessSlider.hide()
+        self.thicknessSpin.hide()
 
-        self.value_slider.setRange(0, 100)
-        self.value_spin.setRange(0, 100)
+        self.valueSlider.setRange(0, 100)
+        self.valueSpin.setRange(0, 100)
 
-        self.value_slider.setValue(50)
-        self.value_spin.setValue(50)
+        self.valueSlider.setValue(50)
+        self.valueSpin.setValue(50)
 
-    def _event_position(self, event) -> tuple[float, float]:
+    def _eventPosition(self, event) -> tuple[float, float]:
         position = event.position() if hasattr(event, "position") else event.pos()
         return float(position.x()), float(position.y())
 
-    def _event_to_index(self, event) -> int | None:
-        if self.spectrum_component is None or self.spectrum_component._displayImage is None:
+    def _eventToIndex(self, event) -> int | None:
+        if self.spectrumComponent is None or self.spectrumComponent._displayImage is None:
             return None
 
-        if self.spectrum_component._powerSpectrum is None:
+        if self.spectrumComponent._powerSpectrum is None:
             return None
 
-        spectrum_size = int(np.asarray(self.spectrum_component._powerSpectrum).size)
-        if spectrum_size == 0:
+        spectrumSize = int(np.asarray(self.spectrumComponent._powerSpectrum).size)
+        if spectrumSize == 0:
             return None
 
-        image_width, _ = self.spectrum_component._displayImage.size
-        widget_width = max(1, self.spectrum_component.width())
-        x, _ = self._event_position(event)
-        image_x = (x / widget_width) * (image_width - 1)
+        imageWidth, _ = self.spectrumComponent._displayImage.size
+        widgetWidth = max(1, self.spectrumComponent.width())
+        x, _ = self._eventPosition(event)
+        imageX = (x / widgetWidth) * (imageWidth - 1)
 
-        plot_left = 48
-        plot_right = max(plot_left + 1, image_width - 12 - 1)
-        ratio = (image_x - plot_left) / (plot_right - plot_left)
-        index = int(round(np.clip(ratio, 0.0, 1.0) * (spectrum_size - 1)))
+        plotLeft = 48
+        plotRight = max(plotLeft + 1, imageWidth - 12 - 1)
+        ratio = (imageX - plotLeft) / (plotRight - plotLeft)
+        index = int(round(np.clip(ratio, 0.0, 1.0) * (spectrumSize - 1)))
         return index
 
-    def _edit_index_range(self, startIndex: int, endIndex: int, button) -> None:
+    def _editIndexRange(self, startIndex: int, endIndex: int, button) -> None:
         if button == Qt.MouseButton.RightButton or self.editValue <= 0.0:
             self.modelContext.eraseSpectrumBetweenIndexes(startIndex, endIndex)
             return
@@ -101,7 +101,7 @@ class EditDialogView1d(EditDialogView):
             self.editValue
         )
 
-    def _on_spectrum_pressed(self, event) -> None:
+    def _onSpectrumPressed(self, event) -> None:
         if self.modelContext is None:
             return
 
@@ -109,7 +109,7 @@ class EditDialogView1d(EditDialogView):
         if button not in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             return
 
-        index = self._event_to_index(event)
+        index = self._eventToIndex(event)
         if index is None:
             return
 
@@ -117,23 +117,23 @@ class EditDialogView1d(EditDialogView):
         self._isDraggingSpectrum = True
         self._activeMouseButton = button
         self._lastIndex = index
-        self._edit_index_range(index, index, button)
+        self._editIndexRange(index, index, button)
 
-    def _on_spectrum_moved(self, event) -> None:
+    def _onSpectrumMoved(self, event) -> None:
         if not self._isDraggingSpectrum or self._lastIndex is None:
             return
 
         if not (event.buttons() & self._activeMouseButton):
             return
 
-        index = self._event_to_index(event)
+        index = self._eventToIndex(event)
         if index is None:
             return
 
-        self._edit_index_range(self._lastIndex, index, self._activeMouseButton)
+        self._editIndexRange(self._lastIndex, index, self._activeMouseButton)
         self._lastIndex = index
 
-    def _on_spectrum_released(self, event) -> None:
+    def _onSpectrumReleased(self, event) -> None:
         if not self._isDraggingSpectrum:
             return
 
@@ -143,21 +143,21 @@ class EditDialogView1d(EditDialogView):
             self._activeMouseButton = None
             self._lastIndex = None
 
-    def on_value_changed(self, value: int):
+    def onValueChanged(self, value: int):
         self.editValue = value / 100
 
-    def on_thickness_changed(self, value: int):
+    def onThicknessChanged(self, value: int):
         pass
 
-    def on_undo_clicked(self):
+    def onUndoClicked(self):
         if self.modelContext is not None and self.modelContext.getUndoCount() > 0:
             self.modelContext.undo()
 
-    def on_redo_clicked(self):
+    def onRedoClicked(self):
         if self.modelContext is not None and self.modelContext.getRedoCount() > 0:
             self.modelContext.redo()
 
-    def on_reset_clicked(self):
+    def onResetClicked(self):
         if self.modelContext is not None:
             self.modelContext.resetSpectrum()
 
