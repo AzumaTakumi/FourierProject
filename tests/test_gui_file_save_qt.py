@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QWidget
 from src.controller.file_saver import FileSaver
 
 
-def test_export_restored_image_with_qt(monkeypatch, tmp_path, qtbot):
+def testExportRestoredImageWithQt(monkeypatch, tmp_path, qtbot):
     """`FileSaver.exportRestoredImage` が QFileDialog と連携して画像を保存することを確認する（pytest-qt 使用）"""
     img = Image.new("RGB", (2, 2), color=(10, 20, 30))
 

@@ -31,39 +31,39 @@ class EditDialogView2d(EditDialogView):
         """
         2D編集画面専用の初期設定を行う。
         """
-        self.thickness_slider.setRange(1, 50)
-        self.thickness_spin.setRange(1, 50)
-        self.thickness_slider.setValue(self.brushSize)
-        self.thickness_spin.setValue(self.brushSize)
+        self.thicknessSlider.setRange(1, 50)
+        self.thicknessSpin.setRange(1, 50)
+        self.thicknessSlider.setValue(self.brushSize)
+        self.thicknessSpin.setValue(self.brushSize)
 
-        # value_slider は整数しか扱えないので、0〜10 として扱う。
+        # valueSlider は整数しか扱えないので、0〜10 として扱う。
         # 実際の編集値は value / 10 にして、表示上の明るさ 0.0〜1.0 に対応させる。
-        self.value_slider.setRange(0, 10)
-        self.value_slider.setValue(int(self.editValue * 10))
+        self.valueSlider.setRange(0, 10)
+        self.valueSlider.setValue(int(self.editValue * 10))
 
         # 親クラスで作られた QSpinBox を、2D用の QDoubleSpinBox に差し替える
-        old_value_spin = self.value_spin
-        self.value_spin = QDoubleSpinBox()
-        self.value_spin.setRange(0.0, 1.0)
-        self.value_spin.setDecimals(1)
-        self.value_spin.setSingleStep(0.1)
-        self.value_spin.setValue(self.editValue)
+        oldValueSpin = self.valueSpin
+        self.valueSpin = QDoubleSpinBox()
+        self.valueSpin.setRange(0.0, 1.0)
+        self.valueSpin.setDecimals(1)
+        self.valueSpin.setSingleStep(0.1)
+        self.valueSpin.setValue(self.editValue)
 
-        value_layout = old_value_spin.parentWidget().layout()
-        value_layout.replaceWidget(old_value_spin, self.value_spin)
-        old_value_spin.deleteLater()
+        valueLayout = oldValueSpin.parentWidget().layout()
+        valueLayout.replaceWidget(oldValueSpin, self.valueSpin)
+        oldValueSpin.deleteLater()
 
         # slider と double spin を同期する
-        self.value_slider.valueChanged.connect(
-            lambda value: self.value_spin.setValue(value / 10)
+        self.valueSlider.valueChanged.connect(
+            lambda value: self.valueSpin.setValue(value / 10)
         )
-        self.value_spin.valueChanged.connect(
-            lambda value: self.value_slider.setValue(int(round(value * 10)))
+        self.valueSpin.valueChanged.connect(
+            lambda value: self.valueSlider.setValue(int(round(value * 10)))
         )
 
         if self.spectrumComponent is not None:
-            parent_layout = self.canvas.parentWidget().layout()
-            parent_layout.replaceWidget(self.canvas, self.spectrumComponent)
+            parentLayout = self.canvas.parentWidget().layout()
+            parentLayout.replaceWidget(self.canvas, self.spectrumComponent)
             self.canvas.deleteLater()
 
             self.spectrumComponent.setMinimumSize(650, 480)
@@ -72,36 +72,36 @@ class EditDialogView2d(EditDialogView):
                 QSizePolicy.Policy.Ignored
             )
             self.spectrumComponent.setScaledContents(True)
-            self.spectrumComponent.addMousePressEventListener(self._on_spectrum_pressed)
-            self.spectrumComponent.addMouseMoveEventListener(self._on_spectrum_moved)
-            self.spectrumComponent.addMouseReleaseEventListener(self._on_spectrum_released)
+            self.spectrumComponent.addMousePressEventListener(self._onSpectrumPressed)
+            self.spectrumComponent.addMouseMoveEventListener(self._onSpectrumMoved)
+            self.spectrumComponent.addMouseReleaseEventListener(self._onSpectrumReleased)
 
-    def _event_position(self, event) -> tuple[float, float]:
+    def _eventPosition(self, event) -> tuple[float, float]:
         position = event.position() if hasattr(event, "position") else event.pos()
         return float(position.x()), float(position.y())
 
-    def _event_to_display_point(self, event) -> tuple[int, int] | None:
+    def _eventToDisplayPoint(self, event) -> tuple[int, int] | None:
         if self.spectrumComponent is None or self.spectrumComponent._displayImage is None:
             return None
 
-        image_width, image_height = self.spectrumComponent._displayImage.size
-        widget_width = max(1, self.spectrumComponent.width())
-        widget_height = max(1, self.spectrumComponent.height())
-        x, y = self._event_position(event)
-        display_col = int(np.clip(round((x / widget_width) * (image_width - 1)), 0, image_width - 1))
-        display_row = int(np.clip(round((y / widget_height) * (image_height - 1)), 0, image_height - 1))
-        return display_row, display_col
+        imageWidth, imageHeight = self.spectrumComponent._displayImage.size
+        widgetWidth = max(1, self.spectrumComponent.width())
+        widgetHeight = max(1, self.spectrumComponent.height())
+        x, y = self._eventPosition(event)
+        displayCol = int(np.clip(round((x / widgetWidth) * (imageWidth - 1)), 0, imageWidth - 1))
+        displayRow = int(np.clip(round((y / widgetHeight) * (imageHeight - 1)), 0, imageHeight - 1))
+        return displayRow, displayCol
 
-    def _display_line_points(
+    def _displayLinePoints(
         self,
         startPoint: tuple[int, int],
         endPoint: tuple[int, int],
     ) -> list[tuple[int, int]]:
-        start_row, start_col = startPoint
-        end_row, end_col = endPoint
-        steps = max(abs(end_row - start_row), abs(end_col - start_col))
-        rows = np.rint(np.linspace(start_row, end_row, steps + 1)).astype(int)
-        cols = np.rint(np.linspace(start_col, end_col, steps + 1)).astype(int)
+        startRow, startCol = startPoint
+        endRow, endCol = endPoint
+        steps = max(abs(endRow - startRow), abs(endCol - startCol))
+        rows = np.rint(np.linspace(startRow, endRow, steps + 1)).astype(int)
+        cols = np.rint(np.linspace(startCol, endCol, steps + 1)).astype(int)
         points = []
         for row, col in zip(rows, cols):
             point = (int(row), int(col))
@@ -109,7 +109,7 @@ class EditDialogView2d(EditDialogView):
                 points.append(point)
         return points
 
-    def _display_point_to_spectrum_point(self, point: tuple[int, int]) -> tuple[int, int]:
+    def _displayPointToSpectrumPoint(self, point: tuple[int, int]) -> tuple[int, int]:
         height, width = self.spectrumComponent._powerSpectrum.shape[:2]
         row, col = point
         return (
@@ -117,48 +117,48 @@ class EditDialogView2d(EditDialogView):
             int((col + ((width + 1) // 2)) % width),
         )
 
-    def _paint_color_from_edit_value(self) -> list[float]:
+    def _paintColorFromEditValue(self) -> list[float]:
         """
         UIの0.0〜1.0を、現在のスペクトル表示レンジ上の明るさとしてFFT実部値へ変換する。
         """
-        display_value = float(np.clip(self.editValue, 0.0, 1.0))
-        value_range = getattr(self.spectrumComponent, "_displayValueRange", None)
+        displayValue = float(np.clip(self.editValue, 0.0, 1.0))
+        valueRange = getattr(self.spectrumComponent, "_displayValueRange", None)
 
-        if value_range is None and getattr(self.spectrumComponent, "_powerSpectrum", None) is not None:
-            display_array = np.log1p(np.abs(np.asarray(self.spectrumComponent._powerSpectrum, dtype=float)))
-            if display_array.ndim == 3:
-                display_array = np.mean(display_array, axis=2)
-            value_range = (float(np.min(display_array)), float(np.max(display_array)))
+        if valueRange is None and getattr(self.spectrumComponent, "_powerSpectrum", None) is not None:
+            displayArray = np.log1p(np.abs(np.asarray(self.spectrumComponent._powerSpectrum, dtype=float)))
+            if displayArray.ndim == 3:
+                displayArray = np.mean(displayArray, axis=2)
+            valueRange = (float(np.min(displayArray)), float(np.max(displayArray)))
 
-        min_value, max_value = value_range if value_range is not None else (0.0, 1.0)
-        target_display_value = min_value + display_value * (max_value - min_value)
-        channel_power = max(0.0, float(np.expm1(target_display_value)))
-        channel_real_value = float(np.sqrt(channel_power))
-        return [channel_real_value] * 3
+        minValue, maxValue = valueRange if valueRange is not None else (0.0, 1.0)
+        targetDisplayValue = minValue + displayValue * (maxValue - minValue)
+        channelPower = max(0.0, float(np.expm1(targetDisplayValue)))
+        channelRealValue = float(np.sqrt(channelPower))
+        return [channelRealValue] * 3
 
-    def _edit_display_line(
+    def _editDisplayLine(
         self,
         startPoint: tuple[int, int],
         endPoint: tuple[int, int],
         button,
     ) -> None:
-        display_points = self._display_line_points(startPoint, endPoint)
-        spectrum_points = [
-            self._display_point_to_spectrum_point(point)
-            for point in display_points
+        displayPoints = self._displayLinePoints(startPoint, endPoint)
+        spectrumPoints = [
+            self._displayPointToSpectrumPoint(point)
+            for point in displayPoints
         ]
         radius = max(0, int(self.brushSize))
         if button == Qt.MouseButton.RightButton:
-            self.modelContext.eraseSpectrumAtPositions(spectrum_points, radius)
+            self.modelContext.eraseSpectrumAtPositions(spectrumPoints, radius)
             return
 
         self.modelContext.paintRgbSpectrumAtPositions(
-            spectrum_points,
+            spectrumPoints,
             radius,
-            self._paint_color_from_edit_value()
+            self._paintColorFromEditValue()
         )
 
-    def _on_spectrum_pressed(self, event) -> None:
+    def _onSpectrumPressed(self, event) -> None:
         if self.modelContext is None or self.spectrumComponent is None:
             return
 
@@ -166,31 +166,31 @@ class EditDialogView2d(EditDialogView):
         if button not in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             return
 
-        display_point = self._event_to_display_point(event)
-        if display_point is None:
+        displayPoint = self._eventToDisplayPoint(event)
+        if displayPoint is None:
             return
 
         self.modelContext.beginSpectrumEdit()
         self._isDraggingSpectrum = True
         self._activeMouseButton = button
-        self._lastDisplayPoint = display_point
-        self._edit_display_line(display_point, display_point, button)
+        self._lastDisplayPoint = displayPoint
+        self._editDisplayLine(displayPoint, displayPoint, button)
 
-    def _on_spectrum_moved(self, event) -> None:
+    def _onSpectrumMoved(self, event) -> None:
         if not self._isDraggingSpectrum or self._lastDisplayPoint is None:
             return
 
         if not (event.buttons() & self._activeMouseButton):
             return
 
-        display_point = self._event_to_display_point(event)
-        if display_point is None:
+        displayPoint = self._eventToDisplayPoint(event)
+        if displayPoint is None:
             return
 
-        self._edit_display_line(self._lastDisplayPoint, display_point, self._activeMouseButton)
-        self._lastDisplayPoint = display_point
+        self._editDisplayLine(self._lastDisplayPoint, displayPoint, self._activeMouseButton)
+        self._lastDisplayPoint = displayPoint
 
-    def _on_spectrum_released(self, event) -> None:
+    def _onSpectrumReleased(self, event) -> None:
         if not self._isDraggingSpectrum:
             return
 
@@ -200,7 +200,7 @@ class EditDialogView2d(EditDialogView):
             self._activeMouseButton = None
             self._lastDisplayPoint = None
 
-    def on_undo_clicked(self):
+    def onUndoClicked(self):
         if self.modelContext is None:
             print("2D Undo: modelContext is not set")
             return
@@ -211,7 +211,7 @@ class EditDialogView2d(EditDialogView):
 
         self.modelContext.undo()
 
-    def on_redo_clicked(self):
+    def onRedoClicked(self):
         if self.modelContext is None:
             print("2D Redo: modelContext is not set")
             return
@@ -222,7 +222,7 @@ class EditDialogView2d(EditDialogView):
 
         self.modelContext.redo()
 
-    def on_reset_clicked(self):
+    def onResetClicked(self):
         if self.modelContext is None:
             print("2D Reset: modelContext is not set")
             return
@@ -233,11 +233,11 @@ class EditDialogView2d(EditDialogView):
             print(f"2D Reset error: {e}")
 
 
-    def on_thickness_changed(self, value: int):
+    def onThicknessChanged(self, value: int):
         self.brushSize = value
         print(f"2D Thickness: {self.brushSize}")
 
-    def on_value_changed(self, value: int):
+    def onValueChanged(self, value: int):
         self.editValue = value / 10
         print(f"2D Value: {self.editValue}")
 

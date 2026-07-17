@@ -11,7 +11,7 @@ from src.model.pane_type import PaneType
 from src.controller.file_saver import FileSaver
 
 
-def test_fft_spectrum_matches_numpy_fft():
+def testFftSpectrumMatchesNumpyFft():
     """単純な信号でFourierTransform.transformがnumpyのFFTと一致することを検証する"""
     x = np.array([1.0, 0.0, 0.0, 0.0], dtype=float)
     ft = FourierTransform(x)
@@ -21,7 +21,7 @@ def test_fft_spectrum_matches_numpy_fft():
     assert np.allclose(spec, expected)
 
 
-def test_1d_edit_single_index_updates_inverse_and_undo():
+def test1dEditSingleIndexUpdatesInverseAndUndo():
     """1次元モデルでスペクトルを編集すると逆変換結果が変化し、Snapshotで復元できることを確認する"""
     data = np.linspace(0.0, 1.0, 8)
     model = Fourier1dModel(data)
@@ -41,34 +41,34 @@ def test_1d_edit_single_index_updates_inverse_and_undo():
     assert np.allclose(model.inverseData, before)
 
 
-def test_1d_inverse_renderer_keeps_negative_values():
+def test1dInverseRendererKeepsNegativeValues():
     """複素型の逆変換結果を1D波形として描いても、負値が絶対値表示に変わらないことを確認する"""
     data = np.array([0.0, 1.5, 3.0, 1.5, 0.0, -1.5, -3.0, -1.5])
     model = Fourier1dModel(data)
 
-    source_image = np.array(FourierRenderer.imageFrom1dData(data))
-    inverse_image = np.array(FourierRenderer.imageFrom1dData(model.inverseData))
+    sourceImage = np.array(FourierRenderer.imageFrom1dData(data))
+    inverseImage = np.array(FourierRenderer.imageFrom1dData(model.inverseData))
 
     assert np.allclose(np.real(model.inverseData), data)
-    assert np.array_equal(inverse_image, source_image)
+    assert np.array_equal(inverseImage, sourceImage)
 
 
-def test_1d_spectrum_renderer_uses_stem_plot():
+def test1dSpectrumRendererUsesStemPlot():
     """1Dスペクトルは折れ線ではなく、離散成分を表す縦棒として描画する"""
     data = np.sin(2.0 * np.pi * np.arange(32) / 32.0)
     model = Fourier1dModel(data)
 
-    spectrum_image = np.array(model.getImage()[PaneType.POWER_SPECTRUM])
-    line_image = np.array(FourierRenderer.imageFrom1dData(model.powerSpectrum))
+    spectrumImage = np.array(model.getImage()[PaneType.POWER_SPECTRUM])
+    lineImage = np.array(FourierRenderer.imageFrom1dData(model.powerSpectrum))
 
     assert np.array_equal(
-        spectrum_image,
+        spectrumImage,
         np.array(FourierRenderer.imageFromSpectrum(model.powerSpectrum)),
     )
-    assert not np.array_equal(spectrum_image, line_image)
+    assert not np.array_equal(spectrumImage, lineImage)
 
 
-def test_2d_paint_and_erase_change_inverse():
+def test2dPaintAndEraseChangeInverse():
     """2次元モデルでペイント・消去操作が逆変換結果に反映されることを確認する"""
     data = np.arange(16, dtype=float).reshape(4, 4)
     model = Fourier2dModel(data)
@@ -86,25 +86,25 @@ def test_2d_paint_and_erase_change_inverse():
     assert not np.allclose(erased, painted)
 
 
-def test_file_saver_write_and_permission_error(tmp_path):
+def testFileSaverWriteAndPermissionError(tmp_path):
     """FileSaver.saveSignalData がファイルを書き出し、書き込み不可ディレクトリでは例外を出すことを確認する"""
     img = Image.new("RGB", (2, 2), color=(10, 20, 30))
     saver = FileSaver(aView=None)
 
-    out_path = tmp_path / "out.png"
-    saver.saveSignalData(str(out_path), img)
-    assert out_path.exists()
+    outPath = tmp_path / "out.png"
+    saver.saveSignalData(str(outPath), img)
+    assert outPath.exists()
 
     # 書き込み権限のないディレクトリへ保存しようとすると例外が発生する
-    no_write_dir = tmp_path / "no_write_dir"
-    no_write_dir.mkdir()
+    noWriteDir = tmp_path / "no_write_dir"
+    noWriteDir.mkdir()
     # remove write permission for the directory
-    orig_mode = no_write_dir.stat().st_mode
+    origMode = noWriteDir.stat().st_mode
     try:
-        os.chmod(no_write_dir, 0o500)
-        bad_path = no_write_dir / "fail.png"
+        os.chmod(noWriteDir, 0o500)
+        badPath = noWriteDir / "fail.png"
         with pytest.raises(Exception):
-            saver.saveSignalData(str(bad_path), img)
+            saver.saveSignalData(str(badPath), img)
     finally:
         # restore permissions so pytest can clean up
-        os.chmod(no_write_dir, orig_mode)
+        os.chmod(noWriteDir, origMode)

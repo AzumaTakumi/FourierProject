@@ -115,11 +115,11 @@ class EditDialogView(QWidget):
         # Interactive Spectrum
         ####################################################
 
-        spectrum_group = QGroupBox("Interactive Spectrum")
+        spectrumGroup = QGroupBox("Interactive Spectrum")
 
-        spectrum_layout = QVBoxLayout(spectrum_group)
-        spectrum_layout.setContentsMargins(16, 20, 16, 16)
-        spectrum_layout.setSpacing(12)
+        spectrumLayout = QVBoxLayout(spectrumGroup)
+        spectrumLayout.setContentsMargins(16, 20, 16, 16)
+        spectrumLayout.setSpacing(12)
 
         # canvasはダミー。実際はInteractiveSpectrumComponentが入る予定
 
@@ -133,7 +133,7 @@ class EditDialogView(QWidget):
         }
         """)
 
-        spectrum_layout.addWidget(self.canvas)
+        spectrumLayout.addWidget(self.canvas)
 
         ####################################################
         # Undo / Redo
@@ -143,92 +143,92 @@ class EditDialogView(QWidget):
 
         bottom.addStretch()
 
-        self.undo_button = QPushButton("←")
-        self.redo_button = QPushButton("→")
+        self.undoButton = QPushButton("←")
+        self.redoButton = QPushButton("→")
 
-        bottom.addWidget(self.undo_button)
-        bottom.addWidget(self.redo_button)
+        bottom.addWidget(self.undoButton)
+        bottom.addWidget(self.redoButton)
 
         bottom.addStretch()
 
-        spectrum_layout.addLayout(bottom)
+        spectrumLayout.addLayout(bottom)
 
         ####################################################
         # ペイントパネル
         ####################################################
 
-        self.paint_group = QGroupBox("ペイント")
+        self.paintGroup = QGroupBox("ペイント")
 
-        paint_layout = QVBoxLayout(self.paint_group)
-        paint_layout.setContentsMargins(16, 20, 16, 16)
-        paint_layout.setSpacing(20)
+        paintLayout = QVBoxLayout(self.paintGroup)
+        paintLayout.setContentsMargins(16, 20, 16, 16)
+        paintLayout.setSpacing(20)
 
         ####################################################
         # 太さ
         ####################################################
 
-        self.thickness_widget = QWidget()
-        self.thickness_layout = QHBoxLayout(self.thickness_widget)
-        self.thickness_layout.setContentsMargins(0, 0, 0, 0)
-        self.thickness_layout.setSpacing(12)
+        self.thicknessWidget = QWidget()
+        self.thicknessLayout = QHBoxLayout(self.thicknessWidget)
+        self.thicknessLayout.setContentsMargins(0, 0, 0, 0)
+        self.thicknessLayout.setSpacing(12)
 
 
-        thickness_label = QLabel("太さ")
-        thickness_label.setFixedWidth(40)
+        thicknessLabel = QLabel("太さ")
+        thicknessLabel.setFixedWidth(40)
 
-        self.thickness_slider = QSlider(Qt.Orientation.Horizontal)
-        # self.thickness_slider.setRange(1, 50)
-        # self.thickness_slider.setValue(5)
+        self.thicknessSlider = QSlider(Qt.Orientation.Horizontal)
+        # self.thicknessSlider.setRange(1, 50)
+        # self.thicknessSlider.setValue(5)
 
-        self.thickness_spin = QSpinBox()
-        # self.thickness_spin.setRange(1, 50)
-        # self.thickness_spin.setValue(5)
+        self.thicknessSpin = QSpinBox()
+        # self.thicknessSpin.setRange(1, 50)
+        # self.thicknessSpin.setValue(5)
 
-        self.thickness_slider.valueChanged.connect(self.thickness_spin.setValue)
-        self.thickness_spin.valueChanged.connect(self.thickness_slider.setValue)
+        self.thicknessSlider.valueChanged.connect(self.thicknessSpin.setValue)
+        self.thicknessSpin.valueChanged.connect(self.thicknessSlider.setValue)
 
-        self.thickness_layout.addWidget(thickness_label)
-        self.thickness_layout.addWidget(self.thickness_slider)
-        self.thickness_layout.addWidget(self.thickness_spin)
+        self.thicknessLayout.addWidget(thicknessLabel)
+        self.thicknessLayout.addWidget(self.thicknessSlider)
+        self.thicknessLayout.addWidget(self.thicknessSpin)
 
         ####################################################
         # 数値
         ####################################################
 
-        value_layout = QHBoxLayout()
-        value_layout.setSpacing(12)
+        valueLayout = QHBoxLayout()
+        valueLayout.setSpacing(12)
 
-        value_label = QLabel("数値")
-        value_label.setFixedWidth(40)
+        valueLabel = QLabel("数値")
+        valueLabel.setFixedWidth(40)
 
-        self.value_slider = QSlider(Qt.Orientation.Horizontal)
-        # self.value_slider.setRange(0, 100)
-        # self.value_slider.setValue(50)
+        self.valueSlider = QSlider(Qt.Orientation.Horizontal)
+        # self.valueSlider.setRange(0, 100)
+        # self.valueSlider.setValue(50)
 
-        self.value_spin = QSpinBox()
-        # self.value_spin.setRange(0, 100)
-        # self.value_spin.setValue(50)
+        self.valueSpin = QSpinBox()
+        # self.valueSpin.setRange(0, 100)
+        # self.valueSpin.setValue(50)
 
-        self.value_slider.valueChanged.connect(self.value_spin.setValue)
-        self.value_spin.valueChanged.connect(self.value_slider.setValue)
+        self.valueSlider.valueChanged.connect(self.valueSpin.setValue)
+        self.valueSpin.valueChanged.connect(self.valueSlider.setValue)
 
-        value_layout.addWidget(value_label)
-        value_layout.addWidget(self.value_slider)
-        value_layout.addWidget(self.value_spin)
-        
-        paint_layout.addWidget(self.thickness_widget)
-        paint_layout.addLayout(value_layout)
-        paint_layout.addStretch()
+        valueLayout.addWidget(valueLabel)
+        valueLayout.addWidget(self.valueSlider)
+        valueLayout.addWidget(self.valueSpin)
 
-        self.paint_group.setFixedWidth(300)
+        paintLayout.addWidget(self.thicknessWidget)
+        paintLayout.addLayout(valueLayout)
+        paintLayout.addStretch()
+
+        self.paintGroup.setFixedWidth(300)
 
         ####################################################
         # Splitter
         ####################################################
 
-        splitter.addWidget(spectrum_group)
+        splitter.addWidget(spectrumGroup)
 
-        splitter.addWidget(self.paint_group)
+        splitter.addWidget(self.paintGroup)
 
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
@@ -241,12 +241,12 @@ class EditDialogView(QWidget):
 
         footer = QHBoxLayout()
 
-        self.reset_button = QPushButton("リセット")
-        self.close_button = QPushButton("閉じる")
+        self.resetButton = QPushButton("リセット")
+        self.closeButton = QPushButton("閉じる")
 
-        footer.addWidget(self.reset_button)
+        footer.addWidget(self.resetButton)
         footer.addStretch()
-        footer.addWidget(self.close_button)
+        footer.addWidget(self.closeButton)
 
         root.addLayout(footer)
 
@@ -255,35 +255,35 @@ class EditDialogView(QWidget):
         ####################################################
 
         # ボタン
-        self.undo_button.clicked.connect(self.on_undo_clicked)
-        self.redo_button.clicked.connect(self.on_redo_clicked)
-        self.reset_button.clicked.connect(self.on_reset_clicked)
-        self.close_button.clicked.connect(self.on_close_clicked)
+        self.undoButton.clicked.connect(self.onUndoClicked)
+        self.redoButton.clicked.connect(self.onRedoClicked)
+        self.resetButton.clicked.connect(self.onResetClicked)
+        self.closeButton.clicked.connect(self.onCloseClicked)
 
         # スライダー
-        self.thickness_slider.valueChanged.connect(self.on_thickness_changed)
-        self.value_slider.valueChanged.connect(self.on_value_changed)
+        self.thicknessSlider.valueChanged.connect(self.onThicknessChanged)
+        self.valueSlider.valueChanged.connect(self.onValueChanged)
 
     ####################################################
     # スロット
     ####################################################
 
-    def on_undo_clicked(self):
+    def onUndoClicked(self):
         print("Undo")
 
-    def on_redo_clicked(self):
+    def onRedoClicked(self):
         print("Redo")
 
-    def on_reset_clicked(self):
+    def onResetClicked(self):
         print("Reset")
 
-    def on_close_clicked(self):
+    def onCloseClicked(self):
         self.close()
 
-    def on_thickness_changed(self, value: int):
+    def onThicknessChanged(self, value: int):
         print(f"Thickness: {value}")
 
-    def on_value_changed(self, value: int):
+    def onValueChanged(self, value: int):
         print(f"Value: {value}")
 
 

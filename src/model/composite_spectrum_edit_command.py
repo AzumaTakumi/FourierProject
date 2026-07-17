@@ -99,39 +99,39 @@ class CompositeSpectrumEditCommand(SpectrumEditCommand):
 
         commands = self.commands
         model = commands[0].model
-        row_start = min(command.rect[0] for command in commands)
-        row_stop = max(command.rect[1] for command in commands)
-        col_start = min(command.rect[2] for command in commands)
-        col_stop = max(command.rect[3] for command in commands)
+        rowStart = min(command.rect[0] for command in commands)
+        rowStop = max(command.rect[1] for command in commands)
+        colStart = min(command.rect[2] for command in commands)
+        colStop = max(command.rect[3] for command in commands)
 
-        old_real, old_imaginary = model.getInteractiveSpectrumAtRect(
-            row_start,
-            row_stop,
-            col_start,
-            col_stop,
+        oldReal, oldImaginary = model.getInteractiveSpectrumAtRect(
+            rowStart,
+            rowStop,
+            colStart,
+            colStop,
         )
-        filled = np.zeros(old_real.shape[:2], dtype=bool)
+        filled = np.zeros(oldReal.shape[:2], dtype=bool)
 
         for command in commands:
             r0, r1, c0, c1 = command.rect
-            relative_rows = slice(r0 - row_start, r1 - row_start)
-            relative_cols = slice(c0 - col_start, c1 - col_start)
-            filled_region = filled[relative_rows, relative_cols]
-            missing = ~filled_region
+            relativeRows = slice(r0 - rowStart, r1 - rowStart)
+            relativeCols = slice(c0 - colStart, c1 - colStart)
+            filledRegion = filled[relativeRows, relativeCols]
+            missing = ~filledRegion
 
-            real_region = old_real[relative_rows, relative_cols]
-            imaginary_region = old_imaginary[relative_rows, relative_cols]
-            real_region[missing] = np.asarray(command.oldRealPart)[missing]
-            imaginary_region[missing] = np.asarray(command.oldImaginaryPart)[missing]
-            filled_region[missing] = True
+            realRegion = oldReal[relativeRows, relativeCols]
+            imaginaryRegion = oldImaginary[relativeRows, relativeCols]
+            realRegion[missing] = np.asarray(command.oldRealPart)[missing]
+            imaginaryRegion[missing] = np.asarray(command.oldImaginaryPart)[missing]
+            filledRegion[missing] = True
 
         model.restoreInteractiveSpectrumAtRect(
-            row_start,
-            row_stop,
-            col_start,
-            col_stop,
-            old_real,
-            old_imaginary,
+            rowStart,
+            rowStop,
+            colStart,
+            colStop,
+            oldReal,
+            oldImaginary,
         )
         return True
 

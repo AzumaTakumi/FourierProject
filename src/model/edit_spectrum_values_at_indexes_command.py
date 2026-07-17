@@ -52,16 +52,16 @@ class EditSpectrumValuesAtIndexesCommand(SpectrumEditCommand):
         self.oldImaginaryParts: np.ndarray = np.array([])
 
         # 新しく設定する実部の値を保持する。
-        new_real_parts = np.asarray(newRealParts, dtype=float)
+        newRealParts = np.asarray(newRealParts, dtype=float)
         self.newRealParts: np.ndarray = (
-            new_real_parts.reshape(1) if new_real_parts.ndim == 0 else new_real_parts.copy()
+            newRealParts.reshape(1) if newRealParts.ndim == 0 else newRealParts.copy()
         )
         self.newRealPart: float = float(self.newRealParts[0]) if self.newRealParts.size else 0.0
 
         # 新しく設定する虚部の値を保持する。
-        new_imaginary_parts = np.asarray(newImaginaryParts, dtype=float)
+        newImaginaryParts = np.asarray(newImaginaryParts, dtype=float)
         self.newImaginaryParts: np.ndarray = (
-            new_imaginary_parts.reshape(1) if new_imaginary_parts.ndim == 0 else new_imaginary_parts.copy()
+            newImaginaryParts.reshape(1) if newImaginaryParts.ndim == 0 else newImaginaryParts.copy()
         )
         self.newImaginaryPart: float = float(self.newImaginaryParts[0]) if self.newImaginaryParts.size else 0.0
 
@@ -81,9 +81,9 @@ class EditSpectrumValuesAtIndexesCommand(SpectrumEditCommand):
 
         # SAFE CODE AREA ˅
         # Undoで戻す値は、実行直前のinteractive値として保存する。
-        old_values = [self.model.getInteractiveSpectrumAtIndex(index) for index in self.indexes]
-        self.oldRealParts = np.asarray([real_part for real_part, _ in old_values], dtype=float)
-        self.oldImaginaryParts = np.asarray([imaginary_part for _, imaginary_part in old_values], dtype=float)
+        oldValues = [self.model.getInteractiveSpectrumAtIndex(index) for index in self.indexes]
+        self.oldRealParts = np.asarray([realPart for realPart, _ in oldValues], dtype=float)
+        self.oldImaginaryParts = np.asarray([imaginaryPart for _, imaginaryPart in oldValues], dtype=float)
         self.oldRealPart = float(self.oldRealParts[0]) if self.oldRealParts.size else 0.0
         self.oldImaginaryPart = float(self.oldImaginaryParts[0]) if self.oldImaginaryParts.size else 0.0
 

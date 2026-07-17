@@ -6,7 +6,7 @@ from src.model.fourier_2_d_model import Fourier2dModel
 from src.model.spectrum_1_d_change import Spectrum1dChange
 
 
-def test_model_switching_clears_history_and_keeps_1d_and_2d_separate():
+def testModelSwitchingClearsHistoryAndKeeps1dAnd2dSeparate():
     """モデル切り替えで履歴がリセットされ、1D/2Dの状態が独立していることを確認する"""
     context = FourierModelContext(lambda _change: None)
 
@@ -34,7 +34,7 @@ def test_model_switching_clears_history_and_keeps_1d_and_2d_separate():
     assert context.currentModel.interactiveRealPart.shape == (3,)
 
 
-def test_model_switch_does_not_emit_dirty_region_notification():
+def testModelSwitchDoesNotEmitDirtyRegionNotification():
     """モデル差し替えでは部分更新通知を出さず、編集時だけ通知することを確認する"""
     notifications = []
     context = FourierModelContext(notifications.append)

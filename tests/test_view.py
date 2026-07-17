@@ -46,7 +46,7 @@ class FakeMouseEvent:
         return self._buttons
 
 
-def test_interactive_1d_render_all_stores_copy_and_displays_image(qtbot):
+def testInteractive1dRenderAllStoresCopyAndDisplaysImage(qtbot):
     """1D全体描画が入力をコピーし、表示画像とPixmapを作ることを確認する。"""
     component = Interactive1dSpectrumComponent()
     qtbot.addWidget(component)
@@ -61,7 +61,7 @@ def test_interactive_1d_render_all_stores_copy_and_displays_image(qtbot):
     assert not component.pixmap().isNull()
 
 
-def test_interactive_1d_render_dirty_region_updates_only_target_range(qtbot):
+def testInteractive1dRenderDirtyRegionUpdatesOnlyTargetRange(qtbot):
     """1D部分描画が指定インデックスの範囲だけを更新することを確認する。"""
     component = Interactive1dSpectrumComponent()
     qtbot.addWidget(component)
@@ -77,7 +77,7 @@ def test_interactive_1d_render_dirty_region_updates_only_target_range(qtbot):
     assert component._displayImage is not None
 
 
-def test_interactive_2d_render_all_copies_data_and_sets_display_range(qtbot):
+def testInteractive2dRenderAllCopiesDataAndSetsDisplayRange(qtbot):
     """2D全体描画が表示レンジを計算し、画像を生成することを確認する。"""
     component = Interactive2dSpectrumComponent()
     qtbot.addWidget(component)
@@ -92,12 +92,12 @@ def test_interactive_2d_render_all_copies_data_and_sets_display_range(qtbot):
     assert component._displayImage.size == (4, 4)
 
 
-def test_interactive_2d_render_dirty_region_updates_only_rectangle(qtbot):
+def testInteractive2dRenderDirtyRegionUpdatesOnlyRectangle(qtbot):
     """2D部分描画が指定矩形だけを更新し、表示レンジを維持することを確認する。"""
     component = Interactive2dSpectrumComponent()
     qtbot.addWidget(component)
     component.renderAll(np.zeros((4, 4), dtype=float))
-    initial_range = component._displayValueRange
+    initialRange = component._displayValueRange
     change = Spectrum2dChange(
         x=1,
         y=1,
@@ -111,12 +111,12 @@ def test_interactive_2d_render_dirty_region_updates_only_rectangle(qtbot):
     expected = np.zeros((4, 4), dtype=float)
     expected[1:3, 1:3] = 9.0
     assert np.array_equal(component._powerSpectrum, expected)
-    assert component._displayValueRange == initial_range
+    assert component._displayValueRange == initialRange
     assert component.pixmap() is not None
 
 
 @pytest.mark.parametrize(
-    ("component_class", "add_method", "event_method"),
+    ("componentClass", "addMethod", "eventMethod"),
     [
         (Interactive1dSpectrumComponent, "addMouseMoveEventListener", "mouseMoveEvent"),
         (Interactive1dSpectrumComponent, "addMousePressEventListener", "mousePressEvent"),
@@ -126,22 +126,22 @@ def test_interactive_2d_render_dirty_region_updates_only_rectangle(qtbot):
         (Interactive2dSpectrumComponent, "addMouseReleaseEventListener", "mouseReleaseEvent"),
     ],
 )
-def test_interactive_component_notifies_registered_mouse_listener(
-    qtbot, component_class, add_method, event_method
+def testInteractiveComponentNotifiesRegisteredMouseListener(
+    qtbot, componentClass, addMethod, eventMethod
 ):
     """登録したマウスリスナーへ同じイベントを通知することを確認する。"""
-    component = component_class()
+    component = componentClass()
     qtbot.addWidget(component)
     received = []
     event = object()
-    getattr(component, add_method)(received.append)
+    getattr(component, addMethod)(received.append)
 
-    getattr(component, event_method)(event)
+    getattr(component, eventMethod)(event)
 
     assert received == [event]
 
 
-def test_main_window_display_populates_all_four_panes(qtbot):
+def testMainWindowDisplayPopulatesAllFourPanes(qtbot):
     """MainWindowViewがモデルの4領域を保持・描画することを確認する。"""
     view = MainWindowView()
     qtbot.addWidget(view)
@@ -173,7 +173,7 @@ def test_main_window_display_populates_all_four_panes(qtbot):
     assert view._restoredDataImageLabel.pixmap() is not None
 
 
-def test_main_window_context_menu_event_delegates_global_position(qtbot):
+def testMainWindowContextMenuEventDelegatesGlobalPosition(qtbot):
     """右クリックイベントのグローバル座標をControllerへ渡すことを確認する。"""
     view = MainWindowView()
     qtbot.addWidget(view)
@@ -189,46 +189,46 @@ def test_main_window_context_menu_event_delegates_global_position(qtbot):
     assert positions == [position]
 
 
-def test_main_window_update_restored_image_refreshes_view(qtbot, monkeypatch):
+def testMainWindowUpdateRestoredImageRefreshesView(qtbot, monkeypatch):
     """復元画像を差し替えた直後に再描画することを確認する。"""
     view = MainWindowView()
     qtbot.addWidget(view)
-    refresh_calls = []
-    monkeypatch.setattr(view, "_refreshImages", lambda: refresh_calls.append(True))
+    refreshCalls = []
+    monkeypatch.setattr(view, "_refreshImages", lambda: refreshCalls.append(True))
     image = Image.new("RGB", (3, 3), color=(1, 2, 3))
 
     view.updateRestoredDataImage(image)
 
     assert view._restoredDataImage is image
-    assert refresh_calls == [True]
+    assert refreshCalls == [True]
 
 
-def test_edit_dialog_1d_maps_widget_edges_to_spectrum_edges(qtbot):
+def testEditDialog1dMapsWidgetEdgesToSpectrumEdges(qtbot):
     """1D表示領域の左右端をスペクトルの先頭・末尾へ変換することを確認する。"""
     component = Interactive1dSpectrumComponent()
     component.renderAll(np.arange(8, dtype=float))
-    dialog = EditDialogView1d(spectrum_component=component)
+    dialog = EditDialogView1d(spectrumComponent=component)
     qtbot.addWidget(dialog)
     component.resize(650, 480)
 
     left = FakeMouseEvent(0, 10, Qt.MouseButton.LeftButton)
     right = FakeMouseEvent(component.width(), 10, Qt.MouseButton.LeftButton)
 
-    assert dialog._event_to_index(left) == 0
-    assert dialog._event_to_index(right) == 7
+    assert dialog._eventToIndex(left) == 0
+    assert dialog._eventToIndex(right) == 7
 
 
-def test_edit_dialog_1d_routes_scale_and_erase_operations(qtbot):
+def testEditDialog1dRoutesScaleAndEraseOperations(qtbot):
     """1D左クリックを倍率変更、右クリックと値0を消去へ振り分ける。"""
     context = MagicMock()
     dialog = EditDialogView1d(modelContext=context)
     qtbot.addWidget(dialog)
     dialog.editValue = 0.75
 
-    dialog._edit_index_range(1, 3, Qt.MouseButton.LeftButton)
-    dialog._edit_index_range(4, 5, Qt.MouseButton.RightButton)
+    dialog._editIndexRange(1, 3, Qt.MouseButton.LeftButton)
+    dialog._editIndexRange(4, 5, Qt.MouseButton.RightButton)
     dialog.editValue = 0.0
-    dialog._edit_index_range(6, 6, Qt.MouseButton.LeftButton)
+    dialog._editIndexRange(6, 6, Qt.MouseButton.LeftButton)
 
     context.scaleSpectrumBetweenIndexes.assert_called_once_with(1, 3, 0.75)
     assert context.eraseSpectrumBetweenIndexes.call_args_list == [
@@ -237,7 +237,7 @@ def test_edit_dialog_1d_routes_scale_and_erase_operations(qtbot):
     ]
 
 
-def test_edit_dialog_1d_drag_starts_edits_and_ends_composite_command(qtbot):
+def testEditDialog1dDragStartsEditsAndEndsCompositeCommand(qtbot):
     """1Dドラッグの押下・移動・解放で編集トランザクションを完結する。"""
     context = MagicMock()
     component = Interactive1dSpectrumComponent()
@@ -245,7 +245,7 @@ def test_edit_dialog_1d_drag_starts_edits_and_ends_composite_command(qtbot):
     component.resize(650, 480)
     dialog = EditDialogView1d(
         modelContext=context,
-        spectrum_component=component,
+        spectrumComponent=component,
     )
     qtbot.addWidget(dialog)
     dialog.editValue = 0.5
@@ -258,9 +258,9 @@ def test_edit_dialog_1d_drag_starts_edits_and_ends_composite_command(qtbot):
     )
     release = FakeMouseEvent(300, 10, Qt.MouseButton.LeftButton)
 
-    dialog._on_spectrum_pressed(press)
-    dialog._on_spectrum_moved(move)
-    dialog._on_spectrum_released(release)
+    dialog._onSpectrumPressed(press)
+    dialog._onSpectrumMoved(move)
+    dialog._onSpectrumReleased(release)
 
     context.beginSpectrumEdit.assert_called_once_with()
     assert context.scaleSpectrumBetweenIndexes.call_count == 2
@@ -268,7 +268,7 @@ def test_edit_dialog_1d_drag_starts_edits_and_ends_composite_command(qtbot):
     assert dialog._isDraggingSpectrum is False
 
 
-def test_edit_dialog_1d_undo_redo_and_reset_use_model_context(qtbot):
+def testEditDialog1dUndoRedoAndResetUseModelContext(qtbot):
     """1D編集ボタンが履歴件数を確認してModelContextを操作する。"""
     context = MagicMock()
     context.getUndoCount.return_value = 1
@@ -276,31 +276,31 @@ def test_edit_dialog_1d_undo_redo_and_reset_use_model_context(qtbot):
     dialog = EditDialogView1d(modelContext=context)
     qtbot.addWidget(dialog)
 
-    dialog.on_undo_clicked()
-    dialog.on_redo_clicked()
-    dialog.on_reset_clicked()
+    dialog.onUndoClicked()
+    dialog.onRedoClicked()
+    dialog.onResetClicked()
 
     context.undo.assert_called_once_with()
     context.redo.assert_called_once_with()
     context.resetSpectrum.assert_called_once_with()
 
 
-def test_edit_dialog_2d_builds_continuous_line_and_maps_fftshift(qtbot):
+def testEditDialog2dBuildsContinuousLineAndMapsFftshift(qtbot):
     """2Dドラッグ線を連続点へ展開し、表示座標をスペクトル座標へ戻す。"""
     component = Interactive2dSpectrumComponent()
     component.renderAll(np.zeros((4, 4, 3), dtype=float))
     dialog = EditDialogView2d(spectrumComponent=component)
     qtbot.addWidget(dialog)
 
-    assert dialog._display_line_points((0, 0), (2, 2)) == [
+    assert dialog._displayLinePoints((0, 0), (2, 2)) == [
         (0, 0),
         (1, 1),
         (2, 2),
     ]
-    assert dialog._display_point_to_spectrum_point((0, 0)) == (2, 2)
+    assert dialog._displayPointToSpectrumPoint((0, 0)) == (2, 2)
 
 
-def test_edit_dialog_2d_routes_paint_and_erase_operations(qtbot):
+def testEditDialog2dRoutesPaintAndEraseOperations(qtbot):
     """2D左クリックをペイント、右クリックを消去へ振り分ける。"""
     context = MagicMock()
     component = Interactive2dSpectrumComponent()
@@ -313,17 +313,17 @@ def test_edit_dialog_2d_routes_paint_and_erase_operations(qtbot):
     dialog.brushSize = 2
     dialog.editValue = 1.0
 
-    dialog._edit_display_line((0, 0), (1, 1), Qt.MouseButton.LeftButton)
-    dialog._edit_display_line((2, 2), (2, 2), Qt.MouseButton.RightButton)
+    dialog._editDisplayLine((0, 0), (1, 1), Qt.MouseButton.LeftButton)
+    dialog._editDisplayLine((2, 2), (2, 2), Qt.MouseButton.RightButton)
 
-    paint_points, radius, color = context.paintRgbSpectrumAtPositions.call_args.args
-    assert paint_points == [(2, 2), (3, 3)]
+    paintPoints, radius, color = context.paintRgbSpectrumAtPositions.call_args.args
+    assert paintPoints == [(2, 2), (3, 3)]
     assert radius == 2
     assert len(color) == 3
     context.eraseSpectrumAtPositions.assert_called_once_with([(0, 0)], 2)
 
 
-def test_edit_dialog_2d_undo_redo_and_reset_use_model_context(qtbot):
+def testEditDialog2dUndoRedoAndResetUseModelContext(qtbot):
     """2D編集ボタンが履歴件数を確認してModelContextを操作する。"""
     context = MagicMock()
     context.getUndoCount.return_value = 1
@@ -331,9 +331,9 @@ def test_edit_dialog_2d_undo_redo_and_reset_use_model_context(qtbot):
     dialog = EditDialogView2d(modelContext=context)
     qtbot.addWidget(dialog)
 
-    dialog.on_undo_clicked()
-    dialog.on_redo_clicked()
-    dialog.on_reset_clicked()
+    dialog.onUndoClicked()
+    dialog.onRedoClicked()
+    dialog.onResetClicked()
 
     context.undo.assert_called_once_with()
     context.redo.assert_called_once_with()

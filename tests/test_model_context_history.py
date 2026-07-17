@@ -4,7 +4,7 @@ import pytest
 from src.model.fourier_model_context import FourierModelContext
 
 
-def test_undo_redo_reset_and_empty_history_behavior():
+def testUndoRedoResetAndEmptyHistoryBehavior():
     """1D編集のUndo/Redo/Resetと履歴が尽きたときの振る舞いを確認する"""
     context = FourierModelContext(lambda _change: None)
     context.set1dSourceData(np.array([0.0, 1.0, 0.0, -1.0], dtype=float))
@@ -35,16 +35,16 @@ def test_undo_redo_reset_and_empty_history_behavior():
         context.undo()
 
 
-def test_2d_composite_undo_restores_rect_and_inverse_once():
+def test2dCompositeUndoRestoresRectAndInverseOnce():
     """2Dドラッグ編集のUndoでは矩形復元と逆FFTを1回だけ実行する"""
     context = FourierModelContext(lambda _change: None)
     context.set2dSourceData(np.arange(64, dtype=float).reshape(8, 8))
     model = context.currentModel
 
-    before_real = np.copy(model.interactiveRealPart)
-    before_imaginary = np.copy(model.interactiveImaginaryPart)
-    before_power = np.copy(model.interactivePowerSpectrum)
-    before_inverse = np.copy(model.inverseData)
+    beforeReal = np.copy(model.interactiveRealPart)
+    beforeImaginary = np.copy(model.interactiveImaginaryPart)
+    beforePower = np.copy(model.interactivePowerSpectrum)
+    beforeInverse = np.copy(model.inverseData)
 
     context.beginSpectrumEdit()
     context.paintRgbSpectrumAtPositions([(2, 2)], radius=1, rgbColor=[10.0, 8.0, 6.0])
@@ -57,23 +57,23 @@ def test_2d_composite_undo_restores_rect_and_inverse_once():
     assert len(command.commands) == 4
 
     calls = {"restore": 0, "inverse": 0}
-    original_restore = model.restoreInteractiveSpectrumAtRect
-    original_compute_inverse = model.computeInverseData
+    originalRestore = model.restoreInteractiveSpectrumAtRect
+    originalComputeInverse = model.computeInverseData
 
-    def counted_restore(*args, **kwargs):
+    def countedRestore(*args, **kwargs):
         calls["restore"] += 1
-        return original_restore(*args, **kwargs)
+        return originalRestore(*args, **kwargs)
 
-    def counted_compute_inverse():
+    def countedComputeInverse():
         calls["inverse"] += 1
-        return original_compute_inverse()
+        return originalComputeInverse()
 
-    model.restoreInteractiveSpectrumAtRect = counted_restore
-    model.computeInverseData = counted_compute_inverse
+    model.restoreInteractiveSpectrumAtRect = countedRestore
+    model.computeInverseData = countedComputeInverse
 
     assert context.undo() is True
     assert calls == {"restore": 1, "inverse": 1}
-    assert np.allclose(model.interactiveRealPart, before_real)
-    assert np.allclose(model.interactiveImaginaryPart, before_imaginary)
-    assert np.allclose(model.interactivePowerSpectrum, before_power)
-    assert np.allclose(model.inverseData, before_inverse)
+    assert np.allclose(model.interactiveRealPart, beforeReal)
+    assert np.allclose(model.interactiveImaginaryPart, beforeImaginary)
+    assert np.allclose(model.interactivePowerSpectrum, beforePower)
+    assert np.allclose(model.inverseData, beforeInverse)

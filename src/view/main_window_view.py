@@ -24,10 +24,10 @@ class MainWindowView(QMainWindow):
         self._originalSpectrum = None
         self._restoredDataImage = None
         self._spectrumComponent = None
-        self.file_saver_instance = FileSaver(self)
+        self.fileSaverInstance = FileSaver(self)
         self._contextMenuController = ContextMenuController(
-            parent=self, 
-            fileSaver=self.file_saver_instance
+            parent=self,
+            fileSaver=self.fileSaverInstance
         )
 
         self._originalDataLabel = QLabel()
@@ -85,7 +85,7 @@ class MainWindowView(QMainWindow):
         # 0行目と1行目の引き伸ばし比率を 1:1 に設定
         self._layout.setRowStretch(0, 1)
         self._layout.setRowStretch(1, 1)
-        
+
         # 0列目と1列目の引き伸ばし比率を 1:1 に設定
         self._layout.setColumnStretch(0, 1)
         self._layout.setColumnStretch(1, 1)
@@ -107,7 +107,7 @@ class MainWindowView(QMainWindow):
         self._spectrumComponent.setParent(None)
         self._spectrumComponent.deleteLater()
         self._spectrumComponent = None
-    
+
 
     def display(self, model) -> None:
         """
@@ -167,17 +167,17 @@ class MainWindowView(QMainWindow):
         self._restoredDataImageLabel.setPixmap(
             QPixmap.fromImage(ImageQt(self._restoredDataImage)).scaled(w3, h3, Qt.AspectRatioMode.KeepAspectRatio)
         )
-        
+
         # 4. 右下：編集用スペクトラム（ここが今回の主役！）
         if self._spectrumComponent and getattr(self._spectrumComponent, "_displayImage", None) is not None:
             # 右下のセルの幅と高さをそのまま取得する
             w4, h4 = self._spectrumComponent.width(), self._spectrumComponent.height()
-            
+
             # 【ここがポイント！】右下自身に .scaled() をさせて突っ張らせるのではなく、
             # View側がセルのサイズに合わせて「比率を維持（KeepAspectRatio）」して綺麗にはめ込みます！
             pix = QPixmap.fromImage(ImageQt(self._spectrumComponent._displayImage)).scaled(w4, h4, Qt.AspectRatioMode.KeepAspectRatio)
             self._spectrumComponent.setPixmap(pix)
-        
+
 
     def resizeEvent(self, event) -> None:
         """ ウィンドウ全体のサイズが変更されたら、自動的に画像をリサイズする """

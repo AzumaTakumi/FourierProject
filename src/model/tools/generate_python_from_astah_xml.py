@@ -114,55 +114,55 @@ IMPORT_LINE_PATTERN = re.compile(r"^\s*(?:from\s+\S+\s+import\s+.+|import\s+.+?)
 @dataclass(frozen=True)
 class ParameterSpec:
     name: str
-    type_name: str
+    typeName: str
     default: str | None
 
 
 @dataclass(frozen=True)
 class AttributeSpec:
     name: str
-    type_name: str
+    typeName: str
     default: str | None
     definition: str | None
-    is_enum_literal: bool
-    is_class_scope: bool
+    isEnumLiteral: bool
+    isClassScope: bool
 
 
 @dataclass(frozen=True)
 class MethodSpec:
     name: str
     parameters: tuple[ParameterSpec, ...]
-    return_type: str
+    returnType: str
     definition: str | None
 
 
 @dataclass(frozen=True)
 class ClassSpec:
-    class_id: str
-    original_name: str
+    classId: str
+    originalName: str
     name: str
-    package_name: str
+    packageName: str
     definition: str | None
-    base_class_name: str | None
-    is_enumeration: bool
-    is_dataclass: bool
+    baseClassName: str | None
+    isEnumeration: bool
+    isDataclass: bool
     attributes: tuple[AttributeSpec, ...]
     methods: tuple[MethodSpec, ...]
 
 
 @dataclass(frozen=True)
 class XmiModel:
-    package_to_classes: dict[str, tuple[ClassSpec, ...]]
+    packageToClasses: dict[str, tuple[ClassSpec, ...]]
 
 
 @dataclass(frozen=True)
 class OutputFileSpec:
     path: Path
     text: str
-    package_name: str
-    class_name: str | None
-    original_class_name: str | None
-    module_name: str | None
+    packageName: str
+    className: str | None
+    originalClassName: str | None
+    moduleName: str | None
 
 
 @dataclass(frozen=True)
@@ -174,7 +174,7 @@ class GeneratedCodeArea:
     end: str
 
 
-def local_name(tag: str) -> str:
+def localName(tag: str) -> str:
     if "}" in tag:
         return tag.rsplit("}", 1)[1]
     if ":" in tag:
@@ -182,49 +182,49 @@ def local_name(tag: str) -> str:
     return tag
 
 
-def xmi_attr(elem: ET.Element, name: str) -> str | None:
+def xmiAttr(elem: ET.Element, name: str) -> str | None:
     return elem.attrib.get(f"xmi.{name}") or elem.attrib.get(name)
 
 
-def direct_children_by_local(elem: ET.Element, local: str) -> list[ET.Element]:
-    return [c for c in list(elem) if local_name(c.tag) == local]
+def directChildrenByLocal(elem: ET.Element, local: str) -> list[ET.Element]:
+    return [c for c in list(elem) if localName(c.tag) == local]
 
 
-def child_classifier_idref(elem: ET.Element) -> str | None:
+def childClassifierIdref(elem: ET.Element) -> str | None:
     for child in elem.iter():
-        if local_name(child.tag) == "Classifier":
-            return xmi_attr(child, "idref")
+        if localName(child.tag) == "Classifier":
+            return xmiAttr(child, "idref")
     return None
 
 
-def decode_astah_text(value: str | None) -> str | None:
+def decodeAstahText(value: str | None) -> str | None:
     if value is None:
         return None
     text = urllib.parse.unquote_plus(value).strip()
     return text or None
 
 
-def decode_astah_name(value: str | None) -> str | None:
-    return decode_astah_text(value)
+def decodeAstahName(value: str | None) -> str | None:
+    return decodeAstahText(value)
 
 
-def read_definition(elem: ET.Element) -> str | None:
-    for def_node in direct_children_by_local(elem, "ModelElement.definition"):
-        text = decode_astah_text(def_node.attrib.get("xmi.value") or def_node.attrib.get("value"))
+def readDefinition(elem: ET.Element) -> str | None:
+    for defNode in directChildrenByLocal(elem, "ModelElement.definition"):
+        text = decodeAstahText(defNode.attrib.get("xmi.value") or defNode.attrib.get("value"))
         if text:
             return text
     return None
 
 
-def parse_param_name(raw_name: str | None) -> tuple[str, str | None]:
-    decoded = decode_astah_name(raw_name) or ""
+def parseParamName(rawName: str | None) -> tuple[str, str | None]:
+    decoded = decodeAstahName(rawName) or ""
     if "=" in decoded:
         name, default = decoded.split("=", 1)
         return name.strip(), default.strip()
     return decoded, None
 
 
-def to_safe_identifier(name: str, fallback: str = "value") -> str:
+def toSafeIdentifier(name: str, fallback: str = "value") -> str:
     raw = name.strip()
     leading = len(raw) - len(raw.lstrip("_"))
     trailing = len(raw) - len(raw.rstrip("_"))
@@ -243,27 +243,27 @@ def to_safe_identifier(name: str, fallback: str = "value") -> str:
     return f"{'_' * leading}{core}{'_' * trailing}"
 
 
-def normalize_type(
-    type_name: str | None,
-    class_name_map: dict[str, str],
+def normalizeType(
+    typeName: str | None,
+    classNameMap: dict[str, str],
     default: str | None = None,
 ) -> str:
-    decoded_type = decode_astah_name(type_name)
-    if not decoded_type:
-        py_type = "Any"
+    decodedType = decodeAstahName(typeName)
+    if not decodedType:
+        pyType = "Any"
     else:
-        py_type = TYPE_MAP.get(decoded_type)
-        if py_type is None:
-            py_type = normalize_collection_type_name(decoded_type)
-        if py_type is None:
-            py_type = class_name_map.get(decoded_type, to_safe_identifier(decoded_type, fallback="Any"))
-    if default is not None and default.strip() in NONE_LITERALS and py_type != "None":
-        return f"{py_type} | None"
-    return py_type
+        pyType = TYPE_MAP.get(decodedType)
+        if pyType is None:
+            pyType = normalizeCollectionTypeName(decodedType)
+        if pyType is None:
+            pyType = classNameMap.get(decodedType, toSafeIdentifier(decodedType, fallback="Any"))
+    if default is not None and default.strip() in NONE_LITERALS and pyType != "None":
+        return f"{pyType} | None"
+    return pyType
 
 
-def is_external_model_type(class_name: str) -> bool:
-    normalized = decode_astah_name(class_name) or ""
+def isExternalModelType(className: str) -> bool:
+    normalized = decodeAstahName(className) or ""
     lower = normalized.strip().lower()
     if lower in EXTERNAL_MODEL_TYPE_NAMES:
         return True
@@ -271,8 +271,8 @@ def is_external_model_type(class_name: str) -> bool:
     return any(compact.startswith(prefix) for prefix in EXTERNAL_GENERIC_PREFIXES)
 
 
-def normalize_collection_type_name(type_name: str) -> str | None:
-    compact = re.sub(r"\s+", "", type_name).lower()
+def normalizeCollectionTypeName(typeName: str) -> str | None:
+    compact = re.sub(r"\s+", "", typeName).lower()
     if compact.startswith(("list[", "list<")):
         return "list"
     if compact.startswith(("dict[", "dict<")):
@@ -284,7 +284,7 @@ def normalize_collection_type_name(type_name: str) -> str | None:
     return None
 
 
-def normalize_default_expr(value: str | None) -> str | None:
+def normalizeDefaultExpr(value: str | None) -> str | None:
     if value is None:
         return None
     v = value.strip()
@@ -300,164 +300,164 @@ def normalize_default_expr(value: str | None) -> str | None:
     return v
 
 
-def fallback_default_expr(type_name: str) -> str:
-    if type_name == "None":
+def fallbackDefaultExpr(typeName: str) -> str:
+    if typeName == "None":
         return "None"
-    if "| None" in type_name:
+    if "| None" in typeName:
         return "None"
-    if type_name == "bool":
+    if typeName == "bool":
         return "False"
-    if type_name == "int":
+    if typeName == "int":
         return "0"
-    if type_name == "float":
+    if typeName == "float":
         return "0.0"
-    if type_name == "str":
+    if typeName == "str":
         return "''"
-    if type_name == "list":
+    if typeName == "list":
         return "[]"
-    if type_name == "dict":
+    if typeName == "dict":
         return "{}"
-    if type_name == "set":
+    if typeName == "set":
         return "set()"
-    if type_name == "tuple":
+    if typeName == "tuple":
         return "()"
     return "None"
 
 
-def parse_initial_value(attr: ET.Element) -> str | None:
-    for init_node in direct_children_by_local(attr, "Attribute.initialValue"):
-        for expr_node in init_node.iter():
-            if local_name(expr_node.tag) == "Expression.body":
-                return normalize_default_expr(expr_node.text)
+def parseInitialValue(attr: ET.Element) -> str | None:
+    for initNode in directChildrenByLocal(attr, "Attribute.initialValue"):
+        for exprNode in initNode.iter():
+            if localName(exprNode.tag) == "Expression.body":
+                return normalizeDefaultExpr(exprNode.text)
     return None
 
 
-def collect_classifier_names(root: ET.Element) -> dict[str, str]:
-    id_to_name: dict[str, str] = {}
+def collectClassifierNames(root: ET.Element) -> dict[str, str]:
+    idToName: dict[str, str] = {}
     for elem in root.iter():
-        if local_name(elem.tag) in {"Class", "Interface", "DataType", "Primitive", "Enumeration"}:
-            xid = xmi_attr(elem, "id")
-            name = decode_astah_name(elem.attrib.get("name"))
+        if localName(elem.tag) in {"Class", "Interface", "DataType", "Primitive", "Enumeration"}:
+            xid = xmiAttr(elem, "id")
+            name = decodeAstahName(elem.attrib.get("name"))
             if xid and name:
-                id_to_name[xid] = name
-    return id_to_name
+                idToName[xid] = name
+    return idToName
 
 
-def collect_package_names(root: ET.Element) -> dict[str, str]:
-    id_to_name: dict[str, str] = {}
+def collectPackageNames(root: ET.Element) -> dict[str, str]:
+    idToName: dict[str, str] = {}
     for elem in root.iter():
-        if local_name(elem.tag) == "Package":
-            xid = xmi_attr(elem, "id")
-            name = decode_astah_name(elem.attrib.get("name"))
+        if localName(elem.tag) == "Package":
+            xid = xmiAttr(elem, "id")
+            name = decodeAstahName(elem.attrib.get("name"))
             if xid and name:
-                id_to_name[xid] = name
-    return id_to_name
+                idToName[xid] = name
+    return idToName
 
 
-def collect_generalization_map(root: ET.Element) -> dict[str, str]:
-    child_to_parent: dict[str, str] = {}
+def collectGeneralizationMap(root: ET.Element) -> dict[str, str]:
+    childToParent: dict[str, str] = {}
     for gen in root.iter():
-        if local_name(gen.tag) != "Generalization":
+        if localName(gen.tag) != "Generalization":
             continue
-        gen_id = xmi_attr(gen, "id")
-        if not gen_id:
+        genId = xmiAttr(gen, "id")
+        if not genId:
             continue
-        child_id = None
-        parent_id = None
-        for child_section in direct_children_by_local(gen, "Generalization.child"):
-            for ge in child_section.iter():
-                if local_name(ge.tag) == "GeneralizableElement":
-                    child_id = xmi_attr(ge, "idref")
-        for parent_section in direct_children_by_local(gen, "Generalization.parent"):
-            for ge in parent_section.iter():
-                if local_name(ge.tag) == "GeneralizableElement":
-                    parent_id = xmi_attr(ge, "idref")
-        if child_id and parent_id:
-            child_to_parent[child_id] = parent_id
-    return child_to_parent
+        childId = None
+        parentId = None
+        for childSection in directChildrenByLocal(gen, "Generalization.child"):
+            for ge in childSection.iter():
+                if localName(ge.tag) == "GeneralizableElement":
+                    childId = xmiAttr(ge, "idref")
+        for parentSection in directChildrenByLocal(gen, "Generalization.parent"):
+            for ge in parentSection.iter():
+                if localName(ge.tag) == "GeneralizableElement":
+                    parentId = xmiAttr(ge, "idref")
+        if childId and parentId:
+            childToParent[childId] = parentId
+    return childToParent
 
 
-def collect_stereotype_names(root: ET.Element) -> dict[str, str]:
-    id_to_name: dict[str, str] = {}
+def collectStereotypeNames(root: ET.Element) -> dict[str, str]:
+    idToName: dict[str, str] = {}
     for elem in root.iter():
-        if local_name(elem.tag) != "Stereotype":
+        if localName(elem.tag) != "Stereotype":
             continue
-        sid = xmi_attr(elem, "id")
-        name = decode_astah_name(elem.attrib.get("name"))
+        sid = xmiAttr(elem, "id")
+        name = decodeAstahName(elem.attrib.get("name"))
         if sid and name:
-            id_to_name[sid] = name
-    return id_to_name
+            idToName[sid] = name
+    return idToName
 
 
-def collect_dependency_endpoint_id(elem: ET.Element, endpoint_local: str) -> str | None:
-    for section in direct_children_by_local(elem, endpoint_local):
+def collectDependencyEndpointId(elem: ET.Element, endpointLocal: str) -> str | None:
+    for section in directChildrenByLocal(elem, endpointLocal):
         for child in section.iter():
-            cid = xmi_attr(child, "idref")
+            cid = xmiAttr(child, "idref")
             if cid:
                 return cid
     return None
 
 
-def is_realize_usage(usage: ET.Element, stereotype_names: dict[str, str]) -> bool:
-    for st_container in direct_children_by_local(usage, "ModelElement.stereotype"):
-        for st_elem in st_container.iter():
-            if local_name(st_elem.tag) != "Stereotype":
+def isRealizeUsage(usage: ET.Element, stereotypeNames: dict[str, str]) -> bool:
+    for stContainer in directChildrenByLocal(usage, "ModelElement.stereotype"):
+        for stElem in stContainer.iter():
+            if localName(stElem.tag) != "Stereotype":
                 continue
-            sid = xmi_attr(st_elem, "idref")
+            sid = xmiAttr(stElem, "idref")
             if not sid:
                 continue
-            if stereotype_names.get(sid, "").lower() == "realize":
+            if stereotypeNames.get(sid, "").lower() == "realize":
                 return True
     return False
 
 
-def class_has_stereotype(elem: ET.Element, stereotype_name: str, stereotype_names: dict[str, str]) -> bool:
-    expected = stereotype_name.lower()
-    for st_container in direct_children_by_local(elem, "ModelElement.stereotype"):
-        for st_elem in st_container.iter():
-            if local_name(st_elem.tag) != "Stereotype":
+def classHasStereotype(elem: ET.Element, stereotypeName: str, stereotypeNames: dict[str, str]) -> bool:
+    expected = stereotypeName.lower()
+    for stContainer in directChildrenByLocal(elem, "ModelElement.stereotype"):
+        for stElem in stContainer.iter():
+            if localName(stElem.tag) != "Stereotype":
                 continue
-            sid = xmi_attr(st_elem, "idref")
+            sid = xmiAttr(stElem, "idref")
             if not sid:
                 continue
-            if stereotype_names.get(sid, "").lower() == expected:
+            if stereotypeNames.get(sid, "").lower() == expected:
                 return True
     return False
 
 
-def collect_realization_map(root: ET.Element) -> dict[str, str]:
-    stereotype_names = collect_stereotype_names(root)
-    client_to_supplier: dict[str, str] = {}
+def collectRealizationMap(root: ET.Element) -> dict[str, str]:
+    stereotypeNames = collectStereotypeNames(root)
+    clientToSupplier: dict[str, str] = {}
     for usage in root.iter():
-        if local_name(usage.tag) != "Usage":
+        if localName(usage.tag) != "Usage":
             continue
-        usage_id = xmi_attr(usage, "id")
-        if not usage_id:
+        usageId = xmiAttr(usage, "id")
+        if not usageId:
             # Skip xmi.idref references under diagram presentation trees.
             continue
-        if not is_realize_usage(usage, stereotype_names):
+        if not isRealizeUsage(usage, stereotypeNames):
             continue
-        client_id = collect_dependency_endpoint_id(usage, "Dependency.client")
-        supplier_id = collect_dependency_endpoint_id(usage, "Dependency.supplier")
-        if client_id and supplier_id:
-            client_to_supplier[client_id] = supplier_id
-    return client_to_supplier
+        clientId = collectDependencyEndpointId(usage, "Dependency.client")
+        supplierId = collectDependencyEndpointId(usage, "Dependency.supplier")
+        if clientId and supplierId:
+            clientToSupplier[clientId] = supplierId
+    return clientToSupplier
 
 
-def get_visibility(elem: ET.Element) -> str | None:
+def getVisibility(elem: ET.Element) -> str | None:
     visibility = elem.attrib.get("visibility")
     if visibility:
         return visibility
-    for vis_node in direct_children_by_local(elem, "ModelElement.visibility"):
-        value = vis_node.attrib.get("xmi.value") or vis_node.attrib.get("value")
+    for visNode in directChildrenByLocal(elem, "ModelElement.visibility"):
+        value = visNode.attrib.get("xmi.value") or visNode.attrib.get("value")
         if value:
             return value
     return None
 
 
-def has_tagged_value(elem: ET.Element, tag: str, value: str | None = None) -> bool:
-    for tv_container in direct_children_by_local(elem, "ModelElement.taggedValue"):
-        for tagged in direct_children_by_local(tv_container, "TaggedValue"):
+def hasTaggedValue(elem: ET.Element, tag: str, value: str | None = None) -> bool:
+    for tvContainer in directChildrenByLocal(elem, "ModelElement.taggedValue"):
+        for tagged in directChildrenByLocal(tvContainer, "TaggedValue"):
             if tagged.attrib.get("tag") != tag:
                 continue
             if value is None or tagged.attrib.get("value") == value:
@@ -465,176 +465,176 @@ def has_tagged_value(elem: ET.Element, tag: str, value: str | None = None) -> bo
     return False
 
 
-def collect_namespace_id(elem: ET.Element) -> str | None:
-    for ns_container in direct_children_by_local(elem, "ModelElement.namespace"):
-        for ns in ns_container.iter():
-            if local_name(ns.tag) == "Namespace":
-                return xmi_attr(ns, "idref")
+def collectNamespaceId(elem: ET.Element) -> str | None:
+    for nsContainer in directChildrenByLocal(elem, "ModelElement.namespace"):
+        for ns in nsContainer.iter():
+            if localName(ns.tag) == "Namespace":
+                return xmiAttr(ns, "idref")
     return None
 
 
-def parse_xmi(xml_path: Path) -> XmiModel:
-    root = ET.parse(xml_path).getroot()
-    id_to_name = collect_classifier_names(root)
-    classifier_py_names = {name: to_safe_identifier(name, fallback="TypeName") for name in set(id_to_name.values())}
-    package_id_to_name = collect_package_names(root)
-    child_to_parent_id = collect_generalization_map(root)
-    child_to_interface_id = collect_realization_map(root)
-    stereotype_names = collect_stereotype_names(root)
+def parseXmi(xmlPath: Path) -> XmiModel:
+    root = ET.parse(xmlPath).getroot()
+    idToName = collectClassifierNames(root)
+    classifierPyNames = {name: toSafeIdentifier(name, fallback="TypeName") for name in set(idToName.values())}
+    packageIdToName = collectPackageNames(root)
+    childToParentId = collectGeneralizationMap(root)
+    childToInterfaceId = collectRealizationMap(root)
+    stereotypeNames = collectStereotypeNames(root)
 
-    package_to_classes: dict[str, list[ClassSpec]] = {}
+    packageToClasses: dict[str, list[ClassSpec]] = {}
 
     for cls in root.iter():
-        if local_name(cls.tag) not in {"Class", "Interface"}:
+        if localName(cls.tag) not in {"Class", "Interface"}:
             continue
-        class_id = xmi_attr(cls, "id")
-        class_name_raw = decode_astah_name(cls.attrib.get("name"))
-        class_name = to_safe_identifier(class_name_raw or "", fallback="GeneratedClass")
-        if not class_id or not class_name_raw:
+        classId = xmiAttr(cls, "id")
+        classNameRaw = decodeAstahName(cls.attrib.get("name"))
+        className = toSafeIdentifier(classNameRaw or "", fallback="GeneratedClass")
+        if not classId or not classNameRaw:
             continue
-        if is_external_model_type(class_name_raw):
+        if isExternalModelType(classNameRaw):
             continue
 
-        package_id = collect_namespace_id(cls)
-        package_name = package_id_to_name.get(package_id or "", "generated")
-        class_definition = read_definition(cls)
-        is_enumeration = has_tagged_value(cls, "jude.enumeration", "true")
-        is_dataclass = class_has_stereotype(cls, "dataclass", stereotype_names)
+        packageId = collectNamespaceId(cls)
+        packageName = packageIdToName.get(packageId or "", "generated")
+        classDefinition = readDefinition(cls)
+        isEnumeration = hasTaggedValue(cls, "jude.enumeration", "true")
+        isDataclass = classHasStereotype(cls, "dataclass", stereotypeNames)
 
         attributes: list[AttributeSpec] = []
         methods: list[MethodSpec] = []
 
-        for feature in direct_children_by_local(cls, "Classifier.feature"):
-            for attr in direct_children_by_local(feature, "Attribute"):
-                attr_name = decode_astah_name(attr.attrib.get("name"))
-                if not attr_name:
+        for feature in directChildrenByLocal(cls, "Classifier.feature"):
+            for attr in directChildrenByLocal(feature, "Attribute"):
+                attrName = decodeAstahName(attr.attrib.get("name"))
+                if not attrName:
                     continue
-                attr_name = to_safe_identifier(attr_name)
+                attrName = toSafeIdentifier(attrName)
 
-                type_ref = None
-                for type_node in direct_children_by_local(attr, "StructuralFeature.type"):
-                    type_ref = child_classifier_idref(type_node)
-                uml_type = id_to_name.get(type_ref or "")
+                typeRef = None
+                for typeNode in directChildrenByLocal(attr, "StructuralFeature.type"):
+                    typeRef = childClassifierIdref(typeNode)
+                umlType = idToName.get(typeRef or "")
 
-                default_value = parse_initial_value(attr)
-                attr_type = normalize_type(uml_type, classifier_py_names, default_value)
-                attr_definition = read_definition(attr)
-                is_enum_literal = has_tagged_value(attr, "jude.enumeration_literal", "true")
-                is_class_scope = attr.attrib.get("ownerScope") == "classifier"
+                defaultValue = parseInitialValue(attr)
+                attrType = normalizeType(umlType, classifierPyNames, defaultValue)
+                attrDefinition = readDefinition(attr)
+                isEnumLiteral = hasTaggedValue(attr, "jude.enumeration_literal", "true")
+                isClassScope = attr.attrib.get("ownerScope") == "classifier"
 
                 attributes.append(
                     AttributeSpec(
-                        name=attr_name,
-                        type_name=attr_type,
-                        default=default_value,
-                        definition=attr_definition,
-                        is_enum_literal=is_enum_literal,
-                        is_class_scope=is_class_scope,
+                        name=attrName,
+                        typeName=attrType,
+                        default=defaultValue,
+                        definition=attrDefinition,
+                        isEnumLiteral=isEnumLiteral,
+                        isClassScope=isClassScope,
                     )
                 )
 
-            for op in direct_children_by_local(feature, "Operation"):
-                method_name = decode_astah_name(op.attrib.get("name"))
-                if not method_name:
+            for op in directChildrenByLocal(feature, "Operation"):
+                methodName = decodeAstahName(op.attrib.get("name"))
+                if not methodName:
                     continue
-                if get_visibility(op) == "protected" and not method_name.startswith("_"):
-                    method_name = f"_{method_name}"
-                method_name = to_safe_identifier(method_name, fallback="method")
+                if getVisibility(op) == "protected" and not methodName.startswith("_"):
+                    methodName = f"_{methodName}"
+                methodName = toSafeIdentifier(methodName, fallback="method")
 
                 params: list[ParameterSpec] = []
-                return_type = "None"
+                returnType = "None"
 
-                for bf_param in direct_children_by_local(op, "BehavioralFeature.parameter"):
-                    for param in direct_children_by_local(bf_param, "Parameter"):
+                for bfParam in directChildrenByLocal(op, "BehavioralFeature.parameter"):
+                    for param in directChildrenByLocal(bfParam, "Parameter"):
                         kind = param.attrib.get("kind")
-                        type_ref = None
-                        for type_node in direct_children_by_local(param, "Parameter.type"):
-                            type_ref = child_classifier_idref(type_node)
-                        uml_type = id_to_name.get(type_ref or "")
+                        typeRef = None
+                        for typeNode in directChildrenByLocal(param, "Parameter.type"):
+                            typeRef = childClassifierIdref(typeNode)
+                        umlType = idToName.get(typeRef or "")
 
                         if kind == "return":
-                            return_type = normalize_type(uml_type, classifier_py_names)
+                            returnType = normalizeType(umlType, classifierPyNames)
                             continue
                         if kind not in {"in", "inout", "out"}:
                             continue
 
-                        name, default = parse_param_name(param.attrib.get("name"))
+                        name, default = parseParamName(param.attrib.get("name"))
                         if not name:
                             continue
                         params.append(
                             ParameterSpec(
-                                name=to_safe_identifier(name),
-                                type_name=normalize_type(uml_type, classifier_py_names, default),
+                                name=toSafeIdentifier(name),
+                                typeName=normalizeType(umlType, classifierPyNames, default),
                                 default=default,
                             )
                         )
 
                 methods.append(
                     MethodSpec(
-                        name=method_name,
+                        name=methodName,
                         parameters=tuple(params),
-                        return_type=return_type,
-                        definition=read_definition(op),
+                        returnType=returnType,
+                        definition=readDefinition(op),
                     )
                 )
 
-        base_class_name = None
-        parent_id = child_to_parent_id.get(class_id)
-        if not parent_id:
-            parent_id = child_to_interface_id.get(class_id)
-        if parent_id:
-            base_raw = id_to_name.get(parent_id)
-            if base_raw:
-                base_class_name = classifier_py_names.get(base_raw, to_safe_identifier(base_raw, fallback="BaseClass"))
+        baseClassName = None
+        parentId = childToParentId.get(classId)
+        if not parentId:
+            parentId = childToInterfaceId.get(classId)
+        if parentId:
+            baseRaw = idToName.get(parentId)
+            if baseRaw:
+                baseClassName = classifierPyNames.get(baseRaw, toSafeIdentifier(baseRaw, fallback="BaseClass"))
 
-        package_to_classes.setdefault(package_name, []).append(
+        packageToClasses.setdefault(packageName, []).append(
             ClassSpec(
-                class_id=class_id,
-                original_name=class_name_raw,
-                name=class_name,
-                package_name=package_name,
-                definition=class_definition,
-                base_class_name=base_class_name,
-                is_enumeration=is_enumeration,
-                is_dataclass=is_dataclass,
+                classId=classId,
+                originalName=classNameRaw,
+                name=className,
+                packageName=packageName,
+                definition=classDefinition,
+                baseClassName=baseClassName,
+                isEnumeration=isEnumeration,
+                isDataclass=isDataclass,
                 attributes=tuple(attributes),
                 methods=tuple(methods),
             )
         )
 
-    frozen = {pkg: tuple(sorted(classes, key=lambda c: c.name.lower())) for pkg, classes in package_to_classes.items()}
-    return XmiModel(package_to_classes=frozen)
+    frozen = {pkg: tuple(sorted(classes, key=lambda c: c.name.lower())) for pkg, classes in packageToClasses.items()}
+    return XmiModel(packageToClasses=frozen)
 
 
-def discover_input_xmls(xml_path: Path) -> list[Path]:
-    base_path = xml_path.resolve()
-    prefix = base_path.stem
+def discoverInputXmls(xmlPath: Path) -> list[Path]:
+    basePath = xmlPath.resolve()
+    prefix = basePath.stem
     related = [
         candidate.resolve()
-        for candidate in base_path.parent.glob(f"{prefix}*.xml")
-        if candidate.resolve() != base_path
+        for candidate in basePath.parent.glob(f"{prefix}*.xml")
+        if candidate.resolve() != basePath
     ]
-    return [base_path, *sorted(related, key=lambda path: path.name.lower())]
+    return [basePath, *sorted(related, key=lambda path: path.name.lower())]
 
 
-def merge_models(models: list[XmiModel]) -> XmiModel:
+def mergeModels(models: list[XmiModel]) -> XmiModel:
     merged: dict[str, dict[str, ClassSpec]] = {}
     for model in models:
-        for package_name, classes in model.package_to_classes.items():
-            package_classes = merged.setdefault(package_name, {})
+        for packageName, classes in model.packageToClasses.items():
+            packageClasses = merged.setdefault(packageName, {})
             for cls in classes:
-                package_classes.setdefault(cls.name, cls)
+                packageClasses.setdefault(cls.name, cls)
 
     return XmiModel(
-        package_to_classes={
-            package_name: tuple(sorted(package_classes.values(), key=lambda cls: cls.name.lower()))
-            for package_name, package_classes in merged.items()
+        packageToClasses={
+            packageName: tuple(sorted(packageClasses.values(), key=lambda cls: cls.name.lower()))
+            for packageName, packageClasses in merged.items()
         }
     )
 
 
-def to_safe_module_name(class_name: str) -> str:
-    text = re.sub(r"[^0-9A-Za-z_]", "_", class_name)
+def toSafeModuleName(className: str) -> str:
+    text = re.sub(r"[^0-9A-Za-z_]", "_", className)
     text = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", text)
     text = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", text)
     text = re.sub(r"([A-Za-z])([0-9])", r"\1_\2", text)
@@ -649,12 +649,12 @@ def to_safe_module_name(class_name: str) -> str:
     return text
 
 
-def extract_annotation_type_names(type_expr: str) -> set[str]:
-    names = set(re.findall(r"\b[A-Za-z_]\w*\b", type_expr))
+def extractAnnotationTypeNames(typeExpr: str) -> set[str]:
+    names = set(re.findall(r"\b[A-Za-z_]\w*\b", typeExpr))
     return {n for n in names if n not in BUILTIN_TYPE_NAMES}
 
 
-def render_docstring_block(doc: str, indent: str = "    ") -> list[str]:
+def renderDocstringBlock(doc: str, indent: str = "    ") -> list[str]:
     safe = doc.replace('"""', '\\"\\"\\"')
     lines = safe.splitlines()
     out = [f'{indent}"""\n']
@@ -664,7 +664,7 @@ def render_docstring_block(doc: str, indent: str = "    ") -> list[str]:
     return out
 
 
-def render_comment_block(doc: str, indent: str = "    ") -> list[str]:
+def renderCommentBlock(doc: str, indent: str = "    ") -> list[str]:
     safe = doc.strip()
     if not safe:
         return []
@@ -678,22 +678,22 @@ def render_comment_block(doc: str, indent: str = "    ") -> list[str]:
     return out
 
 
-def render_safe_area(indent: str, default_body_lines: list[str]) -> list[str]:
+def renderSafeArea(indent: str, defaultBodyLines: list[str]) -> list[str]:
     out = [f"{indent}# SAFE CODE AREA ˅\n"]
-    for line in default_body_lines:
+    for line in defaultBodyLines:
         out.append(f"{indent}{line}\n")
     out.append(f"{indent}# SAFE CODE AREA ˄\n")
     return out
 
 
-def render_generated_code_area(indent: str, label: str, body_lines: list[str]) -> list[str]:
+def renderGeneratedCodeArea(indent: str, label: str, bodyLines: list[str]) -> list[str]:
     out = [f"{indent}# GENERATED CODE AREA: {label} ˅\n"]
-    out.extend(body_lines)
+    out.extend(bodyLines)
     out.append(f"{indent}# GENERATED CODE AREA: {label} ˄\n")
     return out
 
 
-def append_blank_line(out: list[str]) -> None:
+def appendBlankLine(out: list[str]) -> None:
     if not out:
         out.append("\n")
         return
@@ -701,45 +701,45 @@ def append_blank_line(out: list[str]) -> None:
         out.append("\n")
 
 
-def extract_safe_areas(text: str) -> list[str]:
+def extractSafeAreas(text: str) -> list[str]:
     areas: list[str] = []
     for m in SAFE_AREA_PATTERN.finditer(text):
         areas.append(m.group("body"))
     return areas
 
 
-def extract_safe_areas_by_context(text: str) -> tuple[list[str], dict[str, list[str]]]:
-    outside_areas: list[str] = []
-    generated_area_safe_areas: dict[str, list[str]] = {}
+def extractSafeAreasByContext(text: str) -> tuple[list[str], dict[str, list[str]]]:
+    outsideAreas: list[str] = []
+    generatedAreaSafeAreas: dict[str, list[str]] = {}
 
     cursor = 0
     for match in GENERATED_CODE_AREA_PATTERN.finditer(text):
-        outside_areas.extend(extract_safe_areas(text[cursor : match.start()]))
+        outsideAreas.extend(extractSafeAreas(text[cursor : match.start()]))
         label = match.group("label")
-        generated_area_safe_areas.setdefault(label, []).extend(extract_safe_areas(match.group("body")))
+        generatedAreaSafeAreas.setdefault(label, []).extend(extractSafeAreas(match.group("body")))
         cursor = match.end()
 
-    outside_areas.extend(extract_safe_areas(text[cursor:]))
-    return outside_areas, generated_area_safe_areas
+    outsideAreas.extend(extractSafeAreas(text[cursor:]))
+    return outsideAreas, generatedAreaSafeAreas
 
 
-def merge_safe_areas_in_segment(new_segment: str, old_areas: list[str], start_index: int) -> tuple[str, int]:
-    index = start_index
+def mergeSafeAreasInSegment(newSegment: str, oldAreas: list[str], startIndex: int) -> tuple[str, int]:
+    index = startIndex
 
     def _replace(match: re.Match[str]) -> str:
         nonlocal index
-        if index >= len(old_areas):
+        if index >= len(oldAreas):
             return match.group(0)
-        old_body = old_areas[index]
+        oldBody = oldAreas[index]
         index += 1
-        if old_body.strip() == SAFE_AREA_DEFAULT_PLACEHOLDER:
-            old_body = ""
-        return f"{match.group('start')}{old_body}{match.group('end')}"
+        if oldBody.strip() == SAFE_AREA_DEFAULT_PLACEHOLDER:
+            oldBody = ""
+        return f"{match.group('start')}{oldBody}{match.group('end')}"
 
-    return SAFE_AREA_PATTERN.sub(_replace, new_segment), index
+    return SAFE_AREA_PATTERN.sub(_replace, newSegment), index
 
 
-def extract_generated_code_areas(text: str) -> dict[str, GeneratedCodeArea]:
+def extractGeneratedCodeAreas(text: str) -> dict[str, GeneratedCodeArea]:
     areas: dict[str, GeneratedCodeArea] = {}
     for match in GENERATED_CODE_AREA_PATTERN.finditer(text):
         label = match.group("label")
@@ -753,56 +753,56 @@ def extract_generated_code_areas(text: str) -> dict[str, GeneratedCodeArea]:
     return areas
 
 
-def merge_generated_code_areas(new_text: str, old_text: str) -> tuple[str, list[str]]:
-    old_areas = extract_generated_code_areas(old_text)
-    blocked_labels: list[str] = []
+def mergeGeneratedCodeAreas(newText: str, oldText: str) -> tuple[str, list[str]]:
+    oldAreas = extractGeneratedCodeAreas(oldText)
+    blockedLabels: list[str] = []
 
     def _replace(match: re.Match[str]) -> str:
         label = match.group("label")
-        old_area = old_areas.get(label)
-        if old_area is None or old_area.state != "FIXED":
+        oldArea = oldAreas.get(label)
+        if oldArea is None or oldArea.state != "FIXED":
             return match.group(0)
-        if old_area.body != match.group("body") and label not in blocked_labels:
-            blocked_labels.append(label)
-        return f"{old_area.start}{old_area.body}{old_area.end}"
+        if oldArea.body != match.group("body") and label not in blockedLabels:
+            blockedLabels.append(label)
+        return f"{oldArea.start}{oldArea.body}{oldArea.end}"
 
-    merged = GENERATED_CODE_AREA_PATTERN.sub(_replace, new_text)
-    return merged, blocked_labels
+    merged = GENERATED_CODE_AREA_PATTERN.sub(_replace, newText)
+    return merged, blockedLabels
 
 
-def merge_safe_areas(new_text: str, old_text: str) -> str:
-    old_outside_areas, old_generated_area_areas = extract_safe_areas_by_context(old_text)
-    merged_parts: list[str] = []
-    outside_index = 0
-    generated_area_indexes: dict[str, int] = {}
+def mergeSafeAreas(newText: str, oldText: str) -> str:
+    oldOutsideAreas, oldGeneratedAreaAreas = extractSafeAreasByContext(oldText)
+    mergedParts: list[str] = []
+    outsideIndex = 0
+    generatedAreaIndexes: dict[str, int] = {}
 
     cursor = 0
-    for match in GENERATED_CODE_AREA_PATTERN.finditer(new_text):
-        outside_segment, outside_index = merge_safe_areas_in_segment(
-            new_text[cursor : match.start()],
-            old_outside_areas,
-            outside_index,
+    for match in GENERATED_CODE_AREA_PATTERN.finditer(newText):
+        outsideSegment, outsideIndex = mergeSafeAreasInSegment(
+            newText[cursor : match.start()],
+            oldOutsideAreas,
+            outsideIndex,
         )
-        merged_parts.append(outside_segment)
+        mergedParts.append(outsideSegment)
 
         label = match.group("label")
-        old_areas = old_generated_area_areas.get(label, [])
-        area_index = generated_area_indexes.get(label, 0)
-        merged_body, area_index = merge_safe_areas_in_segment(match.group("body"), old_areas, area_index)
-        generated_area_indexes[label] = area_index
-        merged_parts.append(f"{match.group('start')}{merged_body}{match.group('end')}")
+        oldAreas = oldGeneratedAreaAreas.get(label, [])
+        areaIndex = generatedAreaIndexes.get(label, 0)
+        mergedBody, areaIndex = mergeSafeAreasInSegment(match.group("body"), oldAreas, areaIndex)
+        generatedAreaIndexes[label] = areaIndex
+        mergedParts.append(f"{match.group('start')}{mergedBody}{match.group('end')}")
         cursor = match.end()
 
-    tail_segment, outside_index = merge_safe_areas_in_segment(
-        new_text[cursor:],
-        old_outside_areas,
-        outside_index,
+    tailSegment, outsideIndex = mergeSafeAreasInSegment(
+        newText[cursor:],
+        oldOutsideAreas,
+        outsideIndex,
     )
-    merged_parts.append(tail_segment)
-    return "".join(merged_parts)
+    mergedParts.append(tailSegment)
+    return "".join(mergedParts)
 
 
-def imported_names_from_line(line: str) -> set[str]:
+def importedNamesFromLine(line: str) -> set[str]:
     if not IMPORT_LINE_PATTERN.match(line):
         return set()
     try:
@@ -823,23 +823,23 @@ def imported_names_from_line(line: str) -> set[str]:
     return names
 
 
-def extract_module_import_lines(text: str) -> list[str]:
-    area = extract_generated_code_areas(text).get("module.imports")
+def extractModuleImportLines(text: str) -> list[str]:
+    area = extractGeneratedCodeAreas(text).get("module.imports")
     if area is None:
         return []
-    import_lines: list[str] = []
+    importLines: list[str] = []
     seen: set[str] = set()
     for line in area.body.splitlines():
         stripped = line.strip()
         if not stripped or stripped in seen:
             continue
-        if imported_names_from_line(stripped):
-            import_lines.append(stripped)
+        if importedNamesFromLine(stripped):
+            importLines.append(stripped)
             seen.add(stripped)
-    return import_lines
+    return importLines
 
 
-def remove_generated_area(text: str, label: str) -> str:
+def removeGeneratedArea(text: str, label: str) -> str:
     parts: list[str] = []
     cursor = 0
     for match in GENERATED_CODE_AREA_PATTERN.finditer(text):
@@ -850,75 +850,75 @@ def remove_generated_area(text: str, label: str) -> str:
     return "".join(parts)
 
 
-def text_references_imported_name(text: str, names: set[str]) -> bool:
+def textReferencesImportedName(text: str, names: set[str]) -> bool:
     return any(re.search(rf"\b{re.escape(name)}\b", text) for name in names)
 
 
-def append_module_import_lines(text: str, import_lines: list[str]) -> str:
-    if not import_lines:
+def appendModuleImportLines(text: str, importLines: list[str]) -> str:
+    if not importLines:
         return text
 
     def _replace(match: re.Match[str]) -> str:
         if match.group("label") != "module.imports":
             return match.group(0)
 
-        body_lines = match.group("body").splitlines(keepends=True)
-        while body_lines and not body_lines[-1].strip():
-            body_lines.pop()
+        bodyLines = match.group("body").splitlines(keepends=True)
+        while bodyLines and not bodyLines[-1].strip():
+            bodyLines.pop()
 
-        existing = {line.strip() for line in body_lines if line.strip()}
-        for import_line in import_lines:
-            if import_line not in existing:
-                body_lines.append(f"{import_line}\n")
-                existing.add(import_line)
-        if body_lines:
-            body_lines.append("\n")
-        return f"{match.group('start')}{''.join(body_lines)}{match.group('end')}"
+        existing = {line.strip() for line in bodyLines if line.strip()}
+        for importLine in importLines:
+            if importLine not in existing:
+                bodyLines.append(f"{importLine}\n")
+                existing.add(importLine)
+        if bodyLines:
+            bodyLines.append("\n")
+        return f"{match.group('start')}{''.join(bodyLines)}{match.group('end')}"
 
     return GENERATED_CODE_AREA_PATTERN.sub(_replace, text)
 
 
-def preserve_referenced_module_imports(new_text: str, old_text: str) -> str:
-    old_imports = extract_module_import_lines(old_text)
-    if not old_imports:
-        return new_text
+def preserveReferencedModuleImports(newText: str, oldText: str) -> str:
+    oldImports = extractModuleImportLines(oldText)
+    if not oldImports:
+        return newText
 
-    current_imports = set(extract_module_import_lines(new_text))
-    reference_text = remove_generated_area(new_text, "module.imports")
-    imports_to_preserve: list[str] = []
-    for import_line in old_imports:
-        if import_line in current_imports:
+    currentImports = set(extractModuleImportLines(newText))
+    referenceText = removeGeneratedArea(newText, "module.imports")
+    importsToPreserve: list[str] = []
+    for importLine in oldImports:
+        if importLine in currentImports:
             continue
-        if text_references_imported_name(reference_text, imported_names_from_line(import_line)):
-            imports_to_preserve.append(import_line)
-    return append_module_import_lines(new_text, imports_to_preserve)
+        if textReferencesImportedName(referenceText, importedNamesFromLine(importLine)):
+            importsToPreserve.append(importLine)
+    return appendModuleImportLines(newText, importsToPreserve)
 
 
-def extract_changed_generated_area_labels(old_text: str, new_text: str) -> list[str]:
-    old_areas = extract_generated_code_areas(old_text)
-    new_areas = extract_generated_code_areas(new_text)
+def extractChangedGeneratedAreaLabels(oldText: str, newText: str) -> list[str]:
+    oldAreas = extractGeneratedCodeAreas(oldText)
+    newAreas = extractGeneratedCodeAreas(newText)
     changed: list[str] = []
-    for label in sorted(set(old_areas) & set(new_areas)):
-        if old_areas[label].body != new_areas[label].body:
+    for label in sorted(set(oldAreas) & set(newAreas)):
+        if oldAreas[label].body != newAreas[label].body:
             changed.append(label)
     return changed
 
 
-def summarize_changed_labels(changed_labels: list[str]) -> dict[str, list[str]]:
+def summarizeChangedLabels(changedLabels: list[str]) -> dict[str, list[str]]:
     methods: list[str] = []
     sections: list[str] = []
-    seen_methods: set[str] = set()
-    seen_sections: set[str] = set()
+    seenMethods: set[str] = set()
+    seenSections: set[str] = set()
 
-    for label in changed_labels:
+    for label in changedLabels:
         if label.startswith("method."):
-            method_name = label.split(".", 1)[1]
-            if method_name not in seen_methods:
-                seen_methods.add(method_name)
-                methods.append(method_name)
+            methodName = label.split(".", 1)[1]
+            if methodName not in seenMethods:
+                seenMethods.add(methodName)
+                methods.append(methodName)
             continue
-        if label not in seen_sections:
-            seen_sections.add(label)
+        if label not in seenSections:
+            seenSections.add(label)
             sections.append(label)
 
     return {
@@ -927,7 +927,7 @@ def summarize_changed_labels(changed_labels: list[str]) -> dict[str, list[str]]:
     }
 
 
-def extract_outside_generated_text(text: str) -> str:
+def extractOutsideGeneratedText(text: str) -> str:
     parts: list[str] = []
     cursor = 0
     for match in GENERATED_CODE_AREA_PATTERN.finditer(text):
@@ -937,370 +937,370 @@ def extract_outside_generated_text(text: str) -> str:
     return "".join(parts)
 
 
-def summarize_non_generated_changes(old_text: str, new_text: str) -> dict[str, str]:
-    old_safe = extract_safe_areas(old_text)
-    new_safe = extract_safe_areas(new_text)
-    safe_changed = old_safe != new_safe
+def summarizeNonGeneratedChanges(oldText: str, newText: str) -> dict[str, str]:
+    oldSafe = extractSafeAreas(oldText)
+    newSafe = extractSafeAreas(newText)
+    safeChanged = oldSafe != newSafe
 
-    old_outside = extract_outside_generated_text(old_text)
-    new_outside = extract_outside_generated_text(new_text)
-    outside_changed = old_outside != new_outside
+    oldOutside = extractOutsideGeneratedText(oldText)
+    newOutside = extractOutsideGeneratedText(newText)
+    outsideChanged = oldOutside != newOutside
 
-    whitespace_only = (
-        old_text != new_text
-        and re.sub(r"\s+", "", old_text) == re.sub(r"\s+", "", new_text)
+    whitespaceOnly = (
+        oldText != newText
+        and re.sub(r"\s+", "", oldText) == re.sub(r"\s+", "", newText)
     )
 
     return {
-        "safe_areas": "changed" if safe_changed else "unchanged",
-        "outside_generated": "changed" if outside_changed else "unchanged",
-        "whitespace": "changed-only" if whitespace_only else "not-only",
+        "safe_areas": "changed" if safeChanged else "unchanged",
+        "outside_generated": "changed" if outsideChanged else "unchanged",
+        "whitespace": "changed-only" if whitespaceOnly else "not-only",
     }
 
 
-def is_single_blank_line_addition(old_text: str, new_text: str) -> bool:
-    if old_text == new_text:
+def isSingleBlankLineAddition(oldText: str, newText: str) -> bool:
+    if oldText == newText:
         return False
 
-    old_lines = old_text.splitlines(keepends=True)
-    new_lines = new_text.splitlines(keepends=True)
-    matcher = difflib.SequenceMatcher(a=old_lines, b=new_lines)
+    oldLines = oldText.splitlines(keepends=True)
+    newLines = newText.splitlines(keepends=True)
+    matcher = difflib.SequenceMatcher(a=oldLines, b=newLines)
 
-    blank_added = 0
+    blankAdded = 0
     for tag, _, _, j1, j2 in matcher.get_opcodes():
         if tag == "equal":
             continue
         if tag != "insert":
             return False
-        for line in new_lines[j1:j2]:
+        for line in newLines[j1:j2]:
             if line.strip():
                 return False
-            blank_added += 1
-            if blank_added > 1:
+            blankAdded += 1
+            if blankAdded > 1:
                 return False
-    return blank_added == 1
+    return blankAdded == 1
 
 
-def is_whitespace_only_change(old_text: str, new_text: str) -> bool:
+def isWhitespaceOnlyChange(oldText: str, newText: str) -> bool:
     return (
-        old_text != new_text
-        and re.sub(r"\s+", "", old_text) == re.sub(r"\s+", "", new_text)
+        oldText != newText
+        and re.sub(r"\s+", "", oldText) == re.sub(r"\s+", "", newText)
     )
 
 
-def format_parameter(param: ParameterSpec) -> str:
+def formatParameter(param: ParameterSpec) -> str:
     if param.default is None:
-        return f"{param.name}: {param.type_name}"
-    default = normalize_default_expr(param.default) or "None"
-    return f"{param.name}: {param.type_name} = {default}"
+        return f"{param.name}: {param.typeName}"
+    default = normalizeDefaultExpr(param.default) or "None"
+    return f"{param.name}: {param.typeName} = {default}"
 
 
-def choose_attr_init_expr(attr: AttributeSpec, constructor_param_names: set[str]) -> str:
+def chooseAttrInitExpr(attr: AttributeSpec, constructorParamNames: set[str]) -> str:
     if attr.default:
-        default = normalize_default_expr(attr.default)
+        default = normalizeDefaultExpr(attr.default)
         if default:
-            if default in constructor_param_names:
+            if default in constructorParamNames:
                 return default
             return default
-    return fallback_default_expr(attr.type_name)
+    return fallbackDefaultExpr(attr.typeName)
 
 
-def build_class_index(model: XmiModel) -> dict[str, tuple[str, str]]:
+def buildClassIndex(model: XmiModel) -> dict[str, tuple[str, str]]:
     idx: dict[str, tuple[str, str]] = {}
-    for package_name, classes in model.package_to_classes.items():
+    for packageName, classes in model.packageToClasses.items():
         for cls in classes:
-            idx[cls.name] = (package_name, to_safe_module_name(cls.name))
+            idx[cls.name] = (packageName, toSafeModuleName(cls.name))
     return idx
 
 
-def render_class_file(cls: ClassSpec, class_index: dict[str, tuple[str, str]]) -> str:
-    module_name = to_safe_module_name(cls.name)
+def renderClassFile(cls: ClassSpec, classIndex: dict[str, tuple[str, str]]) -> str:
+    moduleName = toSafeModuleName(cls.name)
     imports: list[str] = []
 
-    need_any = False
-    need_callable = False
-    need_numpy_alias = False
-    need_pillow_image_alias = False
-    external_imports: set[tuple[str, str]] = set()
+    needAny = False
+    needCallable = False
+    needNumpyAlias = False
+    needPillowImageAlias = False
+    externalImports: set[tuple[str, str]] = set()
 
-    referenced_type_names: set[str] = set()
-    type_expressions: list[str] = []
+    referencedTypeNames: set[str] = set()
+    typeExpressions: list[str] = []
     for attr in cls.attributes:
-        type_expressions.append(attr.type_name)
-        referenced_type_names.update(extract_annotation_type_names(attr.type_name))
+        typeExpressions.append(attr.typeName)
+        referencedTypeNames.update(extractAnnotationTypeNames(attr.typeName))
     for method in cls.methods:
-        type_expressions.append(method.return_type)
-        referenced_type_names.update(extract_annotation_type_names(method.return_type))
+        typeExpressions.append(method.returnType)
+        referencedTypeNames.update(extractAnnotationTypeNames(method.returnType))
         for p in method.parameters:
-            type_expressions.append(p.type_name)
-            referenced_type_names.update(extract_annotation_type_names(p.type_name))
+            typeExpressions.append(p.typeName)
+            referencedTypeNames.update(extractAnnotationTypeNames(p.typeName))
 
-    base_class = "Enum" if cls.is_enumeration else (cls.base_class_name or "object")
-    type_expressions.append(base_class)
-    if any(re.search(r"\bAny\b", expr) for expr in type_expressions):
-        need_any = True
-    if any(re.search(r"\bCallable\b", expr) for expr in type_expressions):
-        need_callable = True
-    if any("np.ndarray" in expr for expr in type_expressions):
-        need_numpy_alias = True
-    if any("Image.Image" in expr for expr in type_expressions):
-        need_pillow_image_alias = True
+    baseClass = "Enum" if cls.isEnumeration else (cls.baseClassName or "object")
+    typeExpressions.append(baseClass)
+    if any(re.search(r"\bAny\b", expr) for expr in typeExpressions):
+        needAny = True
+    if any(re.search(r"\bCallable\b", expr) for expr in typeExpressions):
+        needCallable = True
+    if any("np.ndarray" in expr for expr in typeExpressions):
+        needNumpyAlias = True
+    if any("Image.Image" in expr for expr in typeExpressions):
+        needPillowImageAlias = True
 
-    if base_class == "Any":
-        need_any = True
-    elif base_class == "Callable":
-        need_callable = True
-    elif base_class not in {"object", "Enum"} and base_class in class_index:
-        target_pkg, target_mod = class_index[base_class]
-        if not (target_pkg == cls.package_name and target_mod == module_name):
-            if target_pkg == cls.package_name:
-                external_imports.add((f".{target_mod}", base_class))
+    if baseClass == "Any":
+        needAny = True
+    elif baseClass == "Callable":
+        needCallable = True
+    elif baseClass not in {"object", "Enum"} and baseClass in classIndex:
+        targetPkg, targetMod = classIndex[baseClass]
+        if not (targetPkg == cls.packageName and targetMod == moduleName):
+            if targetPkg == cls.packageName:
+                externalImports.add((f".{targetMod}", baseClass))
             else:
-                external_imports.add((f"{target_pkg}.{target_mod}", base_class))
+                externalImports.add((f"{targetPkg}.{targetMod}", baseClass))
 
-    for type_name in sorted(referenced_type_names):
-        if type_name == "Any":
-            need_any = True
+    for typeName in sorted(referencedTypeNames):
+        if typeName == "Any":
+            needAny = True
             continue
-        if type_name == cls.name:
+        if typeName == cls.name:
             continue
-        target = class_index.get(type_name)
+        target = classIndex.get(typeName)
         if not target:
             continue
-        target_pkg, target_mod = target
-        if target_pkg == cls.package_name and target_mod == module_name:
+        targetPkg, targetMod = target
+        if targetPkg == cls.packageName and targetMod == moduleName:
             continue
-        if target_pkg == cls.package_name:
-            external_imports.add((f".{target_mod}", type_name))
+        if targetPkg == cls.packageName:
+            externalImports.add((f".{targetMod}", typeName))
         else:
-            external_imports.add((f"{target_pkg}.{target_mod}", type_name))
+            externalImports.add((f"{targetPkg}.{targetMod}", typeName))
 
     out: list[str] = ["from __future__ import annotations\n\n"]
-    if cls.is_dataclass:
+    if cls.isDataclass:
         imports.append("from dataclasses import dataclass")
-    if cls.is_enumeration:
+    if cls.isEnumeration:
         imports.append("from enum import Enum, auto")
-    typing_imports: list[str] = []
-    if need_any:
-        typing_imports.append("Any")
-    if need_callable:
-        typing_imports.append("Callable")
-    if typing_imports:
-        imports.append(f"from typing import {', '.join(typing_imports)}")
-    if need_numpy_alias:
+    typingImports: list[str] = []
+    if needAny:
+        typingImports.append("Any")
+    if needCallable:
+        typingImports.append("Callable")
+    if typingImports:
+        imports.append(f"from typing import {', '.join(typingImports)}")
+    if needNumpyAlias:
         imports.append("import numpy as np")
-    if need_pillow_image_alias:
+    if needPillowImageAlias:
         imports.append("from PIL import Image")
-    for module, name in sorted(external_imports):
+    for module, name in sorted(externalImports):
         imports.append(f"from {module} import {name}")
-    import_block: list[str] = []
+    importBlock: list[str] = []
     if imports:
         for line in imports:
-            import_block.append(f"{line}\n")
-        append_blank_line(import_block)
-    out.extend(render_generated_code_area("", "module.imports", import_block))
-    append_blank_line(out)
+            importBlock.append(f"{line}\n")
+        appendBlankLine(importBlock)
+    out.extend(renderGeneratedCodeArea("", "module.imports", importBlock))
+    appendBlankLine(out)
 
-    out.extend(render_safe_area("", []))
-    append_blank_line(out)
+    out.extend(renderSafeArea("", []))
+    appendBlankLine(out)
 
-    if cls.is_dataclass:
+    if cls.isDataclass:
         out.append("@dataclass\n")
-    out.append(f"class {cls.name}({base_class}):\n")
-    class_header_block: list[str] = []
+    out.append(f"class {cls.name}({baseClass}):\n")
+    classHeaderBlock: list[str] = []
     if cls.definition:
-        class_header_block.extend(render_docstring_block(cls.definition))
-        append_blank_line(class_header_block)
+        classHeaderBlock.extend(renderDocstringBlock(cls.definition))
+        appendBlankLine(classHeaderBlock)
     # Class-level safe area allows adding class description/manual class-level code
     # that survives regeneration.
-    class_header_block.extend(render_safe_area("    ", []))
-    append_blank_line(class_header_block)
-    out.extend(render_generated_code_area("    ", "class.header", class_header_block))
-    append_blank_line(out)
+    classHeaderBlock.extend(renderSafeArea("    ", []))
+    appendBlankLine(classHeaderBlock)
+    out.extend(renderGeneratedCodeArea("    ", "class.header", classHeaderBlock))
+    appendBlankLine(out)
 
-    if cls.is_enumeration:
-        enum_members = [a for a in cls.attributes if a.is_enum_literal]
-        enum_block: list[str] = []
-        if enum_members:
-            for index, member in enumerate(enum_members):
+    if cls.isEnumeration:
+        enumMembers = [a for a in cls.attributes if a.isEnumLiteral]
+        enumBlock: list[str] = []
+        if enumMembers:
+            for index, member in enumerate(enumMembers):
                 if member.definition:
-                    enum_block.extend(render_comment_block(member.definition, indent="    "))
-                enum_block.append(f"    {member.name} = auto()\n")
-                if index < len(enum_members) - 1:
-                    append_blank_line(enum_block)
-            append_blank_line(enum_block)
-            enum_block.extend(render_safe_area("    ", ["pass"]))
+                    enumBlock.extend(renderCommentBlock(member.definition, indent="    "))
+                enumBlock.append(f"    {member.name} = auto()\n")
+                if index < len(enumMembers) - 1:
+                    appendBlankLine(enumBlock)
+            appendBlankLine(enumBlock)
+            enumBlock.extend(renderSafeArea("    ", ["pass"]))
         else:
-            enum_block.extend(render_safe_area("    ", ["pass"]))
-        append_blank_line(enum_block)
-        out.extend(render_generated_code_area("    ", "enum.members", enum_block))
-        append_blank_line(out)
+            enumBlock.extend(renderSafeArea("    ", ["pass"]))
+        appendBlankLine(enumBlock)
+        out.extend(renderGeneratedCodeArea("    ", "enum.members", enumBlock))
+        appendBlankLine(out)
         return "".join(out)
 
     methods = list(cls.methods)
-    attributes = [a for a in cls.attributes if not a.is_enum_literal]
-    instance_attributes = [a for a in attributes if not a.is_class_scope]
+    attributes = [a for a in cls.attributes if not a.isEnumLiteral]
+    instanceAttributes = [a for a in attributes if not a.isClassScope]
 
-    if cls.is_dataclass:
-        attribute_block: list[str] = []
-        for attr in instance_attributes:
+    if cls.isDataclass:
+        attributeBlock: list[str] = []
+        for attr in instanceAttributes:
             if attr.definition:
-                attribute_block.extend(render_comment_block(attr.definition, indent="    "))
-            default = choose_attr_init_expr(attr, set())
-            attribute_block.append(f"    {attr.name}: {attr.type_name} = {default}\n")
-            append_blank_line(attribute_block)
-        if attribute_block:
-            out.extend(render_generated_code_area("    ", "class.attributes", attribute_block))
-            append_blank_line(out)
-        remaining_methods = [m for m in methods if m.name != "__init__"]
-        if remaining_methods:
-            for method_index, method in enumerate(remaining_methods):
-                method_block: list[str] = []
-                params = ", ".join(["self", *(format_parameter(p) for p in method.parameters)])
-                method_block.append(f"    def {method.name}({params}) -> {method.return_type}:\n")
+                attributeBlock.extend(renderCommentBlock(attr.definition, indent="    "))
+            default = chooseAttrInitExpr(attr, set())
+            attributeBlock.append(f"    {attr.name}: {attr.typeName} = {default}\n")
+            appendBlankLine(attributeBlock)
+        if attributeBlock:
+            out.extend(renderGeneratedCodeArea("    ", "class.attributes", attributeBlock))
+            appendBlankLine(out)
+        remainingMethods = [m for m in methods if m.name != "__init__"]
+        if remainingMethods:
+            for methodIndex, method in enumerate(remainingMethods):
+                methodBlock: list[str] = []
+                params = ", ".join(["self", *(formatParameter(p) for p in method.parameters)])
+                methodBlock.append(f"    def {method.name}({params}) -> {method.returnType}:\n")
                 if method.definition:
-                    method_block.extend(render_docstring_block(method.definition, indent="        "))
-                    append_blank_line(method_block)
-                method_block.extend(render_safe_area("        ", ["pass"]))
-                out.extend(render_generated_code_area("    ", f"method.{method.name}", method_block))
-                if method_index < len(remaining_methods) - 1:
+                    methodBlock.extend(renderDocstringBlock(method.definition, indent="        "))
+                    appendBlankLine(methodBlock)
+                methodBlock.extend(renderSafeArea("        ", ["pass"]))
+                out.extend(renderGeneratedCodeArea("    ", f"method.{method.name}", methodBlock))
+                if methodIndex < len(remainingMethods) - 1:
                     out.append("\n")
                     out.append("\n")
                 else:
                     out.append("\n")
         else:
-            body_block = render_safe_area("    ", ["pass"])
-            append_blank_line(body_block)
-            out.extend(render_generated_code_area("    ", "class.body", body_block))
-            append_blank_line(out)
+            bodyBlock = renderSafeArea("    ", ["pass"])
+            appendBlankLine(bodyBlock)
+            out.extend(renderGeneratedCodeArea("    ", "class.body", bodyBlock))
+            appendBlankLine(out)
         return "".join(out)
 
     if methods:
         ctor = next((m for m in methods if m.name == "__init__"), None)
-        remaining_methods = [m for m in methods if m.name != "__init__"]
+        remainingMethods = [m for m in methods if m.name != "__init__"]
 
-        if ctor is None and instance_attributes:
-            init_block: list[str] = ["    def __init__(self) -> None:\n"]
-            for attr_index, attr in enumerate(instance_attributes):
+        if ctor is None and instanceAttributes:
+            initBlock: list[str] = ["    def __init__(self) -> None:\n"]
+            for attrIndex, attr in enumerate(instanceAttributes):
                 if attr.definition:
-                    init_block.extend(render_comment_block(attr.definition, indent="        "))
-                init_expr = choose_attr_init_expr(attr, set())
-                init_block.append(f"        self.{attr.name}: {attr.type_name} = {init_expr}\n")
-                if attr_index < len(instance_attributes) - 1:
-                    append_blank_line(init_block)
-            append_blank_line(init_block)
-            init_block.extend(render_safe_area("        ", ["pass"]))
-            append_blank_line(init_block)
-            out.extend(render_generated_code_area("    ", "method.__init__", init_block))
-            append_blank_line(out)
+                    initBlock.extend(renderCommentBlock(attr.definition, indent="        "))
+                initExpr = chooseAttrInitExpr(attr, set())
+                initBlock.append(f"        self.{attr.name}: {attr.typeName} = {initExpr}\n")
+                if attrIndex < len(instanceAttributes) - 1:
+                    appendBlankLine(initBlock)
+            appendBlankLine(initBlock)
+            initBlock.extend(renderSafeArea("        ", ["pass"]))
+            appendBlankLine(initBlock)
+            out.extend(renderGeneratedCodeArea("    ", "method.__init__", initBlock))
+            appendBlankLine(out)
 
-        rendered_methods = [ctor] if ctor is not None else []
-        rendered_methods.extend(remaining_methods)
+        renderedMethods = [ctor] if ctor is not None else []
+        renderedMethods.extend(remainingMethods)
 
-        for method_index, method in enumerate(rendered_methods):
+        for methodIndex, method in enumerate(renderedMethods):
             if method is None:
                 continue
-            method_block: list[str] = []
-            params = ", ".join(["self", *(format_parameter(p) for p in method.parameters)])
-            method_block.append(f"    def {method.name}({params}) -> {method.return_type}:\n")
+            methodBlock: list[str] = []
+            params = ", ".join(["self", *(formatParameter(p) for p in method.parameters)])
+            methodBlock.append(f"    def {method.name}({params}) -> {method.returnType}:\n")
             if method.definition:
-                method_block.extend(render_docstring_block(method.definition, indent="        "))
-                append_blank_line(method_block)
+                methodBlock.extend(renderDocstringBlock(method.definition, indent="        "))
+                appendBlankLine(methodBlock)
 
             if method.name == "__init__":
-                ctor_param_names = {p.name for p in method.parameters}
-                for attr_index, attr in enumerate(instance_attributes):
+                ctorParamNames = {p.name for p in method.parameters}
+                for attrIndex, attr in enumerate(instanceAttributes):
                     if attr.definition:
-                        method_block.extend(render_comment_block(attr.definition, indent="        "))
-                    init_expr = choose_attr_init_expr(attr, ctor_param_names)
-                    method_block.append(f"        self.{attr.name}: {attr.type_name} = {init_expr}\n")
-                    if attr_index < len(instance_attributes) - 1:
-                        append_blank_line(method_block)
-                if instance_attributes:
-                    append_blank_line(method_block)
-                method_block.extend(render_safe_area("        ", ["pass"]))
+                        methodBlock.extend(renderCommentBlock(attr.definition, indent="        "))
+                    initExpr = chooseAttrInitExpr(attr, ctorParamNames)
+                    methodBlock.append(f"        self.{attr.name}: {attr.typeName} = {initExpr}\n")
+                    if attrIndex < len(instanceAttributes) - 1:
+                        appendBlankLine(methodBlock)
+                if instanceAttributes:
+                    appendBlankLine(methodBlock)
+                methodBlock.extend(renderSafeArea("        ", ["pass"]))
             else:
-                method_block.extend(render_safe_area("        ", ["pass"]))
-            out.extend(render_generated_code_area("    ", f"method.{method.name}", method_block))
-            if method_index < len(rendered_methods) - 1:
+                methodBlock.extend(renderSafeArea("        ", ["pass"]))
+            out.extend(renderGeneratedCodeArea("    ", f"method.{method.name}", methodBlock))
+            if methodIndex < len(renderedMethods) - 1:
                 out.append("\n")
                 out.append("\n")
             else:
                 out.append("\n")
-    elif instance_attributes:
-        init_block: list[str] = ["    def __init__(self) -> None:\n"]
-        for attr_index, attr in enumerate(instance_attributes):
+    elif instanceAttributes:
+        initBlock: list[str] = ["    def __init__(self) -> None:\n"]
+        for attrIndex, attr in enumerate(instanceAttributes):
             if attr.definition:
-                init_block.extend(render_comment_block(attr.definition, indent="        "))
-            init_expr = choose_attr_init_expr(attr, set())
-            init_block.append(f"        self.{attr.name}: {attr.type_name} = {init_expr}\n")
-            if attr_index < len(instance_attributes) - 1:
-                append_blank_line(init_block)
-        if instance_attributes:
-            append_blank_line(init_block)
-        init_block.extend(render_safe_area("        ", ["pass"]))
-        append_blank_line(init_block)
-        out.extend(render_generated_code_area("    ", "method.__init__", init_block))
-        append_blank_line(out)
+                initBlock.extend(renderCommentBlock(attr.definition, indent="        "))
+            initExpr = chooseAttrInitExpr(attr, set())
+            initBlock.append(f"        self.{attr.name}: {attr.typeName} = {initExpr}\n")
+            if attrIndex < len(instanceAttributes) - 1:
+                appendBlankLine(initBlock)
+        if instanceAttributes:
+            appendBlankLine(initBlock)
+        initBlock.extend(renderSafeArea("        ", ["pass"]))
+        appendBlankLine(initBlock)
+        out.extend(renderGeneratedCodeArea("    ", "method.__init__", initBlock))
+        appendBlankLine(out)
     else:
-        body_block = render_safe_area("    ", ["pass"])
-        append_blank_line(body_block)
-        out.extend(render_generated_code_area("    ", "class.body", body_block))
-        append_blank_line(out)
+        bodyBlock = renderSafeArea("    ", ["pass"])
+        appendBlankLine(bodyBlock)
+        out.extend(renderGeneratedCodeArea("    ", "class.body", bodyBlock))
+        appendBlankLine(out)
 
     return "".join(out)
 
 
-def render_package_init(classes: tuple[ClassSpec, ...]) -> str:
+def renderPackageInit(classes: tuple[ClassSpec, ...]) -> str:
     lines: list[str] = ["from __future__ import annotations\n\n"]
-    sorted_classes = sorted(classes, key=lambda c: c.name.lower())
-    for cls in sorted_classes:
-        module = to_safe_module_name(cls.name)
+    sortedClasses = sorted(classes, key=lambda c: c.name.lower())
+    for cls in sortedClasses:
+        module = toSafeModuleName(cls.name)
         lines.append(f"from .{module} import {cls.name}\n")
     lines.append("\n")
-    exported = ", ".join(f'"{c.name}"' for c in sorted_classes)
+    exported = ", ".join(f'"{c.name}"' for c in sortedClasses)
     lines.append(f"__all__ = [{exported}]\n")
     return "".join(lines)
 
 
-def build_output_file_specs(model: XmiModel, output_root: Path) -> tuple[OutputFileSpec, ...]:
-    class_index = build_class_index(model)
+def buildOutputFileSpecs(model: XmiModel, outputRoot: Path) -> tuple[OutputFileSpec, ...]:
+    classIndex = buildClassIndex(model)
     specs: list[OutputFileSpec] = []
 
-    for package_name, classes in model.package_to_classes.items():
-        if package_name == "generated":
+    for packageName, classes in model.packageToClasses.items():
+        if packageName == "generated":
             continue
-        package_dir = output_root / package_name
+        packageDir = outputRoot / packageName
         specs.append(
             OutputFileSpec(
-                path=package_dir / "__init__.py",
-                text=render_package_init(classes),
-                package_name=package_name,
-                class_name=None,
-                original_class_name=None,
-                module_name="__init__",
+                path=packageDir / "__init__.py",
+                text=renderPackageInit(classes),
+                packageName=packageName,
+                className=None,
+                originalClassName=None,
+                moduleName="__init__",
             )
         )
         for cls in classes:
-            module = to_safe_module_name(cls.name)
+            module = toSafeModuleName(cls.name)
             specs.append(
                 OutputFileSpec(
-                    path=package_dir / f"{module}.py",
-                    text=render_class_file(cls, class_index),
-                    package_name=package_name,
-                    class_name=cls.name,
-                    original_class_name=cls.original_name,
-                    module_name=module,
+                    path=packageDir / f"{module}.py",
+                    text=renderClassFile(cls, classIndex),
+                    packageName=packageName,
+                    className=cls.name,
+                    originalClassName=cls.originalName,
+                    moduleName=module,
                 )
             )
     return tuple(specs)
 
 
-def build_output_files(model: XmiModel, output_root: Path) -> dict[Path, str]:
-    return {spec.path: spec.text for spec in build_output_file_specs(model, output_root)}
+def buildOutputFiles(model: XmiModel, outputRoot: Path) -> dict[Path, str]:
+    return {spec.path: spec.text for spec in buildOutputFileSpecs(model, outputRoot)}
 
 
-def split_target_values(values: list[str]) -> tuple[str, ...]:
+def splitTargetValues(values: list[str]) -> tuple[str, ...]:
     targets: list[str] = []
     seen: set[str] = set()
     for value in values:
@@ -1313,104 +1313,104 @@ def split_target_values(values: list[str]) -> tuple[str, ...]:
     return tuple(targets)
 
 
-def normalize_target_path(value: str) -> str:
+def normalizeTargetPath(value: str) -> str:
     return value.strip().replace("\\", "/")
 
 
-def output_path_candidates(path: Path, output_root: Path) -> set[str]:
+def outputPathCandidates(path: Path, outputRoot: Path) -> set[str]:
     candidates = {path.as_posix(), path.name, path.stem}
     try:
-        candidates.add(path.relative_to(output_root).as_posix())
+        candidates.add(path.relative_to(outputRoot).as_posix())
     except ValueError:
         pass
 
-    resolved_path = path.resolve()
-    resolved_output = output_root.resolve()
-    candidates.add(resolved_path.as_posix())
+    resolvedPath = path.resolve()
+    resolvedOutput = outputRoot.resolve()
+    candidates.add(resolvedPath.as_posix())
     try:
-        candidates.add(resolved_path.relative_to(resolved_output).as_posix())
+        candidates.add(resolvedPath.relative_to(resolvedOutput).as_posix())
     except ValueError:
         pass
     try:
-        candidates.add(resolved_path.relative_to(Path.cwd().resolve()).as_posix())
+        candidates.add(resolvedPath.relative_to(Path.cwd().resolve()).as_posix())
     except ValueError:
         pass
     return candidates
 
 
-def output_file_matches_target(spec: OutputFileSpec, output_root: Path, target: str) -> bool:
-    normalized = normalize_target_path(target)
-    candidates = output_path_candidates(spec.path, output_root)
+def outputFileMatchesTarget(spec: OutputFileSpec, outputRoot: Path, target: str) -> bool:
+    normalized = normalizeTargetPath(target)
+    candidates = outputPathCandidates(spec.path, outputRoot)
     if normalized in candidates:
         return True
     if "/" in normalized or normalized.endswith(".py"):
         return any(candidate.endswith(f"/{normalized}") for candidate in candidates)
-    return normalized in {spec.path.stem, spec.module_name}
+    return normalized in {spec.path.stem, spec.moduleName}
 
 
-def output_class_matches_target(spec: OutputFileSpec, target: str) -> bool:
-    if spec.class_name is None:
+def outputClassMatchesTarget(spec: OutputFileSpec, target: str) -> bool:
+    if spec.className is None:
         return False
 
     normalized = target.strip()
-    short_name = normalized.rsplit(".", 1)[-1]
-    safe_short_name = to_safe_identifier(short_name, fallback="GeneratedClass")
+    shortName = normalized.rsplit(".", 1)[-1]
+    safeShortName = toSafeIdentifier(shortName, fallback="GeneratedClass")
     candidates = {
-        spec.class_name,
-        spec.original_class_name or "",
-        spec.module_name or "",
-        f"{spec.package_name}.{spec.class_name}",
-        f"{spec.package_name}.{spec.original_class_name}" if spec.original_class_name else "",
+        spec.className,
+        spec.originalClassName or "",
+        spec.moduleName or "",
+        f"{spec.packageName}.{spec.className}",
+        f"{spec.packageName}.{spec.originalClassName}" if spec.originalClassName else "",
     }
-    return normalized in candidates or short_name in candidates or safe_short_name == spec.class_name
+    return normalized in candidates or shortName in candidates or safeShortName == spec.className
 
 
-def format_available_targets(specs: tuple[OutputFileSpec, ...], output_root: Path) -> str:
-    files = sorted(spec.path.relative_to(output_root).as_posix() for spec in specs)
+def formatAvailableTargets(specs: tuple[OutputFileSpec, ...], outputRoot: Path) -> str:
+    files = sorted(spec.path.relative_to(outputRoot).as_posix() for spec in specs)
     classes = sorted(
-        f"{spec.package_name}.{spec.class_name}"
+        f"{spec.packageName}.{spec.className}"
         for spec in specs
-        if spec.class_name is not None
+        if spec.className is not None
     )
-    file_text = "\n  ".join(files)
-    class_text = "\n  ".join(classes)
-    return f"Available files:\n  {file_text}\nAvailable classes:\n  {class_text}"
+    fileText = "\n  ".join(files)
+    classText = "\n  ".join(classes)
+    return f"Available files:\n  {fileText}\nAvailable classes:\n  {classText}"
 
 
-def filter_output_file_specs(
+def filterOutputFileSpecs(
     specs: tuple[OutputFileSpec, ...],
-    output_root: Path,
-    target_files: tuple[str, ...],
-    target_classes: tuple[str, ...],
+    outputRoot: Path,
+    targetFiles: tuple[str, ...],
+    targetClasses: tuple[str, ...],
 ) -> tuple[OutputFileSpec, ...]:
-    if not target_files and not target_classes:
+    if not targetFiles and not targetClasses:
         return specs
 
     selected: list[OutputFileSpec] = []
-    matched_files: set[str] = set()
-    matched_classes: set[str] = set()
+    matchedFiles: set[str] = set()
+    matchedClasses: set[str] = set()
     for spec in specs:
         include = False
-        for target_file in target_files:
-            if output_file_matches_target(spec, output_root, target_file):
+        for targetFile in targetFiles:
+            if outputFileMatchesTarget(spec, outputRoot, targetFile):
                 include = True
-                matched_files.add(target_file)
-        for target_class in target_classes:
-            if output_class_matches_target(spec, target_class):
+                matchedFiles.add(targetFile)
+        for targetClass in targetClasses:
+            if outputClassMatchesTarget(spec, targetClass):
                 include = True
-                matched_classes.add(target_class)
+                matchedClasses.add(targetClass)
         if include:
             selected.append(spec)
 
-    missing_files = [target for target in target_files if target not in matched_files]
-    missing_classes = [target for target in target_classes if target not in matched_classes]
-    if missing_files or missing_classes:
+    missingFiles = [target for target in targetFiles if target not in matchedFiles]
+    missingClasses = [target for target in targetClasses if target not in matchedClasses]
+    if missingFiles or missingClasses:
         messages: list[str] = []
-        if missing_files:
-            messages.append(f"unknown target file(s): {', '.join(missing_files)}")
-        if missing_classes:
-            messages.append(f"unknown target class(es): {', '.join(missing_classes)}")
-        messages.append(format_available_targets(specs, output_root))
+        if missingFiles:
+            messages.append(f"unknown target file(s): {', '.join(missingFiles)}")
+        if missingClasses:
+            messages.append(f"unknown target class(es): {', '.join(missingClasses)}")
+        messages.append(formatAvailableTargets(specs, outputRoot))
         raise ValueError("\n".join(messages))
 
     return tuple(selected)
@@ -1436,60 +1436,60 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    xml_inputs = discover_input_xmls(args.xml)
-    model = merge_models([parse_xmi(path) for path in xml_inputs])
-    target_files = split_target_values(args.target_file)
-    target_classes = split_target_values(args.target_class)
-    output_specs = build_output_file_specs(model, args.output)
+    xmlInputs = discoverInputXmls(args.xml)
+    model = mergeModels([parseXmi(path) for path in xmlInputs])
+    targetFiles = splitTargetValues(args.targetFile)
+    targetClasses = splitTargetValues(args.targetClass)
+    outputSpecs = buildOutputFileSpecs(model, args.output)
     try:
-        output_specs = filter_output_file_specs(output_specs, args.output, target_files, target_classes)
+        outputSpecs = filterOutputFileSpecs(outputSpecs, args.output, targetFiles, targetClasses)
     except ValueError as exc:
         parser.error(str(exc))
-    files = {spec.path: spec.text for spec in output_specs}
+    files = {spec.path: spec.text for spec in outputSpecs}
 
-    changed_count = 0
+    changedCount = 0
     notes: list[str] = []
-    change_logs: list[str] = []
+    changeLogs: list[str] = []
 
     for path in sorted(files):
-        new_text = files[path]
-        old_text = path.read_text(encoding="utf-8") if path.exists() else ""
-        blocked_fixed_labels: list[str] = []
-        if old_text:
-            new_text, blocked_fixed_labels = merge_generated_code_areas(new_text, old_text)
-            new_text = merge_safe_areas(new_text, old_text)
-            new_text = preserve_referenced_module_imports(new_text, old_text)
-        if blocked_fixed_labels:
-            labels = ", ".join(blocked_fixed_labels)
+        newText = files[path]
+        oldText = path.read_text(encoding="utf-8") if path.exists() else ""
+        blockedFixedLabels: list[str] = []
+        if oldText:
+            newText, blockedFixedLabels = mergeGeneratedCodeAreas(newText, oldText)
+            newText = mergeSafeAreas(newText, oldText)
+            newText = preserveReferencedModuleImports(newText, oldText)
+        if blockedFixedLabels:
+            labels = ", ".join(blockedFixedLabels)
             notes.append(f"[NOTE] {path}: FIXED CODE AREA prevented updates: {labels}")
-        if is_whitespace_only_change(old_text, new_text):
+        if isWhitespaceOnlyChange(oldText, newText):
             continue
-        if is_single_blank_line_addition(old_text, new_text):
+        if isSingleBlankLineAddition(oldText, newText):
             continue
-        if old_text == new_text:
+        if oldText == newText:
             continue
-        changed_count += 1
+        changedCount += 1
         action = "update" if path.exists() else "create"
         if action == "update":
-            changed_labels = extract_changed_generated_area_labels(old_text, new_text)
-            summary = summarize_changed_labels(changed_labels)
-            non_generated = summarize_non_generated_changes(old_text, new_text)
-            method_text = ", ".join(summary["methods"]) if summary["methods"] else "(none)"
-            section_text = ", ".join(summary["sections"]) if summary["sections"] else "(none)"
-            change_logs.append(
-                f"[UPDATE] {path} | methods: {method_text} | sections: {section_text} "
-                f"| safe_areas: {non_generated['safe_areas']} "
-                f"| outside_generated: {non_generated['outside_generated']} "
-                f"| whitespace: {non_generated['whitespace']}"
+            changedLabels = extractChangedGeneratedAreaLabels(oldText, newText)
+            summary = summarizeChangedLabels(changedLabels)
+            nonGenerated = summarizeNonGeneratedChanges(oldText, newText)
+            methodText = ", ".join(summary["methods"]) if summary["methods"] else "(none)"
+            sectionText = ", ".join(summary["sections"]) if summary["sections"] else "(none)"
+            changeLogs.append(
+                f"[UPDATE] {path} | methods: {methodText} | sections: {sectionText} "
+                f"| safe_areas: {nonGenerated['safe_areas']} "
+                f"| outside_generated: {nonGenerated['outside_generated']} "
+                f"| whitespace: {nonGenerated['whitespace']}"
             )
         else:
-            change_logs.append(f"[CREATE] {path}")
+            changeLogs.append(f"[CREATE] {path}")
         if args.show_diff:
             print(
                 "".join(
                     difflib.unified_diff(
-                        old_text.splitlines(keepends=True),
-                        new_text.splitlines(keepends=True),
+                        oldText.splitlines(keepends=True),
+                        newText.splitlines(keepends=True),
                         fromfile=str(path),
                         tofile=str(path),
                     )
@@ -1497,7 +1497,7 @@ def main() -> int:
             )
         if args.write:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(new_text, encoding="utf-8")
+            path.write_text(newText, encoding="utf-8")
 
     if notes:
         print("=== Notes ===")
@@ -1505,23 +1505,23 @@ def main() -> int:
             print(line)
         print("")
 
-    if change_logs:
+    if changeLogs:
         print("=== Planned Changes ===" if not args.write else "=== Applied Changes ===")
-        for line in change_logs:
+        for line in changeLogs:
             print(line)
         print("")
 
     mode = "write mode" if args.write else "dry-run"
     print(f"=== Summary ===")
     print(f"Mode: {mode}")
-    print(f"Changed files: {changed_count}")
-    if target_files or target_classes:
-        target_summary: list[str] = []
-        if target_files:
-            target_summary.append(f"files: {', '.join(target_files)}")
-        if target_classes:
-            target_summary.append(f"classes: {', '.join(target_classes)}")
-        print(f"Targets: {'; '.join(target_summary)}")
+    print(f"Changed files: {changedCount}")
+    if targetFiles or targetClasses:
+        targetSummary: list[str] = []
+        if targetFiles:
+            targetSummary.append(f"files: {', '.join(targetFiles)}")
+        if targetClasses:
+            targetSummary.append(f"classes: {', '.join(targetClasses)}")
+        print(f"Targets: {'; '.join(targetSummary)}")
     if not args.write:
         print("Next: run again with --write to apply these changes.")
     return 0

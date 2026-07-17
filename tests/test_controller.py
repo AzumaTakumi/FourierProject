@@ -7,23 +7,23 @@ from src.controller.file_controller import FileController, FileLoader
 from src.controller.file_saver import FileSaver
 
 
-def test_open_file_chooser_returns_selected_path(monkeypatch):
+def testOpenFileChooserReturnsSelectedPath(monkeypatch):
     """FileControllerがViewを親にしてファイル選択結果を返すことを確認する。"""
     view = object()
     received = {}
 
-    def fake_get_open_file_name(parent, title, directory, file_filter):
+    def fakeGetOpenFileName(parent, title, directory, fileFilter):
         received.update(
             parent=parent,
             title=title,
             directory=directory,
-            file_filter=file_filter,
+            fileFilter=fileFilter,
         )
         return "/tmp/signal.txt", "テキストデータ(1次元データ) (*.csv *.txt)"
 
     monkeypatch.setattr(
         "src.controller.file_controller.QFileDialog.getOpenFileName",
-        fake_get_open_file_name,
+        fakeGetOpenFileName,
     )
 
     selected = FileController(view).openFileChooser()
@@ -31,35 +31,35 @@ def test_open_file_chooser_returns_selected_path(monkeypatch):
     assert selected == "/tmp/signal.txt"
     assert received["parent"] is view
     assert received["title"] == "ファイルを開く"
-    assert "*.txt" in received["file_filter"]
+    assert "*.txt" in received["fileFilter"]
 
 
-def test_file_loader_start_returns_false_when_selection_is_cancelled(
+def testFileLoaderStartReturnsFalseWhenSelectionIsCancelled(
     monkeypatch, capsys
 ):
     """ファイル選択をキャンセルした場合は読込処理を開始しない。"""
     loader = FileLoader(aView=None)
-    loaded_paths = []
+    loadedPaths = []
     monkeypatch.setattr(loader, "openFileChooser", lambda: "")
-    monkeypatch.setattr(loader, "loadSignalData", loaded_paths.append)
+    monkeypatch.setattr(loader, "loadSignalData", loadedPaths.append)
 
     assert loader.start() is False
-    assert loaded_paths == []
+    assert loadedPaths == []
     assert "キャンセル" in capsys.readouterr().out
 
 
-def test_file_loader_start_loads_selected_path(monkeypatch):
+def testFileLoaderStartLoadsSelectedPath(monkeypatch):
     """ファイルを選択した場合はそのパスを読み込み、成功を返す。"""
     loader = FileLoader(aView=None)
-    loaded_paths = []
+    loadedPaths = []
     monkeypatch.setattr(loader, "openFileChooser", lambda: "/tmp/signal.csv")
-    monkeypatch.setattr(loader, "loadSignalData", loaded_paths.append)
+    monkeypatch.setattr(loader, "loadSignalData", loadedPaths.append)
 
     assert loader.start() is True
-    assert loaded_paths == ["/tmp/signal.csv"]
+    assert loadedPaths == ["/tmp/signal.csv"]
 
 
-def test_input_file_warns_when_file_loader_is_missing(monkeypatch):
+def testInputFileWarnsWhenFileLoaderIsMissing(monkeypatch):
     """FileLoader未設定時は警告し、処理を終了する。"""
     warnings = []
     parent = object()
@@ -74,26 +74,26 @@ def test_input_file_warns_when_file_loader_is_missing(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ("loaded", "expected_refresh_count"),
+    ("loaded", "expectedRefreshCount"),
     [(True, 1), (False, 0)],
 )
-def test_input_file_refreshes_view_only_after_successful_load(
-    loaded, expected_refresh_count
+def testInputFileRefreshesViewOnlyAfterSuccessfulLoad(
+    loaded, expectedRefreshCount
 ):
     """読込成功時だけView更新コールバックを呼び出す。"""
-    refresh_calls = []
+    refreshCalls = []
     loader = SimpleNamespace(start=lambda: loaded)
     controller = ContextMenuController(
         fileLoader=loader,
-        refreshViewCallback=lambda: refresh_calls.append("refresh"),
+        refreshViewCallback=lambda: refreshCalls.append("refresh"),
     )
 
     controller.inputFile()
 
-    assert len(refresh_calls) == expected_refresh_count
+    assert len(refreshCalls) == expectedRefreshCount
 
 
-def test_open_edit_view_calls_callback():
+def testOpenEditViewCallsCallback():
     """編集画面が接続済みならコールバックへ処理を委譲する。"""
     calls = []
     controller = ContextMenuController(
@@ -105,7 +105,7 @@ def test_open_edit_view_calls_callback():
     assert calls == ["opened"]
 
 
-def test_open_edit_view_informs_when_callback_is_missing(monkeypatch):
+def testOpenEditViewInformsWhenCallbackIsMissing(monkeypatch):
     """編集画面が未接続なら情報メッセージを表示する。"""
     messages = []
     parent = object()
@@ -119,7 +119,7 @@ def test_open_edit_view_informs_when_callback_is_missing(monkeypatch):
     assert messages == [(parent, "編集画面", "編集画面はまだ未接続です。")]
 
 
-def test_output_restored_data_prefers_callback():
+def testOutputRestoredDataPrefersCallback():
     """出力コールバックがある場合はFileSaverより優先して使用する。"""
     calls = []
     saver = SimpleNamespace(
@@ -135,7 +135,7 @@ def test_output_restored_data_prefers_callback():
     assert calls == ["callback"]
 
 
-def test_output_restored_data_warns_when_file_saver_is_missing(monkeypatch):
+def testOutputRestoredDataWarnsWhenFileSaverIsMissing(monkeypatch):
     """出力処理が未接続の場合は警告を表示する。"""
     warnings = []
     parent = object()
@@ -149,26 +149,26 @@ def test_output_restored_data_warns_when_file_saver_is_missing(monkeypatch):
     assert warnings == [(parent, "エラー", "FileSaverが設定されていません。")]
 
 
-def test_output_restored_data_delegates_to_file_saver():
+def testOutputRestoredDataDelegatesToFileSaver():
     """コールバックがなければFileSaverへ現在のViewを渡す。"""
-    exported_views = []
+    exportedViews = []
     parent = object()
-    saver = SimpleNamespace(exportRestoredImage=exported_views.append)
+    saver = SimpleNamespace(exportRestoredImage=exportedViews.append)
 
     ContextMenuController(parent=parent, fileSaver=saver).outputRestoredData()
 
-    assert exported_views == [parent]
+    assert exportedViews == [parent]
 
 
 @pytest.mark.parametrize(
-    ("selected_index", "expected_method"),
+    ("selectedIndex", "expectedMethod"),
     [(0, "inputFile"), (1, "openEditView"), (2, "outputRestoredData")],
 )
-def test_context_menu_routes_selected_action(
-    monkeypatch, selected_index, expected_method
+def testContextMenuRoutesSelectedAction(
+    monkeypatch, selectedIndex, expectedMethod
 ):
     """右クリックメニューで選択した項目に対応する処理だけを呼び出す。"""
-    menu_labels = []
+    menuLabels = []
     actions = []
 
     class FakeMenu:
@@ -177,12 +177,12 @@ def test_context_menu_routes_selected_action(
 
         def addAction(self, label):
             action = object()
-            menu_labels.append(label)
+            menuLabels.append(label)
             actions.append(action)
             return action
 
-        def exec(self, _global_position):
-            return actions[selected_index]
+        def exec(self, _globalPosition):
+            return actions[selectedIndex]
 
     monkeypatch.setattr(
         "src.controller.context_menu_controller.QMenu",
@@ -191,24 +191,24 @@ def test_context_menu_routes_selected_action(
 
     calls = []
     controller = ContextMenuController()
-    for method_name in ("inputFile", "openEditView", "outputRestoredData"):
+    for methodName in ("inputFile", "openEditView", "outputRestoredData"):
         monkeypatch.setattr(
             controller,
-            method_name,
-            lambda name=method_name: calls.append(name),
+            methodName,
+            lambda name=methodName: calls.append(name),
         )
 
     controller.showContextMenu(globalPos=object())
 
-    assert menu_labels == [
+    assert menuLabels == [
         "ファイル入力",
         "編集画面を開く",
         "左下のデータ・画像を出力",
     ]
-    assert calls == [expected_method]
+    assert calls == [expectedMethod]
 
 
-def test_export_restored_image_warns_when_image_is_missing(monkeypatch):
+def testExportRestoredImageWarnsWhenImageIsMissing(monkeypatch):
     """保存対象画像がない場合は警告し、保存ダイアログを開かない。"""
     warnings = []
     view = SimpleNamespace(_restoredDataImage=None)
@@ -226,7 +226,7 @@ def test_export_restored_image_warns_when_image_is_missing(monkeypatch):
     assert warnings == [(view, "警告", "保存する復元画像がありません。")]
 
 
-def test_export_restored_image_does_nothing_when_save_is_cancelled(monkeypatch):
+def testExportRestoredImageDoesNothingWhenSaveIsCancelled(monkeypatch):
     """保存先選択をキャンセルした場合は保存処理を呼び出さない。"""
     image = object()
     view = SimpleNamespace(_restoredDataImage=image)
@@ -244,7 +244,7 @@ def test_export_restored_image_does_nothing_when_save_is_cancelled(monkeypatch):
     saver.exportRestoredImage(view)
 
 
-def test_export_restored_image_reports_save_error(monkeypatch):
+def testExportRestoredImageReportsSaveError(monkeypatch):
     """保存中の例外を捕捉し、エラーメッセージとして通知する。"""
     image = object()
     view = SimpleNamespace(_restoredDataImage=image)
