@@ -77,3 +77,33 @@ def test_2d_composite_undo_restores_rect_and_inverse_once():
     assert np.allclose(model.interactiveImaginaryPart, before_imaginary)
     assert np.allclose(model.interactivePowerSpectrum, before_power)
     assert np.allclose(model.inverseData, before_inverse)
+
+
+def test_undo_and_redo_history_keeps_latest_twenty_commands():
+    """Undo/Redo履歴は直近20件だけを保持する"""
+    context = FourierModelContext(lambda _change: None)
+    context.set1dSourceData(np.zeros(32, dtype=float))
+
+    for index in range(25):
+        context.editSpectrumValueAtIndex(index, float(index + 1), 0.0)
+
+    assert context.getUndoCount() == 20
+    assert context.getRedoCount() == 0
+
+    for _ in range(20):
+        assert context.undo() is True
+
+    assert context.getUndoCount() == 0
+    assert context.getRedoCount() == 20
+    assert np.allclose(context.currentModel.interactiveRealPart[:5], np.arange(1.0, 6.0))
+    assert np.allclose(context.currentModel.interactiveRealPart[5:25], 0.0)
+
+    with pytest.raises(IndexError):
+        context.undo()
+
+    for _ in range(20):
+        assert context.redo() is True
+
+    assert context.getUndoCount() == 20
+    assert context.getRedoCount() == 0
+    assert np.allclose(context.currentModel.interactiveRealPart[:25], np.arange(1.0, 26.0))

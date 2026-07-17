@@ -64,6 +64,9 @@ class FourierModelContext(object):
         self.currentCompositeCommand: CompositeSpectrumEditCommand | None = None
 
         # SAFE CODE AREA ˅
+        # Undo/Redo履歴として保持する最大Command数。
+        self.maxHistorySize = 20
+
         # Commandの変更種別から通知範囲生成処理を選ぶ。
         self.spectrumChangeFactories = {
             "1d": self._create1dSpectrumChangeForCommand,
@@ -158,6 +161,7 @@ class FourierModelContext(object):
         if command is None or len(command.commands) == 0:
             return
         self.undoStack.append(command)
+        del self.undoStack[:-self.maxHistorySize]
         self.redoStack.clear()
         # SAFE CODE AREA ˄
     # GENERATED CODE AREA: method.endSpectrumEdit ˄
@@ -295,6 +299,7 @@ class FourierModelContext(object):
         command = self.undoStack.pop()
         command.undo()
         self.redoStack.append(command)
+        del self.redoStack[:-self.maxHistorySize]
         # Undo後の変更範囲だけをViewへ通知する。
         self._notifySpectrumChanged(self._createSpectrumChange(command))
         return True
@@ -313,6 +318,7 @@ class FourierModelContext(object):
         command = self.redoStack.pop()
         command.execute()
         self.undoStack.append(command)
+        del self.undoStack[:-self.maxHistorySize]
         # Redo後の変更範囲だけをViewへ通知する。
         self._notifySpectrumChanged(self._createSpectrumChange(command))
         return True
