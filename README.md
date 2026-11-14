@@ -35,10 +35,10 @@
 
 ---
 
-## 📊 実行例・解析結果
-| 入力信号（時間領域波形） | 解析結果（周波数スペクトル） |
+## 📊 実行例
+| 実行画面 | 編集画面 |
 | :---: | :---: |
-| ![入力波形](docs/input_waveform.png) | ![スペクトル](docs/spectrum.png) |
+| ![実行画面](image/ResultImage.png) | ![編集画面](image/EditImage.png) |
 
 ---
 
@@ -48,3 +48,14 @@
 ```bash
 git clone [https://github.com/AzumaTakumi/FourierProject.git](https://github.com/AzumaTakumi/FourierProject.git)
 cd FourierProject
+```
+
+### 2. 仮想環境の構築
+```bash
+python -m venv .venv
+source ./venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 3. 実行
+make run
