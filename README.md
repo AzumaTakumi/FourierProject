@@ -58,4 +58,6 @@ pip install -r requirements.txt
 ```
 
 ### 3. 実行
+```bash
 make run
+```
